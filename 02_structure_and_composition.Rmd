@@ -716,7 +716,7 @@ save(trees_cf, file = "output/trees_cf2.RData")
 
 
 ```
-
+######################################################################
 ### Detrended Correspondence Analysis (DCA) and Principal Component Analysis (PCA)
 
 To know whether linear or unimodal methods are better in this case, I'll calculate a DCA. According to Lepš & Šmilauer (2003) if the first DCA axis (which is scaled in units of standard deviation, S.D.) > 4 S.D. the dataset is heterogeneous so unimodal methods should be used, while the length < 3 S.D. indicates a homogeneous dataset for which linear methods are suitable.
