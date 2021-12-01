@@ -1,0 +1,329 @@
+---
+title: "TMCFdelimitation"
+author: "Adriana Uscanga"
+date: "7/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Tropical Montane Cloud Forest delimitation
+
+Code to select sites from forest inventory within tropical montane cloud forests in the Northern Mountains of Oaxaca. 
+The criteria for selecting sites that are within TMCF in SNO are as follows:
+* veg_inegi = "BOSQUE MESOFILO DE MONTANA" | prim_veg_infys = "BM"
+* & 1,000 - 2,800 m asl
+* & precipitation of at least 1,000 mm 
+* & epiphytes present   
+
+## 1. Load packages
+
+```{r}
+
+library(tidyverse)
+library(dplyr)
+library(raster)
+library(permute)
+library(lattice)
+
+```
+
+## 2. Read files
+
+```{r}
+
+# Files previously edited (code in organize_data) and saved as RData
+
+load("output/trees_sno.RData")
+load("output/sites_sno.RData")
+load("output/plots_sno.RData")
+load("output/epiphytes_sno.RData")
+
+```
+
+## 3. Extract precipitation and temp data from worldclim 
+
+INFyS does not include climatic data. Thus, I am getting annual precipitation data (bio 12) from worldclim (https://www.worldclim.org/).
+Note: I have downloaded the raster files to my computer and will not upload them to Github. 
+
+```{r}
+
+# 3.1. Extract bio12 = annual precipitation
+
+bio12 <- raster("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/sierrra_norte_oaxaca/worldclim/wc2.1_30s_bio_12.tif")
+
+# 3.2. Create a dataframe with geographic coordinates (from plots_sno)
+
+coords_sno <- plots_sno %>%
+  filter(!is.na(longitude) | !is.na(latitude)) %>% # filter out plots lacking geographic info
+  dplyr::select(site, plot, longitude, latitude) %>% 
+  # function select in both dplyr and raster libraries (package must be specified)
+  unite(plot_id, site, plot, sep = "_", remove = T) %>% # make plot ids
+  dplyr::group_by(plot_id) %>%
+  dplyr::summarize(plots = unique(plot_id),
+            longitude = unique(longitude),
+            latitude = unique(latitude)) %>%
+  dplyr::select(-plots) %>%
+  as.data.frame()
+
+# Transform coords_sno dataset to a dataframe with two columns
+coords_sno <- data.frame(coords_sno, row.names = "plot_id") 
+
+# 3.3. Extract bio12 data for coords_sno 
+coords_sno$bio12 <- extract(bio12, coords_sno)
+coords_sno <- as_tibble(coords_sno, rownames = "plot_id") # convert to tibble
+
+# 3.4. Join coords_sno dataset (with bio 12 included) and plots_sno together
+
+plots_sno <- plots_sno %>%
+  unite(plot_id, site, plot, sep = "_", remove = T) # create plot id column
+  
+plots_sno <- coords_sno %>%
+  right_join(plots_sno, by = "plot_id") 
+
+# 3.5. Clean dataset
+
+plots_sno <- plots_sno %>%
+  mutate(longitude = as.numeric(longitude.x),
+         latitude = as.numeric(latitude.x),
+         precip = as.numeric(bio12)) %>%
+  dplyr::select(-longitude.y,
+                -latitude.y,
+                -longitude.x,
+                -latitude.x,
+                -bio12)
+
+```
+
+
+```{r}
+## Add temp data and save plots_cf file 
+
+# 3.6. Extract bio 1 = annual mean temperature
+
+bio1 <- raster("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/sierrra_norte_oaxaca/worldclim/wc2.1_30s_bio_1.tif")
+
+# 3.7. Create a dataframe with geographic coordinates (from plots_sno)
+
+coords_sno2 <- coords_sno %>%
+  dplyr::select(plot_id, longitude, latitude) %>% 
+  as.data.frame()
+
+# Transform coords_sno dataset to a dataframe with two columns
+coords_sno2 <- data.frame(coords_sno2, row.names = "plot_id") 
+
+# 3.8. Extract bio1 data for coords_sno
+
+coords_sno2$bio1 <- extract(bio1, coords_sno2)
+coords_sno2 <- as_tibble(coords_sno2, rownames = "plot_id") # convert to tibble
+
+# 3.9. Join coords_sno2 dataset (with bio 12 included) and plots_sno together
+
+plots_sno <- coords_sno2 %>%
+  right_join(plots_sno, by = c("plot_id", "longitude", "latitude")) 
+
+# 3.10. Clean dataset
+
+plots_sno <- plots_sno %>%
+  mutate(temp = as.numeric(bio1)) %>%
+  dplyr::select(-bio1) %>%
+  relocate(c("longitude", "latitude", "altitude", "precip", "temp"),
+           .after = mun_id)
+
+```
+
+## 4. Add epiphyte data
+
+```{r}
+
+plots_sno <- plots_sno %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  left_join(epiphytes_sno, by = "site") %>%
+  transmute(plot_id = as.character(plot_id),
+            site = as.numeric(site),
+            plot = as.numeric(plot),
+            state = as.character(state.x),
+            state_id = as.numeric(state_id.x),
+            municipality = as.character(municipality.x),
+            mun_id = as.numeric(mun_id.x),
+            year = as.numeric(year),
+            prim_veg_infys = as.character(prim_veg_infys),
+            sec_veg_infys = as.character(sec_veg_infys),
+            veg_inegi = as.character(veg_inegi),
+            veg_inegi_id = as.character(veg_inegi_id),
+            bromelids_b = as.character(bromelids_branches),
+            cacti_b = as.character(cacti_branches),
+            ferns_b = as.character(ferns_branches),
+            lichens_b = as.character(lichens_branches),
+            moss_b = as.character(moss_branches),
+            orchids_b = as.character(orchids_branches),
+            others_b = as.character(others_branches),
+            bromelids_t = as.character(bromelids_trunk),
+            cacti_t = as.character(cacti_trunk),
+            ferns_t = as.character(ferns_trunk),
+            lichens_t = as.character(lichens_trunk),
+            moss_t = as.character(moss_trunk),
+            orchids_t = as.character(orchids_trunk),
+            others_t = as.character(orchids_trunk),
+            latitude = as.numeric(latitude),
+            longitude = as.numeric(longitude),
+            altitude = as.numeric(altitude),
+            precip = as.numeric(precip),
+            temp = as.numeric(temp))
+
+plots_sno <- plots_sno %>%
+  mutate(epiphytes = ifelse(bromelids_b == "Absent" &
+                              bromelids_t == "Absent" &
+                              lichens_b == "Absent" &
+                              lichens_t == "Absent" &
+                              moss_b == "Absent" &
+                              moss_t == "Absent", "Absent", "Present"))
+```
+
+There are 18 sites from SNO missing in epiphytes dataset: 
+65855				
+68155				
+69150				
+69850				
+69860				
+70311				
+70546				
+71223				
+71428				
+71652
+71855				
+72065				
+73347				
+73349				
+73561				
+73980				
+74787				
+74793
+
+## 5. Filter data 
+
+```{r}
+
+plots_cf <- plots_sno %>%
+  filter(veg_inegi == "BOSQUE MESOFILO DE MONTANA" | #filter by vegetation type
+           prim_veg_infys == "BM",
+           altitude >= 1000 & altitude <= 2800,  #filter by elevation
+           precip >= 1000,
+         epiphytes == "Present") %>%
+  dplyr::select(-bromelids_b,
+         -cacti_b,
+         -ferns_b,
+         -lichens_b,
+         -moss_b,
+         -orchids_b,
+         -others_b,
+         -bromelids_t,
+         -cacti_t,
+         -ferns_t,
+         -lichens_t,
+         -moss_t,
+         -orchids_t,
+         -others_t)
+
+```
+
+313 plots within SNO match the criteria. There are a total of 445 plots assigned by either
+infys or inegi as TMCF (BM in the dataset), but they do not match the elevation or precip criteria.
+
+Save the geographic coordinates of the plots in a csv file
+
+```{r}
+plots_cf_coords <- plots_cf %>%
+  dplyr::select(plot_id, longitude, latitude, altitude)
+
+plots_cf_coords <- data.frame(plots_cf_coords, row.names = "plot_id")
+
+str(plots_cf_coords)
+write.csv(plots_cf_coords, file = "output/plots_cf_coords.csv")
+```
+
+## 6. Subset trees and sites datasets
+
+Now that TMCF plots have been selected, I can subset the trees dataset accordingly.
+
+```{r}
+
+# 6.1. Subset trees dataset with inner_join function
+
+trees_cf <- trees_sno %>%
+  unite(plot_id, site, plot, sep = "_", remove = T) %>% # create plot id column
+  inner_join(plots_cf, by = "plot_id")
+
+# 9,090 observations in plots within TMCF in SNO
+
+# 6.2. Clean trees_cf dataset
+
+trees_cf <- trees_cf %>%
+  transmute(state = as.character(state.x),
+              state_id = as.numeric(state_id.x),
+              municipality = as.character(municipality.x),
+              mun_id = as.numeric(mun_id.x),
+              longitude = as.numeric(longitude.x),
+              latitude = as.numeric(latitude.x),
+              altitude = as.numeric(altitude.x),
+              precip = as.numeric(precip),
+              temp = as.numeric(temp),
+              plot_id = as.character(plot_id),
+              year = as.numeric(year.x),
+              prim_veg_infys = as.character(prim_veg_infys.x),
+              sec_veg_infys = as.character(sec_veg_infys.x),
+              veg_inegi = as.character(veg_inegi.x),
+              veg_inegi_id = as.character(veg_inegi_id.x),
+              tree_id = as.character(tree_id),
+              tree_number = as.numeric(tree_number),
+              family = as.character(family),
+              genus = as.character(genus),
+              sp = as.character(sp),
+              common_name = as.character(common_name),
+              status = as.character(status),
+              canopy_diam = as.numeric(canopy_diam),
+              canopy_percentage = as.numeric(canopy_percentage),
+              canopy_density = as.numeric(canopy_density),
+              canopy_transparency = as.numeric(canopy_transparency),
+              diam_base = as.numeric(diam_base),
+              life_form = as.character(life_form),
+              height = as.numeric(height),
+              diam_bh = as.numeric(diam_bh),
+              basal_area = as.numeric(basal_area),
+              basal_area2 = as.numeric((3.1416*(diam_bh/2)^2)/10000),
+              canopy_area = as.numeric(canopy_area))
+
+trees_cf <- trees_cf %>%
+  mutate(basal_area = ifelse(is.na(basal_area), basal_area2, basal_area)) %>%
+  dplyr::select(-basal_area2)
+
+# 6.3. Subset sites dataset with inner_join function using trees_cf dataset
+
+sites_cf <- trees_cf %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site) %>%
+  dplyr::summarize(site_cf_list = unique(site)) %>%
+  left_join(sites_sno, by = "site")
+
+# 6.4. Clean sites_cf dataset
+
+sites_cf <- sites_cf %>%
+  dplyr::select(-site_cf_list)
+
+# 107 sites total
+
+```
+
+## 7. Save datasets
+
+```{r}
+
+save(sites_cf, file = "output/sites_cf.RData")
+save(plots_cf, file = "output/plots_cf.RData")
+save(trees_cf, file = "output/trees_cf.RData")
+
+```
+
+
