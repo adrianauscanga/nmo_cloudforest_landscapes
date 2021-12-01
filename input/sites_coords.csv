@@ -1,0 +1,88 @@
+state,municipality,site,longitude,latitude
+Veracruz de Ignacio de la Llave,Tequila,64443,-97.06555556,18.7075
+Veracruz de Ignacio de la Llave,Tequila,64444,-97.01808267,18.70586111
+Veracruz de Ignacio de la Llave,Texhuacan,64985,-97.021416,18.61555556
+Veracruz de Ignacio de la Llave,Zongolica,64987,-96.92638822,18.61211111
+Veracruz de Ignacio de la Llave,Mixtla de Altamirano,65268,-96.97558267,18.56863822
+Puebla,Eloxochitlan,65558,-96.92972156,18.52197156
+Puebla,Eloxochitlan,65559,-96.88397189,18.519416
+Puebla,Eloxochitlan,65848,-96.93138822,18.476666
+Puebla,Zoquitlan,66139,-96.92924933,18.43377744
+Puebla,Ajalpan,66428,-96.98222156,18.38777744
+Puebla,Zoquitlan,66429,-96.93497189,18.38680522
+Puebla,San Sebastian Tlacotepec,66432,-96.79305522,18.38211044
+Puebla,San Sebastian Tlacotepec,66722,-96.84169411,18.33777744
+Puebla,Coyomeapan,67308,-96.93972189,18.25055556
+Oaxaca,Santa Maria Chilchotla,67311,-96.79774967,18.245583
+Oaxaca,Santa Maria Chilchotla,67604,-96.79972189,18.20052778
+Oaxaca,Santa Maria Teopoxco,67878,-96.99052744,18.16163889
+Oaxaca,San Jeronimo Tecoatl,67879,-96.94305522,18.16002778
+Oaxaca,San Jose Tenango,67883,-96.75416667,18.15363889
+Oaxaca,Huautla de Jimenez,68146,-96.75669444,18.11086111
+Oaxaca,San Jose Tenango,68148,-96.66138889,18.105
+Oaxaca,Mazatlan Villa de Flores,68397,-96.85194444,18.06669378
+Oaxaca,Huautepec,68398,-96.80472222,18.065
+Oaxaca,Huautepec,68399,-96.75744444,18.06333333
+Oaxaca,San Andres Teotilalpam,68901,-96.66674933,17.96947156
+Oaxaca,San Pedro Teutila,68902,-96.62133267,17.96655556
+Oaxaca,Concepcion Papalo,69379,-96.81161111,17.88422189
+Oaxaca,San Francisco Chapulapa,69381,-96.71724933,17.88080489
+Oaxaca,Concepcion Papalo,69612,-96.81341667,17.83891633
+Oaxaca,Santa Maria Papalo,69613,-96.76611111,17.83719411
+Oaxaca,San Juan Tepeuxila,69842,-96.76780489,17.79219411
+Oaxaca,San Juan Tepeuxila,69843,-96.72055489,17.79061078
+Oaxaca,San Juan Tepeuxila,69844,-96.67358267,17.78888856
+Oaxaca,San Juan Tepeuxila,70072,-96.72252711,17.74527744
+Oaxaca,San Juan Quiotepec,70073,-96.67527711,17.74361078
+Oaxaca,San Felipe Usila,70076,-96.534083,17.73869411
+Oaxaca,San Juan Quiotepec,70302,-96.63005489,17.69686078
+Oaxaca,San Juan Bautista Valle Nacional,70306,-96.44136078,17.68980522
+Oaxaca,San Felipe Usila,70531,-96.53747189,17.648333
+Oaxaca,San Juan Bautista Atatlahuca,70980,-96.729416,17.56472222
+Oaxaca,Ixtlan de Juarez,70986,-96.44705522,17.55455556
+Oaxaca,Ixtlan de Juarez,70988,-96.35583333,17.55041667
+Oaxaca,Ixtlan de Juarez,71212,-96.35477778,17.50583333
+Oaxaca,Ixtlan de Juarez,71424,-96.40366667,17.46241667
+Oaxaca,San Ildefonso Villa Alta,71429,-96.16833267,17.45327778
+Oaxaca,San Juan Petlapa,71431,-96.07444378,17.44969411
+Oaxaca,Ixtlan de Juarez,71637,-96.44955522,17.41719378
+Oaxaca,San Juan Yatzona,71643,-96.17027711,17.40836111
+Oaxaca,San Juan Petlapa,71645,-96.07777711,17.40641667
+Oaxaca,Santiago Choapam,71648,-95.93527744,17.39891633
+Oaxaca,Ixtlan de Juarez,71851,-96.45436111,17.37413822
+Oaxaca,Ixtlan de Juarez,71853,-96.36052778,17.37102711
+Oaxaca,Villa Talea de Castro,71856,-96.219166,17.365
+Oaxaca,San Juan Comaltepec,71861,-95.98416633,17.35583333
+Oaxaca,San Miguel Yotao,72066,-96.36266667,17.32247156
+Oaxaca,Santo Domingo Roayaga,72072,-96.08219378,17.31583333
+Oaxaca,Totontepec Villa de Morelos,72073,-96.030916,17.31336111
+Oaxaca,Totontepec Villa de Morelos,72074,-95.98605522,17.31052778
+Oaxaca,Santiago Choapam,72077,-95.84527744,17.30475
+Oaxaca,Santa Maria Yalina,72279,-96.31711044,17.27908267
+Oaxaca,Totontepec Villa de Morelos,72284,-96.08227711,17.26913822
+Oaxaca,Totontepec Villa de Morelos,72285,-96.03527744,17.26722156
+Oaxaca,Totontepec Villa de Morelos,72286,-95.988583,17.26630556
+Oaxaca,Totontepec Villa de Morelos,72496,-96.08419411,17.22424933
+Oaxaca,Santiago Zacatepec,72501,-95.84944411,17.21444444
+Oaxaca,Mixistlan de la Reforma,72708,-96.08613856,17.178916
+Oaxaca,Santiago Zacatepec,72712,-95.89813856,17.171666
+Oaxaca,San Juan Cotzocon,72714,-95.80447222,17.16749933
+Oaxaca,Santa Maria Tlahuitoltepec,72922,-96.04113856,17.13194378
+Oaxaca,Santa Maria Tlahuitoltepec,72923,-95.99416633,17.12997156
+Oaxaca,Santiago Atitlan,72924,-95.94688856,17.12527711
+Oaxaca,Santa Maria Alotepec,72926,-95.85338889,17.12444378
+Oaxaca,San Juan Cotzocon,72927,-95.80663889,17.12324933
+Oaxaca,San Juan Cotzocon,72929,-95.713,17.11936044
+Oaxaca,Santiago Atitlan,73136,-95.94916633,17.08299933
+Oaxaca,Santiago Atitlan,73137,-95.90541667,17.07986044
+Oaxaca,Santa Maria Alotepec,73138,-95.85402778,17.08347189
+Oaxaca,Asuncion Cacalotepec,73348,-95.90416667,17.03613856
+Oaxaca,San Juan Mazatlan,73353,-95.66997156,17.02638822
+Oaxaca,Santa Maria Tepantlali,73556,-96,16.99469411
+Oaxaca,San Juan Juquila Mixes,73766,-95.90869444,16.94586078
+Oaxaca,San Miguel Quetzaltepec,73768,-95.81447222,16.94194411
+Oaxaca,San Lucas Camotlan,73770,-95.72080489,16.93805522
+Oaxaca,San Lucas Camotlan,73976,-95.72327711,16.893833
+Oaxaca,Guevea de Humboldt,73983,-95.39524967,16.87888822
+Oaxaca,Guevea de Humboldt,74187,-95.35052778,16.83169378
+Oaxaca,Santo Domingo Petapa,74189,-95.25730556,16.82808267
