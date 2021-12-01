@@ -1,0 +1,879 @@
+---
+title: "structure_and_composition"
+author: "Adriana Uscanga"
+date: "8/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Structure and Composition
+
+Code to analyze the structure and composition of plots and sites within TMCF in NMO, including biomass and biodiversity.
+
+## Load packages and datasets
+
+```{r}
+
+library(tidyverse)
+library(dplyr)
+library(BIOMASS)
+library(vegan)
+library(lubridate)
+library(ggplot2)
+library(betapart)
+
+
+load("output/sites_cf.RData")
+load("output/plots_cf.RData")
+load("output/trees_cf.RData")
+```
+
+## Forest Structure
+
+I decided to work only with trees because info on shrubs, palms, tree ferns, and weeds is not readily available.
+
+### Tree density, Lorey's height, basal area (ha-1)
+
+```{r}
+# Tree density. Number of trees per ha
+
+tree_density <- trees_cf %>%
+  filter(status == "Vivo",
+         life_form == "Arbol" |
+         is.na(life_form)) %>%
+  dplyr::group_by(plot_id) %>%
+  dplyr::summarize(tree_no = sum(n()), tree_density = tree_no/0.04)
+
+plots_cf <- plots_cf %>% # Add data to plots_cf dataset
+  left_join(tree_density, by = "plot_id") 
+
+# Lorey's height
+
+loreys_height <- trees_cf %>%
+  filter(status == "Vivo",
+           life_form == "Arbol" |
+           is.na(life_form)) %>%
+  dplyr::group_by(plot_id) %>%
+  dplyr::summarize(loreys_height = (sum(basal_area*height)/sum(basal_area)))
+
+plots_cf <- plots_cf %>%
+  left_join(loreys_height, by = "plot_id")
+
+# Tree height. Average tree height in plot
+
+tree_height <- trees_cf %>%
+  filter(status == "Vivo",
+           life_form == "Arbol" |
+           is.na(life_form)) %>%
+  dplyr::group_by(plot_id) %>%
+  dplyr::summarize(tree_height = mean(height))
+
+plots_cf <- plots_cf %>%
+  left_join(tree_height, by = "plot_id")
+  
+# Basal area (ha)
+
+basal_area_ha <- trees_cf %>%
+  filter(status == "Vivo",
+         life_form == "Arbol" |
+         is.na(life_form)) %>%
+  dplyr::group_by(plot_id) %>%
+  dplyr::summarize(basal_area_ha = sum(basal_area)/0.04)
+
+plots_cf <- plots_cf %>%
+  left_join(basal_area_ha, by = "plot_id")
+
+
+```
+
+### Biomass
+
+Calculate aboveground biomass with BIOMASS package and other allometric equations. *NOTE: error propagation missing!!*
+
+Information about this package can be found here:
+https://cran.r-project.org/web/packages/BIOMASS/vignettes/plot.html
+https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12753
+
+#### Check and correct taxonomy
+
+```{r}
+
+# Make a list of species
+
+sp_list <- trees_cf %>%
+  mutate(sp = ifelse(is.na(sp) | sp == "x", "sp", sp)) %>%
+  unite(species, genus, sp, sep = " ", remove = FALSE) %>%
+  mutate(species = ifelse(species == "NA sp", NA, species)) %>% 
+  dplyr::group_by(species, genus, sp, family) %>%
+  dplyr::summarize(species_list = unique(species)) %>%
+  filter(!is.na(species_list))
+
+# Use the function correctTaxo to identify errors
+
+taxo <- correctTaxo(genus = sp_list$genus, species = sp_list$sp)
+
+# Result:
+# Cache last modification time : 2020-07-19 20:18:10
+# Source cache:315
+# Corrections FALSE:262, SpNotFound:52, TRUE:1
+
+taxo %>% # shows correct name
+  filter(nameModified == "TRUE")
+
+# There is one sp that must be corrected:
+# **Cleyera theoides -- Cleyera theaeoides**
+# Note: this result might change if Taxonomic Name Resolution Service updates
+
+# Correct sp names in trees_cf and sp_list datasets
+
+trees_cf <- trees_cf %>% 
+  mutate(sp = ifelse(is.na(sp), "sp", sp)) %>%
+  unite(species, genus, sp, sep = " ", remove = TRUE) %>%
+  mutate(species = ifelse(species == "Cleyera theoides", "Cleyera theaeoides", species),
+         species = ifelse(species == "Citrus x", "Citrus sp", species),
+         species = ifelse(species == "NA sp", NA, species)) %>%
+  separate(species, c("genus", "sp"), remove = FALSE) %>%
+  mutate(sp = ifelse(sp == "donnell", "donnell-smithii", sp))
+
+
+sp_list <- trees_cf %>%
+  dplyr::group_by(species, genus, sp, family) %>%
+  dplyr::summarize(species_list = unique(species)) %>%
+  filter(!is.na(species_list))
+
+
+# Run script again to make sure it worked (nameModified == TRUE must be 0)
+
+taxo <- correctTaxo(genus = sp_list$genus, species = sp_list$sp) 
+
+taxo %>%
+  filter(nameModified == "TRUE")
+
+# Fill in unknown genus using common name info
+
+# Some observations lack sp name but have common name
+# I will add the genus of spp that can be found in naturalista.mx by common name:
+# "Encino" = "Quercus"
+# "Encino Roble" = "Quercus"
+# "Mameyito" = "Saurauia"
+# "Anacahua" = "Cordia"
+# "Pino" = "Pinus"
+# "Ocote" = "Pinus"
+# "Platanillo" = "Heliconia"
+
+trees_cf <- trees_cf %>%
+  mutate(genus = ifelse(common_name == "Encino roble", "Quercus", genus),
+         genus = ifelse(common_name == "Encino", "Quercus", genus),
+         genus = ifelse(common_name == "Mameyito", "Saurauia", genus),
+         genus = ifelse(common_name == "Anacahua", "Cordia", genus),
+         genus = ifelse(common_name == "Pino", "Pinus", genus),
+         genus = ifelse(common_name == "Ocote", "Pinus", genus),
+         genus = ifelse(common_name == "Platanillo", "Heliconia", genus)) %>%
+  mutate(sp = ifelse(is.na(sp), "sp", sp)) %>%
+  dplyr::select(-species) %>%
+  unite(species, genus, sp, sep = " ", remove = TRUE) %>%
+  mutate(family = ifelse(common_name == "Encino roble", "Fagaceae", family),
+         family = ifelse(common_name == "Encino", "Fagaceae", family),
+         family = ifelse(common_name == "Mameyito", "Actinidiaceae", family),
+         family = ifelse(common_name == "Anacahua", "Boraginaceae", family),
+         family = ifelse(common_name == "Pino", "Pinaceae", family),
+         family = ifelse(common_name == "Ocote", "Pinaceae", family),
+         family = ifelse(common_name == "Platanillo", "Heliconiaceae", family))
+
+trees_cf <- trees_cf %>%
+  separate(species, c("genus", "sp"), remove = FALSE) %>%
+  mutate(species = ifelse(species == "NA sp", NA, species)) %>%
+  mutate(genus = ifelse(genus == "NA", NA, genus)) %>%
+  mutate(sp = ifelse(sp == "sp", NA, sp)) %>%
+  mutate(sp = ifelse(sp == "donnell", "donnell-smithii", sp))
+
+sp_list <- trees_cf %>%
+  dplyr::group_by(species, genus, sp, family) %>%
+  dplyr::summarize(species_list = unique(species)) %>%
+  filter(!is.na(species_list)) %>%
+  mutate(sp = ifelse(is.na(sp), "sp", sp))
+
+```
+
+#### Estimate wood density
+
+```{r}
+
+# Estimate wood density with getWoodDensity
+
+wd <- getWoodDensity(genus = sp_list$genus, species = sp_list$sp, family = sp_list$family)
+
+# Create a dataset with wood density (wd) information
+
+wd <- wd %>%
+  as_tibble() %>%
+  transmute(family = as.character(family),
+            genus = as.character(genus),
+            sp = as.character(species),
+            species = paste(genus, sp, sep = " "),
+            mean_wd = as.numeric(meanWD),
+            sd_wd = as.numeric(sdWD),
+            level_wd = as.character(levelWD),
+            n_ind = as.numeric(nInd)) %>%
+  dplyr::select(-family, -genus, -sp)
+
+# Add wd data to trees_cf tibble
+
+trees_cf <- left_join(trees_cf, wd, by = "species")
+
+trees_cf %>%
+  group_by(status) %>%
+  summarize(list_status = unique(status), no = sum(n()))
+
+trees_cf %>%
+  group_by(life_form) %>%
+  summarize(list_lf = unique(life_form), no = sum(n()))
+
+trees_cf %>%
+  filter(is.na(life_form)) %>%
+  group_by(species) %>%
+  summarize(list = unique(species), no = sum(n())) %>%
+  arrange(-no)
+
+#NA(life_form) = 2009
+#NA(sp) = 1130 samples are completely unknown
+#9090-1134 = 7956 have life form or spp id  
+#9090-2009 = 7081 have life form
+
+#(6321*100)/7081 = 89.26705% are Trees
+# 7.258% are shrubs
+# 3.106% are fern trees
+# Remove unknown spp and life forms from dataset as it's not possible to analyze biomass and diversity without this info
+# Remove dead trees as well
+
+trees_cf %>%
+  filter(is.na(species))
+         
+         
+#trees_cf <- trees_cf %>%
+#  filter(!is.na(species),
+#         status == "Vivo",
+#         life_form == "Arbol" | is.na(life_form)) #unless I find a generic allometric equation for shrubs...but I haven't
+
+#Final tree_cf dataset has 6,231 rows
+
+#NOTE: 07/10/2021 Not sure if these code (commented above) should be removed or not
+```
+
+#### Estimate aboveground biomass (agb)
+
+For calculating agb, I will use allometric equations developed for each species.
+When specific allometric equations are not available, I will use the generic allometric equation implemented in BIOMASS.
+Using tree height, diameter at breast height and wood density, the function computeAGB calculates biomass.
+
+Estimate agb per tree using BIOMASS
+
+```{r}
+
+trees_cf <- trees_cf %>%
+  mutate(agb_biomass = computeAGB(D = trees_cf$diam_bh, WD = trees_cf$mean_wd, H = trees_cf$height))
+
+```
+
+Estimate agb with specific allometric equations
+
+```{r}
+# Load specific allometric equations:
+
+source("agb_allometricfunctions.R")
+
+# Calculate agb per genus in cases where there are several spp per genus
+
+# Clethra
+
+agb_clethra <- trees_cf %>%
+  filter(genus == "Clethra") %>%
+  mutate(agb_ae = ifelse(species == "Clethra hartwegii", agb_clethrahartwegii(dbh = diam_bh),
+                         ifelse(species == "Clethra mexicana", agb_clethramexicana(dbh = diam_bh),
+                                     ifelse(species == "Clethra pringlei", agb_clethrapringlei(dbh = diam_bh), agb_clethra(dbh = diam_bh)))))
+  
+# Inga
+
+agb_inga <- trees_cf %>%
+  filter(genus == "Inga") %>%
+  mutate(agb_ae = ifelse(species == "Inga punctata", agb_ingapunctata(dbh = diam_bh, h = height),
+                           ifelse(species == "Inga vera", agb_ingavera(dbh = diam_bh), agb_inga(dbh = diam_bh))))
+
+# Liquidambar
+
+agb_liquidambar <- trees_cf %>%
+  filter(genus == "Liquidambar") %>%
+  mutate(agb_ae = ifelse(species == "Liquidambar styraciflua", agb_liquidambarstyraciflua(dbh = diam_bh), agb_liquidambar(dbh = diam_bh)))
+
+# Pinus
+
+agb_pinus <- trees_cf %>%
+  filter(genus == "Pinus") %>%
+  mutate(agb_ae = ifelse(species == "Pinus devoniana", agb_pinusdevoniana(dbh = diam_bh),
+                         ifelse(species == "Pinus herrerae", agb_pinusherrerae(dbh = diam_bh),
+                                ifelse(species == "Pinus leiophylla", agb_pinusleiophylla(dbh = diam_bh),
+                                       ifelse(species == "Pinus patula", agb_pinuspatula(dbh = diam_bh), agb_pinus(dbh = diam_bh, h = height))))))
+
+# Quercus
+
+agb_quercus <- trees_cf %>%
+  filter(genus == "Quercus") %>%
+  mutate(agb_ae = ifelse(species == "Quercus candicans", agb_quercuscandicans(dbh = diam_bh, h = height),
+                         ifelse(species == "Quercus crassifolia", agb_quercuscrassifolia(dbh = diam_bh, h = height),
+                                ifelse(species == "Quercus laurina", agb_quercuslaurina(dbh = diam_bh, h = height),
+                                       ifelse(species == "Quercus obtusata", agb_quercusobtusata(dbh = diam_bh, h = height),
+                                              ifelse(species == "Quercus peduncularis", agb_quercuspeduncularis(dbh = diam_bh),
+                                                     ifelse(species == "Quercus rugosa", agb_quercusrugosa(dbh = diam_bh, h = height), agb_quercus(dbh = diam_bh))))))))
+
+# Other genus
+
+agb_genus <- trees_cf %>%
+  filter(genus %in% c("Abies", "Alchornea", "Citrus", "Cordia", "Eugenia", "Heliocarpus", "Juglans", "Juniperus", "Nectandra", "Prunus", "Psidium", "Trema", "Trichilia", "Zanthoxylum")) %>%
+  mutate(agb_ae = ifelse(genus == "Abies", agb_abies(dbh = diam_bh),
+                         ifelse(genus == "Alchornea", agb_alchornealatifolia(dbh = diam_bh, h = height),
+                         ifelse(genus == "Citrus", agb_citrus(ba = basal_area),
+                                ifelse(genus == "Cordia", agb_cordiaalliodora(dbh = diam_bh),
+                                       ifelse(genus == "Eugenia", agb_eugenia(dbh = diam_bh, h = height),
+                                              ifelse(genus == "Heliocarpus", agb_heliocarpusappendiculatus(dbh = diam_bh),
+                                                     ifelse(genus == "Juglans", agb_juglansolanchana(dbh = diam_bh),
+                                                            ifelse(genus == "Juniperus", agb_juniperusflaccida(dbh = diam_bh),
+                                                                   ifelse(genus == "Nectandra", agb_nectandra(dbh = diam_bh),
+                                                                          ifelse(genus == "Prunus", agb_prunuspersica(dbh = diam_bh),
+                                                                                 ifelse(genus == "Psidium", agb_psidiumguajava(dbh = diam_bh),
+                                                                                        ifelse(genus == "Trema", agb_trema(dbh = diam_bh),
+                                                                                               ifelse(genus == "Trichilia", agb_trichiliahavanensis(dbh = diam_bh),
+                                                                                                      ifelse(genus == "Zanthoxylum", agb_zanthoxylum(dbh = diam_bh), NA)))))))))))))))
+
+
+# Other spp
+
+agb_spp <- trees_cf %>%
+  filter(genus %in% c("Alnus", "Brosimum", "Cecropia", "Cupressus", "Dendropanax", "Fraxinus", "Trichospermum")) %>%
+  mutate(agb_ae = ifelse(species == "Alnus acuminata", agb_alnusacuminata(dbh = diam_bh),
+                         ifelse(species == "Alnus jorullensis", agb_alnusjorullensis(dbh = diam_bh),
+                                ifelse(species == "Brosimum alicastrum", agb_brosimumalicastrum(dbh = diam_bh),
+                                       ifelse(species == "Cecropia obtusifolia", agb_cecropiaobtusifolia(dbh = diam_bh, h = height),
+                                              ifelse(species == "Cupressus lusitanica", agb_cupressuslusitanica(dbh = diam_bh),
+                                                     ifelse(species == "Dendropanax arboreus", agb_dendropanaxarboreus(dbh = diam_bh),
+                                                            ifelse(species == "Fraxinus uhdei", agb_fraxinusuhdei(dbh = diam_bh),
+                                                                   ifelse(species == "Trichospermum mexicanum", agb_trichospermummexicanum(dbh = diam_bh), NA)))))))))
+
+# Join all agb datasets
+
+agb_ae <- bind_rows(agb_clethra, agb_genus, agb_inga, agb_liquidambar, agb_pinus, agb_quercus, agb_spp)
+
+# Join agb_datasets to trees_cf
+
+trees_cf <- left_join(trees_cf, agb_ae, by = c("tree_id", "municipality", "mun_id", "state", "state_id", "longitude", "latitude", "altitude", "precip", "temp", "plot_id", "year", "prim_veg_infys", "sec_veg_infys", "veg_inegi", "veg_inegi_id", "tree_number", "family", "species", "genus", "sp", "common_name", "status", "canopy_diam", "canopy_percentage", "canopy_density", "canopy_transparency", "diam_base", "life_form", "height", "diam_bh", "basal_area", "canopy_area", "mean_wd", "sd_wd", "level_wd", "n_ind", "agb_biomass")) 
+
+# Merge agb data in a single column
+
+trees_cf <- trees_cf %>%
+  mutate(agb = ifelse(!is.na(agb_ae), agb_ae, agb_biomass))
+
+```
+
+#### Calculate AGB per plot and site with error propagation
+
+```{r}
+
+trees_cf %>% 
+  filter(is.na(agb)) %>% # 1,130 observations lack agb most of them are dead
+  filter(status == "Vivo") %>% # 302 observations are alive 
+  filter(is.na(species)) # all of them lack species name
+
+trees_cf %>%
+  group_by(life_form) %>%
+  summarize(list = unique(life_form), no = sum(n()))
+
+# I will assign an agb value for all the dead trees (Muerto en pie and Tocon sin marca) so plots without trees are taken into consideration in the following analysis despite not having trees alive.
+# I will select just trees
+
+trees_cf <- trees_cf %>%
+  mutate(agb = ifelse(status == "Muerto en pie" | status == "Tocon sin marca", 0, agb)) %>%
+  filter(life_form == "Arbol" | is.na(life_form))
+
+# Calculate agb per plot (Mg/ha)
+
+# Function to calculate SE
+
+calcSE<-function(x){
+  x <- x[is.na(x)==F]
+  sd(x)/sqrt(length(x))
+}
+
+# agb per plot
+
+agb_plot <- trees_cf %>%
+  filter(!is.na(agb)) %>%
+  dplyr::group_by(plot_id) %>%
+  dplyr::summarize(agb_plot = sum(agb), av_agb_plot = mean(agb)) %>%
+  as_tibble() %>%
+  mutate(agb_plot_ha = agb_plot/0.04) # Convert to hectares (plots are 400m2)
+  
+plots_cf <- left_join(plots_cf, agb_plot, by = "plot_id")
+
+plots_cf %>%
+  filter(is.na(agb_plot_ha))
+
+plots_cf <- plots_cf %>%
+  mutate(tree_no = ifelse(is.na(tree_no), 0, tree_no),
+         tree_density = ifelse(tree_no == 0, 0, tree_density),
+         loreys_height = ifelse(tree_no == 0, 0, loreys_height),
+         tree_height = ifelse(tree_no == 0, 0, tree_height),
+         basal_area_ha = ifelse(tree_no == 0, 0, basal_area_ha),
+         agb_plot = ifelse(tree_no == 0, 0, agb_plot),
+         av_agb_plot = ifelse(tree_no == 0, 0, av_agb_plot),
+         agb_plot_ha = ifelse(tree_no == 0, 0, agb_plot_ha)) 
+
+# Propagating errors with a standard error in wood density in all plots at once
+
+trees_cf_nona <- trees_cf %>% 
+  filter(!is.na(mean_wd)) # remove NA
+
+trees_cf_nona$meanWD <- trees_cf_nona$mean_wd
+trees_cf_nona$sdWD <- trees_cf_nona$sd_wd
+trees_cf_nona$H <- trees_cf_nona$height
+trees_cf_nona$errH <- trees_cf_nona$height*(0.10) # assume 10% of error in height measurements
+
+# AGB sd in all plots
+
+resultMC <- by(
+  trees_cf_nona, trees_cf_nona$plot_id,
+  function(x) AGBmonteCarlo(
+      D = x$diam_bh, WD = x$meanWD, errWD = x$sdWD,
+      H = x$H, errH = x$errH, Dpropag = "chave2004") # assumes 95% of diameters have low error and 5% have high error as Chave et al 2044
+)
+
+sdAGBperplot <- unlist(sapply(resultMC, "[", 3)) # Create a vector with sd values
+
+agb_sd <- as_tibble(sdAGBperplot, rownames = "plots")
+
+agb_sd <- agb_sd %>%
+  separate(plots, "plot_id", sep = ".sdAGB", remove = T) %>%
+  mutate(agb_sd = as.numeric(value)) %>%
+  select(-value)
+
+plots_cf <- agb_sd %>%
+  right_join(plots_cf, by = "plot_id") %>% #Add sd to plots_cf
+  relocate("agb_sd", .after = agb_plot)
+
+plots_cf <- plots_cf  %>%
+  mutate(agb_sd_ha = (agb_sd/400)*10000, #convert sd to Mg/ha
+         agb_se_ha = agb_sd_ha/sqrt(tree_no)) %>% #estimate SE out of sd (sigma/sqrt(n))
+  mutate(agb_sd = ifelse(tree_no == 0 | tree_no == 1, 0, agb_sd),
+         agb_sd_ha = ifelse(tree_no == 0 | tree_no == 1, 0, agb_sd_ha),
+         agb_se_ha = ifelse(tree_no == 0 | tree_no == 1, 0, agb_se_ha))
+```
+
+### Datasets cleaning: plot and site scales
+
+There are plots with many unknown spp (which means agb and diversity can't be estimated accurately). I will eliminate these plots from the dataset.
+
+```{r}
+trees_cf %>%
+  group_by(plot_id) %>%
+  summarise(agb_na = sum(is.na(agb)),
+            tree_no = sum(n()),
+            ratio = agb_na/tree_no) %>%
+  arrange(-ratio) %>%
+  filter(ratio > 0.5) %>%
+  dplyr::select(plot_id)
+
+#All plots with more than half of the specimens unknown will be eliminated:
+
+#68398_4				
+#72284_2				
+#70306_4				
+#70306_3				
+#72284_1				
+#67883_3				
+#72284_3				
+#67883_2				
+#70076_1
+
+plots_cf <- plots_cf %>%
+  filter(!plot_id == "68398_4",
+         !plot_id == "68398_3",
+         !plot_id == "72284_2",
+         !plot_id == "70306_4",
+         !plot_id == "70306_3",
+         !plot_id == "72284_1",
+         !plot_id == "67883_3",
+         !plot_id == "72284_3",
+         !plot_id == "67883_2",
+         !plot_id == "70076_1",
+         !plot_id == "67883_4")
+
+plots_cf %>%
+  group_by(site) %>%
+  summarize(sites = unique(site), plot_no = n()) %>%
+  #107 sites in total
+  filter(plot_no > 3)
+  # 83 sites have at least 2 plots, 67 have at least 3, 
+```
+
+Estimate forest structure by site:
+
+```{r}
+
+# Calculate agb per site
+
+agb_site <- plots_cf %>%
+  mutate(site = as.character(site),
+         agb_se_ha = ifelse(agb_plot_ha == 0, 0, agb_se_ha)) %>%
+  group_by(site) %>%
+  summarize(av_agb_site = mean(agb_plot_ha),
+            se_agb_site = sqrt(sum((agb_se_ha)^2))) #error propagation at site
+
+sites_cf <- left_join(sites_cf, agb_site, by = "site")
+
+
+# Calculate structure by site:
+#basal area
+#loreys height
+#tree density
+
+sites_cf <- plots_cf %>%
+  mutate(site = as.character(site)) %>%
+  group_by(site) %>%
+  summarize(plot_no = sum(n()),
+            precip = mean(precip),
+            temp = mean(temp),
+            tree_no_site = (sum(tree_no)/plot_no),
+            tree_no_ave = mean(tree_no),
+            av_basalarea_site = mean(basal_area_ha),
+            se_basalarea_site = calcSE(basal_area_ha),
+            av_loreys_site = mean(loreys_height),
+            se_loreys_site = calcSE(loreys_height),
+            av_treeheight_site = mean(tree_height),
+            se_treeheight_site = calcSE(tree_height),
+            av_treedensity_site = mean(tree_density),
+            se_treedensity_site = calcSE(tree_density)) %>%
+  right_join(sites_cf, by = "site") %>%
+  relocate(plot_no, .before = longitude) %>%
+  relocate(c(precip, temp, tree_no_site, tree_no_ave, av_basalarea_site, se_basalarea_site, av_treeheight_site, se_treeheight_site, av_loreys_site, se_loreys_site, av_treedensity_site, se_treedensity_site), .after = latitude)
+
+#Final cleaning
+
+sites_cf <- sites_cf %>%
+  select(-c(plots_by_site, plot1, plot2, plot3, plot4, site_type, monitoring, sampled, vegetation_cover, tree_no_site)) %>%
+  relocate(c(longitude, latitude, temp, precip), .after = land_tenure) %>%
+  relocate(c(municipality, mun_id), .after = state_id) %>%
+  relocate((state_id), .after = state)
+
+```
+
+## Forest Composition and Diversity
+
+### Diversity indices: Shannon and Simpson
+
+```{r}
+
+# By site
+
+sp_site <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+sp_site2 <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species))
+
+# Shannon's diversity index (H) 
+
+shannon <- diversity(sp_site, index = "shannon") %>%
+  as.data.frame()
+colnames(shannon) <- "shannon"
+shannon <- rownames_to_column(shannon, var = "site")
+
+sites_cf <- sites_cf %>%
+  left_join(shannon, by = "site")
+
+# Simpson's diversity index
+
+simpson <- diversity(sp_site, index = "simpson") %>%
+  as.data.frame()
+colnames(simpson) <- "simpson"
+simpson <- rownames_to_column(simpson, var = "site")
+
+sites_cf <- sites_cf %>%
+  left_join(simpson, by = "site")
+
+# By plot
+
+sp_plot <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  #separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "plot_id")
+
+sp_plot2 <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  #separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species))
+
+# Shannon's diversity index (H) 
+
+shannon_plot <- diversity(sp_plot, index = "shannon") %>%
+  as.data.frame()
+colnames(shannon_plot) <- "shannon"
+shannon_plot <- rownames_to_column(shannon_plot, var = "plot_id")
+
+plots_cf <- plots_cf %>%
+  left_join(shannon_plot, by = "plot_id")
+
+# Simpson's diversity index
+
+simpson_plot <- diversity(sp_plot, index = "simpson") %>%
+  as.data.frame()
+colnames(simpson_plot) <- "simpson"
+simpson_plot <- rownames_to_column(simpson_plot, var = "plot_id")
+
+plots_cf <- plots_cf %>%
+  left_join(simpson_plot, by = "plot_id")
+
+# Average Shannon and Simpson indices by site
+
+diversity_sites <- plots_cf %>%
+  mutate(shannon = ifelse((is.na(shannon)), 0, shannon),
+         simpson = ifelse((is.na(simpson)), 0, simpson),
+         site = as.character(site)) %>%
+  group_by(site) %>%
+  summarize(shannon_av_site = mean(shannon),
+            shannon_se_site = calcSE(shannon),
+            simpson_av_site = mean(simpson),
+            simpson_se_site = calcSE(simpson))
+
+sites_cf <- sites_cf %>%
+  left_join(diversity_sites, by = "site")
+
+```
+
+### Species richness by plot and site
+
+```{r}
+
+# By plot
+
+sp_richness_plot <- specnumber(sp_plot, MARGIN = 1)
+sp_richness_plot <- as.data.frame(sp_richness_plot) %>%
+  rownames_to_column(var = "plot_id")
+plots_cf <- plots_cf %>%
+  left_join(sp_richness_plot)
+
+# By site NOTE: sites have different number of plots, richness could be biased if we use totals
+
+sp_richness_site <- specnumber(sp_site, MARGIN = 1)
+sp_richness_site <- as.data.frame(sp_richness_site) %>%
+  rownames_to_column(var = "site")
+sites_cf <- sites_cf %>%
+  left_join(sp_richness_site)
+
+# averaged sp richness
+
+sp_richness_site_av <- plots_cf %>%
+  mutate(site = as.character(site),
+         sp_richness_plot = ifelse(is.na(sp_richness_plot), 0, sp_richness_plot)) %>%
+  group_by(site) %>%
+  summarize(sp_richness_site_av = mean(sp_richness_plot),
+            sp_richness_site_se = calcSE(sp_richness_plot),
+            sp_richness_site_sd = sd(sp_richness_plot))
+
+# Also note that some sites have >0 in totals and 0 in averaged diversity values because trees_cf wasn't filtered by plots before (so there are plots in trees_cf that were removed from plots_cf)
+
+sites_cf <- sites_cf %>%
+  left_join(sp_richness_site_av, by = "site")
+
+```
+
+Save these datasets to use them in following analyses:
+
+```{r}
+save(sites_cf, file = "output/sites_cf2.RData")
+save(plots_cf, file = "output/plots_cf2.RData")
+save(trees_cf, file = "output/trees_cf2.RData")
+
+
+```
+
+### Detrended Correspondence Analysis (DCA) and Principal Component Analysis (PCA)
+
+To know whether linear or unimodal methods are better in this case, I'll calculate a DCA. According to Lepš & Šmilauer (2003) if the first DCA axis (which is scaled in units of standard deviation, S.D.) > 4 S.D. the dataset is heterogeneous so unimodal methods should be used, while the length < 3 S.D. indicates a homogeneous dataset for which linear methods are suitable.
+
+#### DCA
+
+```{r}
+DCA <- decorana(log1p(sp_site))
+DCA
+
+```
+First axis of DCA is 1, so I will use linear methods (i.e. PCA).
+
+#### PCA
+
+```{r}
+
+pca_sp <- rda(log1p(sp_site))
+pca_sp
+summary(pca_sp)
+biplot(pca_sp)
+plot(pca_sp)
+```
+
+Some of the plots are different from the others, but the first two PC only explain 12% of the variation. Let's see if climate has an effect on this ordination.
+
+### Composition and climate
+
+```{r}
+sp_rda <- rda(sp_site ~ sites_cf$precip + sites_cf$temp + sites_cf$altitude + sites_cf$latitude + sites_cf$longitude, data = sites_cf)
+sp_rda
+ordiplot(sp_rda)
+
+constrained_eig <- sp_rda$CCA$eig/sp_rda$tot.chi*100
+unconstrained_eig <- sp_rda$CA$eig/sp_rda$tot.chi*100
+expl_var <- c(constrained_eig, unconstrained_eig)
+barplot (expl_var[1:20], col = c(rep ('red', length (constrained_eig)), rep ('black', length (unconstrained_eig))),
+         las = 2, ylab = '% variation')
+
+```
+Environmental variables (temp, precip, elevation) explain 5% of the variance.
+While species explain the remaining 95%. The first two components explain 17.5 and 11.6% of variation, respectively.
+
+### Betadiversity
+
+For calculating betadiversity, I will use the betapart package wchich considers both turnover and nestedness. Paper: https://besjournals.onlinelibrary.wiley.com/doi/10.1111/j.2041-210X.2012.00224.x
+
+First, I need to compute a presence-absence matrix. 
+Then, I will use beta.multi and beta.pair.
+*beta.multi(x, index.family). This function computes the total dissimilarity across all n sites, along with the turnover and nestedness components of that dissimilarity. 
+*beta.pair(x, index.family). This function computes the same three dissimilarity metrics as for the previous function and can again be set using the argument index.family to use the Sørensen or Jaccard index of total dissimilarity. Rather than returning three single values as in the previous function, beta.pair returns three matrices containing the pairwise between-site values of each component of beta diversity. The dissimilarity matrices yielded by beta.pair are objects of class dist and can be submitted to further analyses as, for example, Mantel tests, non-metric multidimensional scaling, cluster analysis using other R packages as vegan (Oksanen et al. 2011) or cluster (Maechler et al. 2005). 
+
+```{r}
+#Presence-absence matrix
+sp_site_pam <- ifelse(!sp_site == 0, 1, 0)
+
+beta.multi(sp_site_pam, index.family = "sorensen")
+#turnover is high but nestedness is low
+
+beta_sites <- beta.pair(sp_site_pam, index.family = "sorensen")
+turnover <- as.matrix(beta_sites$beta.sim)
+nestedness <- as.matrix(beta_sites$beta.sne)
+dissimilarity <- as.matrix(beta_sites$beta.sor)
+
+```
+
+##################################################################
+
+### Forest structure variation
+
+Now I can analyze how structure varies in different plots and sites, and which variables are related.
+
+Plots:
+
+```{r}
+str_plots_cf <- plots_cf[,c(1,19:22,26)]
+str_plots_cf <- column_to_rownames(str_plots_cf, var = "plot_id")
+
+plot(str_plots_cf)
+
+str_pca <- princomp(str_plots_cf, cor = T)
+summary(str_pca)
+loadings(str_pca)
+
+biplot(str_pca)
+screeplot(str_pca)
+
+#Since tree_no and tree_density are tightly correlated, I will use only tree_density
+
+str_plots_cf <- plots_cf[,c(1,20:22,26)]
+str_plots_cf <- column_to_rownames(str_plots_cf, var = "plot_id")
+
+plot(str_plots_cf)
+
+str_pca <- princomp(str_plots_cf, cor = T)
+summary(str_pca)
+loadings(str_pca)
+
+biplot(str_pca)
+screeplot(str_pca)
+
+#Same data but scaled:
+str_plots_cf_sc <- scale(str_plots_cf)
+str_sc_pca <- princomp(str_plots_cf_sc, cor = T)
+summary(str_sc_pca)
+loadings(str_sc_pca)
+biplot(str_sc_pca)
+
+```
+
+Sites:
+
+```{r}
+
+str_sites_cf <- sites_cf[,c(1,32,34,36,38)]
+str_sites_cf <- column_to_rownames(str_sites_cf, var = "site")
+
+plot(str_sites_cf)
+
+str_pca2 <- princomp(str_sites_cf, cor = T)
+summary(str_pca2)
+loadings(str_pca2)
+
+biplot(str_pca2)
+screeplot(str_pca2)
+
+#Same data but scales:
+str_sites_cf_sc <- scale(str_sites_cf)
+str_pca2_sc <- princomp(str_sites_cf_sc, cor = T)
+summary(str_pca2_sc)
+loadings(str_pca2_sc)
+biplot(str_pca2_sc)
+screeplot(str_pca2_sc)
+```
+
+In both, the analysis by sites and plots, the first two components explain most of the variation (around 90%). 
+In both, the first component is more related to basal area and biomass and the second to tree density.
+
+### Structure ~ climate
+
+To explore the relationship between forest structure and climate (precip and temp), I will use a RDA.
+
+```{r}
+str_rda <- rda(str_plots_cf ~ plots_cf$precip + plots_cf$temp, data = plots_cf)
+str_rda
+ordiplot(str_rda)
+
+str_rda2 <- rda(str_sites_cf ~ sites_cf$precip + sites_cf$temp, data = sites_cf)
+str_rda2
+ordiplot(str_rda2)
+
+constrained_eig <- str_rda2$CCA$eig/str_rda2$tot.chi*100
+unconstrained_eig <- str_rda2$CA$eig/str_rda2$tot.chi*100
+expl_var <- c(constrained_eig, unconstrained_eig)
+barplot (expl_var[1:20], col = c(rep ('red', length (constrained_eig)), rep ('black', length (unconstrained_eig))),
+         las = 2, ylab = '% variation')
+
+#RDA1 explains only 5% of variation
+#PC1 explains 93% of variation
+```
