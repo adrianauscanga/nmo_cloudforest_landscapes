@@ -795,8 +795,9 @@ plots_sno <- as_tibble(plots_sno)
 #### 7. Epiphytes dataset ####
 
 epiphytes <- read_csv("input/epiphytes.csv") 
+head(epiphytes)
 epiphytes <- epiphytes %>%
-  select(-X1) %>%
+  select(-'...1') %>%
   transmute(site = as.character(Conglomerado),
             year = as.numeric(Anio),
             state = as.character(Estado),
