@@ -357,7 +357,7 @@ sites_cf %>%
 # Plots
 
 plots_cf %>%
-  ggplot(aes(y = tree_no, color = str_class_plots)) +
+  ggplot(aes(y = tree_density, color = str_class_plots)) +
   geom_boxplot()
 
 plots_cf %>%
@@ -370,6 +370,14 @@ plots_cf %>%
 
 plots_cf %>%
   ggplot(aes(y = agb_plot_ha, color = str_class_plots)) +
+  geom_boxplot()
+
+plots_cf %>%
+  ggplot(aes(y = shannon, color = str_class_plots)) +
+  geom_boxplot()
+
+plots_cf %>%
+  ggplot(aes(y = simpson, color = str_class_plots)) +
   geom_boxplot()
 ```
 
@@ -386,7 +394,7 @@ mosaic <- plots_cf %>%
          site = as.character(site)) %>%
   group_by(site) %>%
   # normalized mosaic = value - min value / max value - min value
-  # mosaic goes from 0 (all mature forest) to 1 (all agriculture/very young forest)
+  # mosaic goes from 1 (all mature forest) to 0 (all agriculture/very young forest)
   summarize(mosaic4 = ifelse(n()==4, (sum(str_class_plots)-4)/(12-4), NA),
             mosaic3 = ifelse(n()==3, (sum(str_class_plots)-3)/(9-3), NA),
             mosaic2 = ifelse(n()==2, (sum(str_class_plots)-2)/(6-2), NA),
@@ -411,8 +419,11 @@ sites_cf %>%
 
 sites_cf %>%
   filter(plot_no >3) %>%
+  group_by(mosaic) %>%
+  summarize(agb_mosaic = mean(av_agb_site), av_agb_site = as.numeric(av_agb_site)) %>%
   ggplot(aes(x = mosaic, y = av_agb_site)) +
-  geom_point()
+  geom_point() +
+  geom_point(aes(x= mosaic, y = agb_mosaic), color = "red")
   
 save(sites_cf, file = "output/sites_cf3.RData")
 save(plots_cf, file = "output/plots_cf3.RData")
