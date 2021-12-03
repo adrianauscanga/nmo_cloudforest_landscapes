@@ -47,11 +47,12 @@ sites_cf %>%
   na.omit() %>%
   cor()
 
-plots_cf %>%
-  filter(str_class_plots > 1) %>%
-  select(altitude, precip, temp, agb_plot_ha, shannon, simpson, sp_richness_plot) %>%
-  na.omit() %>%
-  cor()
+# EXTRACT ASPECT WITH GEE 
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(mosaic > 0.4) %>%
+  ggplot(aes(x = landform, y = av_agb_site)) +
+  geom_boxplot()
 
 ```
 
