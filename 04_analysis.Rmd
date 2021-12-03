@@ -1,0 +1,58 @@
+---
+title: "04_analysis"
+author: "Adriana Uscanga"
+date: "2/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load packages and data
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+load("output/sites_cf3.RData")
+load("output/plots_cf3.RData")
+load("output/trees_cf3.RData")
+```
+
+# Spatial autocorrelation
+
+
+# Exploration model: effect of disturbance, succession*patchiness, and environmental factors
+
+```{r}
+# First, explore correlation coefficients between variables
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  select(av_agb_site, longitude, latitude, altitude, temp, precip, average_slope, av_agb_site, shannon_av_site, simpson_av_site,sp_richness_site_av, mosaic) %>%
+  na.omit() %>%
+  cor()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  select(av_agb_site, longitude, latitude, altitude, temp, precip, sp_richness_site_av, mosaic) %>%
+  na.omit() %>%
+  plot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(mosaic > 0.5) %>%
+  select(av_agb_site, longitude, latitude, altitude, temp, precip, average_slope, av_agb_site, shannon_av_site, simpson_av_site,sp_richness_site_av, mosaic) %>%
+  na.omit() %>%
+  cor()
+
+plots_cf %>%
+  filter(str_class_plots > 1) %>%
+  select(altitude, precip, temp, agb_plot_ha, shannon, simpson, sp_richness_plot) %>%
+  na.omit() %>%
+  cor()
+
+```
+
+# Biomass and tree diversity over landscape composition
