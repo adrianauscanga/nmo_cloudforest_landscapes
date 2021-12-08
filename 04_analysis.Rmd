@@ -20,6 +20,73 @@ load("output/plots_cf3.RData")
 load("output/trees_cf3.RData")
 ```
 
+Add slope and aspect to the data set.
+
+```{r}
+#Aspect and Slope from GEE 
+aspect <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/aspect_plots.csv", col_names = F)
+
+slope <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/slope_plots.csv", col_names = F)
+
+head(aspect)
+
+aspect <- aspect %>%
+  transmute(plot_id = as.character(X5),
+            lon = as.numeric(X3),
+            lat = as.numeric(X4),
+            aspect = as.numeric(X2))
+
+head(aspect)
+
+slope <- slope %>%
+  transmute(plot_id = as.character(X5),
+            lon = as.numeric(X3),
+            lat = as.numeric(X4),
+            slope = as.numeric(X2))
+head(slope)
+
+aspect_slope <- aspect %>%
+  left_join(slope, by = c("plot_id", "lon", "lat"))
+
+plots_cf <- plots_cf %>%
+  left_join(aspect_slope, by = c("plot_id")) %>%
+  select(-lon, -lat) %>%
+  relocate(c(aspect, slope), .after = altitude)
+
+plots_cf %>%
+  filter(duplicated(longitude), duplicated(latitude)) %>%
+  group_by(site) %>%
+  summarize(sites = unique(site), plots = unique(plot_id))
+
+plots_cf <- plots_cf %>%
+  group_by(site) %>%
+  summarize(plot_id = plot_id,
+            aspect_first = first(aspect),
+            dup = ifelse(duplicated(longitude) & duplicated(latitude), "duplicated", NA),
+            aspectdups = ifelse(dup == "duplicated", aspect_first, NA),
+            slope_first = first(slope),
+            dup_s = ifelse(duplicated(longitude) & duplicated(latitude), "duplicated", NA),
+            slopedups = ifelse(dup_s == "duplicated", slope_first, NA)) %>%
+  filter(!is.na(dup)) %>%
+  select(plot_id, aspectdups, slopedups) %>%
+  right_join(plots_cf) %>%
+  mutate(aspect = ifelse(is.na(aspect), aspectdups, aspect),
+         slope = ifelse(is.na(slope), slopedups, slope)) %>%
+  select(-aspectdups, -slopedups)
+
+plots_cf %>%
+  filter(is.na(aspect))
+#Weird, plot 67878_2 doesn't have aspect and slope, it must have been missing from the GEE feature collection. I'll extract data for this plot and add it.
+# aspect = 334.7877502441406
+# slope= 34.21200942993164
+
+plots_cf <- plots_cf %>%
+  mutate(aspect = ifelse(plot_id == "67878_2", 334.787750, aspect),
+         slope = ifelse(plot_id == "67878_2", 34.212009, slope))
+
+```
+
+
 # Spatial autocorrelation
 
 
@@ -55,5 +122,4 @@ sites_cf %>%
   geom_boxplot()
 
 ```
-
 # Biomass and tree diversity over landscape composition
