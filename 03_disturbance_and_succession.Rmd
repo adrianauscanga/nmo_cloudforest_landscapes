@@ -64,21 +64,53 @@ disturbance_cf %>%
   group_by(cause, notes) %>%
   summarize(notes = unique(notes))
 
-dist_sev <- disturbance_cf %>%
+
+#Disturbances related to agriculture and cattle ranches:
+#Aprovechamientos forestales
+#Incendios
+#Pastoreo
+#Uso del suelo diferente al forestal
+
+disturbance_cf %>%
   group_by(site) %>%
-  summarize(disturbance_site = unique(on_veg)) %>%
-  mutate(disturbance_severity = ifelse(disturbance_site == "Mayor", 3,
-                                       ifelse(disturbance_site == "Mediana", 2,
-                                              ifelse(disturbance_site == "Menor", 1,
-                                                     ifelse(disturbance_site == "No perceptible", 0, NA))))) %>%
-  filter(!is.na(disturbance_severity)) %>%
-  group_by(site) %>%
-  summarize(no_disturbance = n(),
-            dist_sev = ((sum(disturbance_severity)/no_disturbance)* no_disturbance))
+  summarize(sites_list = unique(site))
+
+
 ```
 
-Summarize disturbance info by site
-NDVI time series
+```{r}
+disturbance_cf %>%
+  mutate(cause = ifelse(is.na(cause), "unknown", cause)) %>% #Keep sites that were not recorded on disturbance data set
+  filter(cause == "Uso del suelo diferente al forestal" | #LULCC
+           cause == "Aprovechamientos forestales" | #Logging
+           cause == "Incendios" | #Fire -- swidden ag
+           cause == "Pastoreo" |
+           cause == "unknown") %>% # Cattle grazing
+  mutate(disturbance_severity = ifelse(on_veg == "Mayor", 4,
+                                       ifelse(on_veg == "Mediana", 3,
+                                              ifelse(on_veg == "Menor", 2,
+                                                     ifelse(on_veg == "No perceptible", 1, 0))))) %>%
+  mutate(cause = ifelse(cause == "Uso del suelo diferente al forestal", "lulcc",
+                        ifelse(cause =="Aprovechamientos forestales", "logging",
+                               ifelse(cause == "Incendios", "fire",
+                                      ifelse(cause == "Pastoreo", "grazing", "unknown"))))) %>%
+  select(-on_veg, -notes) %>%
+  pivot_wider(names_from = cause, values_from = c(disturbance_severity), values_fill = 0) %>%
+  mutate(lulcc = ifelse(is.na(unknown), "unknown", lulcc),
+         logging = ifelse(is.na(unknown), "unknown", logging),
+         fire = ifelse(is.na(unknown), "unknown", fire),
+         grazing = ifelse(is.na(unknown), "unknown", grazing)) %>%
+  select(-unknown, -state, -municipality) %>%
+  right_join(sites_cf, by = "site") %>%
+  mutate(lulcc = ifelse(is.na(lulcc), 0, lulcc),
+         logging = ifelse(is.na(logging), 0, logging),
+         fire = ifelse(is.na(fire), 0, fire),
+         grazing = ifelse(is.na(grazing), 0, grazing))
+
+
+#dist_sev = ((sum(disturbance_severity)/no_disturbance)* no_disturbance))
+```
+
 
 ## Forest Succession
 
