@@ -27,91 +27,6 @@ load("output/trees_cf2.RData")
 
 # Forest Disturbance and Succession
 
-## Forest Disturbance
-
-Read and order FI forest disturbance dataset.
-
-```{r}
-disturbance <- load("output/disturbance_sno.RData")
-
-disturbance_cf <- sites_cf %>%
-  select(site) %>%
-  left_join(disturbance_sno, by = "site") %>%
-  select(-c(on_soil, on_water))
-
-disturbance_cf
-  
-```
-Analyze the types of disturbance recorded
-
-```{r}
-
-disturbance_cf %>%
-  group_by(on_veg, cause) %>%
-  summarize(cause = unique(cause),
-            cause_no = n())
-
-disturbance_cf %>%
-  group_by(cause, on_veg) %>%
-  summarize(no_sites = n()) %>%
-  #filter(on_veg == "Mayor") %>%
-  ggplot(aes(x= cause, y= no_sites, fill= on_veg)) +
-  geom_bar(stat = "identity") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle=60, vjust = 1, hjust = 1))
-
-disturbance_cf %>%
-  group_by(cause, notes) %>%
-  summarize(notes = unique(notes))
-
-
-#Disturbances related to agriculture and cattle ranches:
-#Aprovechamientos forestales
-#Incendios
-#Pastoreo
-#Uso del suelo diferente al forestal
-
-disturbance_cf %>%
-  group_by(site) %>%
-  summarize(sites_list = unique(site))
-
-
-```
-
-```{r}
-disturbance_cf %>%
-  mutate(cause = ifelse(is.na(cause), "unknown", cause)) %>% #Keep sites that were not recorded on disturbance data set
-  filter(cause == "Uso del suelo diferente al forestal" | #LULCC
-           cause == "Aprovechamientos forestales" | #Logging
-           cause == "Incendios" | #Fire -- swidden ag
-           cause == "Pastoreo" |
-           cause == "unknown") %>% # Cattle grazing
-  mutate(disturbance_severity = ifelse(on_veg == "Mayor", 4,
-                                       ifelse(on_veg == "Mediana", 3,
-                                              ifelse(on_veg == "Menor", 2,
-                                                     ifelse(on_veg == "No perceptible", 1, 0))))) %>%
-  mutate(cause = ifelse(cause == "Uso del suelo diferente al forestal", "lulcc",
-                        ifelse(cause =="Aprovechamientos forestales", "logging",
-                               ifelse(cause == "Incendios", "fire",
-                                      ifelse(cause == "Pastoreo", "grazing", "unknown"))))) %>%
-  select(-on_veg, -notes) %>%
-  pivot_wider(names_from = cause, values_from = c(disturbance_severity), values_fill = 0) %>%
-  mutate(lulcc = ifelse(is.na(unknown), "unknown", lulcc),
-         logging = ifelse(is.na(unknown), "unknown", logging),
-         fire = ifelse(is.na(unknown), "unknown", fire),
-         grazing = ifelse(is.na(unknown), "unknown", grazing)) %>%
-  select(-unknown, -state, -municipality) %>%
-  right_join(sites_cf, by = "site") %>%
-  mutate(lulcc = ifelse(is.na(lulcc), 0, lulcc),
-         logging = ifelse(is.na(logging), 0, logging),
-         fire = ifelse(is.na(fire), 0, fire),
-         grazing = ifelse(is.na(grazing), 0, grazing))
-
-
-#dist_sev = ((sum(disturbance_severity)/no_disturbance)* no_disturbance))
-```
-
-
 ## Forest Succession
 
 ### Non-hierarchical cluster analysis and PCA
@@ -163,7 +78,6 @@ plots_str_scaled <- scale(plots_str[,-c(1,5)])
 row.names(plots_str_scaled) <- plots_str$plot_id
 
 ```
-
 
 Compute K-means with several number of clusters and compare plots
 
@@ -460,6 +374,155 @@ sites_cf %>%
 save(sites_cf, file = "output/sites_cf3.RData")
 save(plots_cf, file = "output/plots_cf3.RData")
 save(trees_cf, file = "output/trees_cf3.RData")
+
+```
+
+## Forest Disturbance
+
+Read and order FI forest disturbance dataset.
+
+```{r}
+disturbance <- load("output/disturbance_sno.RData")
+
+disturbance_cf <- sites_cf %>%
+  select(site) %>%
+  left_join(disturbance_sno, by = "site") %>%
+  select(-c(on_soil, on_water))
+
+disturbance_cf
+rm(disturbance_sno)
+  
+```
+Analyze the types of disturbance recorded
+
+```{r}
+
+disturbance_cf %>%
+  group_by(on_veg, cause) %>%
+  summarize(cause = unique(cause),
+            cause_no = n())
+
+disturbance_cf %>%
+  group_by(cause, on_veg) %>%
+  summarize(no_sites = n()) %>%
+  #filter(on_veg == "Mayor") %>%
+  ggplot(aes(x= cause, y= no_sites, fill= on_veg)) +
+  geom_bar(stat = "identity") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=60, vjust = 1, hjust = 1))
+
+disturbance_cf %>%
+  group_by(cause, notes) %>%
+  summarize(notes = unique(notes))
+
+
+#Disturbances related to agriculture and cattle ranches:
+#Aprovechamientos forestales
+#Incendios
+#Pastoreo
+#Uso del suelo diferente al forestal
+
+disturbance_cf %>%
+  group_by(site) %>%
+  summarize(sites_list = unique(site))
+
+disturbance_cf %>%
+  filter(is.na(cause)) #14
+```
+
+```{r}
+
+agriculture_grazing <- disturbance_cf %>%
+  mutate(cause = ifelse(is.na(cause), "unknown", cause)) %>% #Keep sites that were not recorded on disturbance data set
+  filter(cause == "Uso del suelo diferente al forestal" | #LULCC
+           cause == "Aprovechamientos forestales" | #Logging
+           cause == "Incendios" | #Fire -- swidden ag
+           cause == "Pastoreo" | # Cattle grazing
+           cause == "unknown") %>% #disturbance not reported
+  mutate(cause = ifelse(cause == "Uso del suelo diferente al forestal", "lulcc",
+                        ifelse(cause =="Aprovechamientos forestales", "logging",
+                               ifelse(cause == "Incendios", "fire",
+                                      ifelse(cause == "Pastoreo", "grazing", "unknown"))))) %>%
+  mutate(cause = ifelse(cause == "logging" & 
+                          notes == "Tala para sembrar café." |
+                          notes == "Roza-Tumba y quema." |
+                          notes == "Roza tumba quema cambio a agricultura temporal.", "agriculture", cause)) %>%
+  mutate(cause = ifelse(cause == "fire" &
+                          notes == "Quemas agrícolas." |
+                          notes == "Rosa, tumba y quema" |
+                          notes == "Quema agrícola.", "agriculture", cause)) %>%
+  filter(cause == "lulcc" |
+           cause == "grazing" |
+           cause == "agriculture" |
+           is.na(cause)) %>%
+  mutate(cause = ifelse(cause == "lulcc" &
+                           notes == "Potrero" |
+                           notes == "Forestal con ganadería" |
+                           notes == "Forestal con ganadería extensiva" |
+                           notes == "De forestal a potreros" |
+                           notes == "Forestal con ganaderia extensiva." |
+                           notes == "Forestal con ganadería extensiva y cultivo de maíz", "grazing", cause)) %>%
+  mutate(cause = ifelse(cause == "lulcc", "agriculture", cause)) %>%
+  mutate(disturbance_type = as.character(cause),
+         disturbance_severity = as.character(on_veg),
+         disturbance_notes = as.character(notes)) %>%
+  select(-state, -municipality, -cause, -on_veg, -notes) %>%
+  mutate(disturbance_type = ifelse(is.na(disturbance_type), "unknown", disturbance_type)) %>%
+  mutate(disturbance_severity = ifelse(disturbance_severity == "Mayor", 4,
+                                       ifelse(disturbance_severity == "Mediana", 3,
+                                              ifelse(disturbance_severity == "Menor", 2,
+                                                     ifelse(disturbance_severity == "No perceptible", 1, NA))))) %>%
+  mutate(disturbance_severity = as.numeric(disturbance_severity))
+  
+  
+#Notes (causes in logging related to agriculture):
+#Tala para sembrar café.
+#Roza-Tumba y quema. 
+#Roza tumba quema cambio a agricultura temporal.
+
+#Notes in fire:
+#Quemas agrícolas.
+#Rosa, tumba y quema
+#Quema agrícola.
+#Notes in lulcc that are grazing:  
+#Potrero
+#Forestal con ganadería
+#Forestal con ganadería extensiva
+#De forestal a potreros
+#Forestal con ganaderia extensiva.
+#Forestal con ganadería extensiva y cultivo de maíz
+
+agriculture_grazing %>%
+  group_by(site) %>%
+  summarize(sites = unique(site))
+
+#51 sites have either agricultural or grazing activities or both
+
+
+```
+
+51 sites have either agricultural or grazing activities and 14 are missing from the disturbance data set
+
+Join to sites
+
+```{r}
+
+sites_cf <- agriculture_grazing %>%
+  select(-disturbance_notes) %>%
+  group_by(site) %>%
+  summarize(disturbance_type = unique(disturbance_type),
+            disturbance_severity = mean(disturbance_severity)) %>%
+  mutate(disturbance_severity = ifelse(disturbance_type == "unknown", -1, disturbance_severity )) %>%
+  pivot_wider(names_from = disturbance_type, values_from = disturbance_severity, values_fill = 0) %>%
+  right_join(sites_cf, by = "site") %>%
+  mutate(agriculture = ifelse(is.na(agriculture), 0, agriculture),
+         unknown = ifelse(is.na(unknown), 0, unknown),
+         grazing = ifelse(is.na(grazing), 0, grazing)) %>%
+  mutate(unknown = ifelse(unknown == -1, NA, unknown)) %>%
+  mutate(agriculture = ifelse(is.na(unknown), NA, agriculture),
+         grazing = ifelse(is.na(unknown), NA, grazing)) %>%
+  select(-unknown) %>%
+  relocate(c("agriculture", "grazing"), .after = "sp_richness_site_sd")
 
 ```
 
