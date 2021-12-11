@@ -230,7 +230,29 @@ Moran test shows that there's spatial autocorrelation among sites that are 10 km
 To account for this spatial autocorrelation, I'll cluster the data in subregions.
 Fortunately, Toledo-Aceves et al (2011) already divided the NMO region in smaller subregions, which fit pretty well with the network of neighbors.
 
+Add a column with subregions
+
+
+
 # Exploration model: effect of disturbance, succession*patchiness, and environmental factors
+
+Generalized Linear Mixed Model (GLMM; when data is not normal)
+Linear Mixed Effects Model (when data is normal)
+Examples: 
+http://mfviz.com/hierarchical-models/
+https://ase.tufts.edu/bugs/guide/assets/mixed_model_guide.html
+https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecy.3336
+https://pjbartlein.github.io/GeogDataAnalysis/lec15.html
+https://nlp.stanford.edu/manning/courses/ling289/GLMM.pdf
+https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html
+https://www.sciencedirect.com/science/article/pii/S0169534709000196
+https://ourcodingclub.github.io/tutorials/mixed-models/
+https://m-clark.github.io/mixed-models-with-R/random_intercepts.html
+https://m-clark.github.io/generalized-additive-models/introduction.html
+
+First, know your data. Is it normal?
+http://www.sthda.com/english/wiki/normality-test-in-r
+https://www.datanovia.com/en/lessons/normality-test-in-r/
 
 ```{r}
 # First, explore correlation coefficients between variables
