@@ -14,6 +14,9 @@ Load packages and data
 ```{r}
 library(tidyverse)
 library(ggplot2)
+library(sf)
+library(spdep)
+library(leaps)
 
 load("output/sites_cf3.RData")
 load("output/plots_cf3.RData")
@@ -84,11 +87,148 @@ plots_cf <- plots_cf %>%
   mutate(aspect = ifelse(plot_id == "67878_2", 334.787750, aspect),
          slope = ifelse(plot_id == "67878_2", 34.212009, slope))
 
+# Average aspect and slope by site
+
+calcSE<-function(x){
+  x <- x[is.na(x)==F]
+  sd(x)/sqrt(length(x))
+}
+
+aspect_slope_sites <- plots_cf %>%
+  select(site, plot_id, aspect, slope) %>%
+  group_by(site) %>%
+  summarize(aspect_gee = mean(aspect),
+            aspect_se_gee = calcSE(aspect),
+            slope_gee = mean(slope),
+            slope_se_gee = calcSE(slope)) %>%
+  mutate(site = as.character(site))
+
+sites_cf <- sites_cf %>%
+  left_join(aspect_slope_sites, by = "site") %>%
+  relocate(c("aspect_gee", "aspect_se_gee", "slope_gee", "slope_se_gee"), .after = aspect)
 ```
 
 
 # Spatial autocorrelation
 
+Examples: 
+- https://www.spatialanalysisonline.com/An%20Introduction%20to%20Spatial%20Data%20Analysis%20in%20R.pdf
+- https://gwenantell.com/exploring-spatial-autocorrelation-in-r/
+- https://rpubs.com/quarcs-lab/spatial-autocorrelation
+- Bart's class: https://pjbartlein.github.io/GeogDataAnalysis/lec13.html
+
+Site 71213 in sites_cf data set lacks geographic coordinates.
+Which are: 17.50506, -96.30769
+
+```{r}
+sites_cf <- sites_cf %>%
+  mutate(longitude = ifelse(site == "71213", -96.30769, longitude),
+         latitude = ifelse(site == "71213", 17.50506, latitude))
+```
+
+Get distance-neighbor matrix  and plot network of sites.
+
+```{r}
+
+#distance neighbors
+loc <- cbind(sites_cf$longitude, sites_cf$latitude)
+d <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_neighbors_dist <- dnearneigh(loc, 0, d, longlat = T)
+str(sites_neighbors_dist)
+plot(sites_neighbors_dist, loc)
+
+plot(loc)
+
+```
+
+
+Plot environmental variables to reveal the relationships and spatial patterns among them
+
+```{r}
+
+plot(sites_cf[-22,c(10:14,18,20,34)]) #remove site 70307 (outlier)
+plot(sites_cf[-22,c(12,13,18,20,34,40,48)])
+```
+
+Moran test
+
+```{r}
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_cf$av_agb_site, zero.policy=T, 
+     nb2listw(sites_neighbors_dist, zero.policy=T, style="W"))
+
+
+```
+
+Run the analysis with sites that have at least 3 plots, to reduce some noise
+
+```{r}
+sites_subset <- sites_cf %>%
+  filter(plot_no > 2)
+
+#plot variables
+plot(sites_subset[,c(10:14,18,20,34)]) 
+plot(sites_subset[,c(12,13,18,20,34,40,48)])
+
+#distance neighbors
+loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(sites_subset_neighbors_dist)
+plot(sites_subset_neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
+
+# Moran test with distance = 10
+#Moran I statistic standard deviate = 2.9615, p-value = 0.001531
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.38509221       -0.01754386        0.01848425 
+
+## Distance = 20
+d_subs2 <- 20 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist2 <- dnearneigh(loc_subs, 0, d_subs2, longlat = T)
+
+plot(sites_subset_neighbors_dist2, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist2, zero.policy=T, style="W"))
+
+#Moran I statistic standard deviate = 4.5796, p-value = 2.329e-06
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#      0.317644918      -0.015151515       0.005280796 
+
+
+## Distance = 5
+
+d_subs3 <- 5 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist3 <- dnearneigh(loc_subs, 0, d_subs3, longlat = T)
+
+plot(sites_subset_neighbors_dist3, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist3, zero.policy=T, style="W"))
+
+#Moran I statistic standard deviate = 0.47578, p-value = 0.3171
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.07981275       -0.03703704        0.06031799 
+```
+
+Moran test shows that there's spatial autocorrelation among sites that are 10 km apart.
+To account for this spatial autocorrelation, I'll cluster the data in subregions.
+Fortunately, Toledo-Aceves et al (2011) already divided the NMO region in smaller subregions, which fit pretty well with the network of neighbors.
 
 # Exploration model: effect of disturbance, succession*patchiness, and environmental factors
 

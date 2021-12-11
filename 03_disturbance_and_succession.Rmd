@@ -27,356 +27,6 @@ load("output/trees_cf2.RData")
 
 # Forest Disturbance and Succession
 
-## Forest Succession
-
-### Non-hierarchical cluster analysis and PCA
-
-Select structure attributes and scale dataset so that variables in different units can be compared
-
-```{r}
-
-#Sites
-
-sites_str <- sites_cf %>%
-  filter(plot_no > 1) %>%
-  select(site,
-         tree_no_ave,
-         av_basalarea_site,
-         av_loreys_site,
-         av_treeheight_site,
-         av_treedensity_site)
-
-sites_str
-plot(sites_str)
-
-# tree_no_ave and av_treedensity_site are completly correlated.
-# Remove tree_no_ave to avoid correlation in further analyses.
-
-sites_str <- sites_cf %>%
-  filter(plot_no > 1) %>%
-  select(site,
-         av_basalarea_site,
-         av_loreys_site,
-         av_treedensity_site)
-
-# Scale data so that variables in different units can be compared
-sites_str_scaled <- scale(sites_str[,-(1)])
-row.names(sites_str_scaled) <- sites_str$site
-
-# Plots
-
-plots_str <- plots_cf %>%
-  select(plot_id,
-         tree_density,
-         loreys_height,
-         basal_area_ha,
-         agb_plot_ha)
-
-plot(plots_str)
-
-plots_str_scaled <- scale(plots_str[,-c(1,5)])
-row.names(plots_str_scaled) <- plots_str$plot_id
-
-```
-
-Compute K-means with several number of clusters and compare plots
-
-```{r}
-
-# Sites
-
-k2_structure <- kmeans(sites_str_scaled, centers = 2, nstart = 25)
-k3_structure <- kmeans(sites_str_scaled, centers = 3, nstart = 25)
-k4_structure <- kmeans(sites_str_scaled, centers = 4, nstart = 25)
-k5_structure <- kmeans(sites_str_scaled, centers = 5, nstart = 25)
-
-# Compare plots:
-p1_str <- fviz_cluster(k2_structure, geom = "point", data = sites_str_scaled) + ggtitle("k = 2")
-p2_str <- fviz_cluster(k3_structure, geom = "point",  data = sites_str_scaled) + ggtitle("k = 3")
-p3_str <- fviz_cluster(k4_structure, geom = "point",  data = sites_str_scaled) + ggtitle("k = 4")
-p4_str <- fviz_cluster(k5_structure, geom = "point",  data = sites_str_scaled) + ggtitle("k = 5")
-grid.arrange(p1_str, p2_str, p3_str, p4_str, nrow = 2)
-
-# Plots
-k2_structure_plots <- kmeans(plots_str_scaled, centers = 2, nstart = 25)
-k3_structure_plots <- kmeans(plots_str_scaled, centers = 3, nstart = 25)
-k4_structure_plots <- kmeans(plots_str_scaled, centers = 4, nstart = 25)
-k5_structure_plots <- kmeans(plots_str_scaled, centers = 5, nstart = 25)
-
-# Compare plots:
-p1_str_plots <- fviz_cluster(k2_structure_plots, geom = "point", data = plots_str_scaled) + ggtitle("k = 2")
-p2_str_plots <- fviz_cluster(k3_structure_plots, geom = "point",  data = plots_str_scaled) + ggtitle("k = 3")
-p3_str_plots <- fviz_cluster(k4_structure_plots, geom = "point",  data = plots_str_scaled) + ggtitle("k = 4")
-p4_str_plots <- fviz_cluster(k5_structure_plots, geom = "point",  data = plots_str_scaled) + ggtitle("k = 5")
-grid.arrange(p1_str_plots, p2_str_plots, p3_str_plots, p4_str_plots, nrow = 2)
-
-```
-Data can be classified in many different number of clusters.
-To define the best number of clusters, we're using NbClust.
-
-```{r}
-#Sites
-
-str_clusters <- NbClust((sites_str_scaled^2), distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D2", index = "all")
-
-# Plots
-
-str_clusters_plots <- NbClust((plots_str_scaled^2), distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D2", index = "all")
-
-
-```
-
-Most indices proposed 3 as the best number of clusters (for both sites and plots).
-Now I can classify data in three classes. Also, I can visualize these three classes in a PCA to see how structure attributes defined them.
-
-```{r}
-# Sites
-
-# Save a vector of 3 clusters:
-str_k3 <- k3_structure$cluster
-as.numeric(str_k3)
-
-#pca with structural data
-
-pca_str <- rda(sites_str_scaled, scale = F)
-summary(pca_str) # PC1 explains 67.69% of variation and PC2 25.04%
-plot(pca_str)
-
-ordiplot(pca_str, display = 'sites', type = 'n')
-points(pca_str, col = str_k3)
-biplot(pca_str, display = 'species')
-
-# Plots
-
-# Save a vector of 3 clusters:
-str_k3_plots <- k3_structure_plots$cluster
-as.numeric(str_k3_plots)
-
-#pca with structural data
-
-pca_str_plots <- rda(plots_str_scaled, scale = F)
-summary(pca_str_plots) # 
-plot(pca_str_plots)
-
-ordiplot(pca_str_plots, display = 'sites', type = 'n')
-points(pca_str_plots, col = str_k3_plots)
-biplot(pca_str_plots, display = 'species')
-
-```
-
-Add cluster class to sites_cf and plots_cf dataset.
-
-```{r}
-
-# Sites
-
-str_k3 <- as_tibble(str_k3, rownames = "site")
-
-str_k3 <- str_k3 %>%
-  mutate(str_class = as.character(value)) %>%
-  select(-value)
-
-sites_cf <- sites_cf %>%
-  left_join(str_k3, by = "site")
-
-sites_cf <- sites_cf %>%
-  left_join(dist_sev, by = "site")
-
-# Plots
-
-str_k3_plots <- as_tibble(str_k3_plots, rownames = "plot_id")
-
-str_k3_plots <- str_k3_plots %>%
-  mutate(str_class_plots = as.character(value)) %>%
-  select(-value)
-
-plots_cf <- plots_cf %>%
-  left_join(str_k3_plots, by = "plot_id")
-
-
-```
-
-### Biomass and strucutre attributes across clusters 
-
-Let's see how structure attributes change in these three clusters.
-
-```{r}
-
-# Sites
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(x = tree_no_site, group = str_class, fill = str_class)) +
-  geom_density(alpha= 0.5) +
-  ggtitle("Tree number")
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(x = av_basalarea_site, group = str_class, fill = str_class)) +
-  geom_density(alpha= 0.5) +
-  ggtitle("Basal Area")
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(x = av_treeheight_site, group = str_class, fill = str_class)) +
-  geom_density(alpha= 0.5) +
-  ggtitle("Tree height")
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(x = av_treedensity_site, group = str_class, fill = str_class)) +
-  geom_density(alpha= 0.5) +
-  ggtitle("Tree density")
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(x = av_agb_site, group = str_class, fill = str_class)) +
-  geom_density(alpha= 0.5) +
-  ggtitle("Biomass")
-
-# Plots
-
-plots_cf %>%
-  ggplot(aes(x = tree_no, group = str_class_plots, fill = str_class_plots)) +
-  geom_density(alpha= 0.5) +
-  ggtitle("Tree number")
-
-plots_cf %>%
-  ggplot(aes(x = loreys_height, group = str_class_plots, fill = str_class_plots)) +
-  geom_density(alpha= 0.5) +
-  ggtitle("Tree height")
-
-plots_cf %>%
-  ggplot(aes(x = basal_area_ha, group = str_class_plots, fill = str_class_plots)) +
-  geom_density(alpha= 0.5) +
-  ggtitle("Basal area")
-
-plots_cf %>%
-  ggplot(aes(x = agb_plot_ha, group = str_class_plots, fill = str_class_plots)) +
-  geom_density(alpha= 0.5) +
-  ggtitle("Biomass")
-
-```
-
-```{r}
-
-# Sites
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(y = av_treedensity_site, color = str_class)) +
-  geom_boxplot()
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(y = tree_no_site, color = str_class)) +
-  geom_boxplot()
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(y = av_treeheight_site, color = str_class)) +
-  geom_boxplot()
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(y = av_basalarea_site, color = str_class)) +
-  geom_boxplot()
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(y = av_agb_site, color = str_class)) +
-  geom_boxplot()
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  ggplot(aes(x = str_class, y = dist_sev)) +
-  geom_point()
-
-plot(sites_cf$dist_sev)
-
-sites_cf %>%
-  filter(plot_no > 1) %>%
-  filter(str_class == "2" | str_class == "3") %>%
-  ggplot(aes(y = av_agb_site, x = altitude, color = precip, shape = str_class)) +
-  geom_point()
-
-# Plots
-
-plots_cf %>%
-  ggplot(aes(y = tree_density, color = str_class_plots)) +
-  geom_boxplot()
-
-plots_cf %>%
-  ggplot(aes(y = loreys_height, color = str_class_plots)) +
-  geom_boxplot()
-
-plots_cf %>%
-  ggplot(aes(y = basal_area_ha, color = str_class_plots)) +
-  geom_boxplot()
-
-plots_cf %>%
-  ggplot(aes(y = agb_plot_ha, color = str_class_plots)) +
-  geom_boxplot()
-
-plots_cf %>%
-  ggplot(aes(y = shannon, color = str_class_plots)) +
-  geom_boxplot()
-
-plots_cf %>%
-  ggplot(aes(y = simpson, color = str_class_plots)) +
-  geom_boxplot()
-```
-
-* Note: there's a plot with more than 600 Mg/ha of biomass, which sounds like too much. Perhaps there's a mistake in the data. *
-
-Structure attributes are clearly different among clusters. It seems that plots split in those with very few trees (small agb), many trees of medium size, and plots with very big trees with medium tree density. This broadly coincides with succession stages: very young, young-medium, and mature forests. 
-
-### Mosaics description
-
-```{r}
-
-mosaic <- plots_cf %>%
-  mutate(str_class_plots = as.numeric(str_class_plots),
-         site = as.character(site)) %>%
-  group_by(site) %>%
-  # normalized mosaic = value - min value / max value - min value
-  # mosaic goes from 1 (all mature forest) to 0 (all agriculture/very young forest)
-  summarize(mosaic4 = ifelse(n()==4, (sum(str_class_plots)-4)/(12-4), NA),
-            mosaic3 = ifelse(n()==3, (sum(str_class_plots)-3)/(9-3), NA),
-            mosaic2 = ifelse(n()==2, (sum(str_class_plots)-2)/(6-2), NA),
-            mosaic1 = ifelse(n()==1, (sum(str_class_plots)-1)/(3-1), NA),
-            mosaic = ifelse(n()==4, mosaic4,
-                            ifelse(n()==3, mosaic3,
-                                   ifelse(n()==2, mosaic2, mosaic1)))) %>%
-  arrange(mosaic)
-
-sites_cf <- sites_cf %>%
-  left_join(mosaic, by = "site") %>%
-  select(-c(mosaic1, mosaic2, mosaic3, mosaic4))
-
-sites_cf %>%
-  filter(plot_no == 4) %>%
-  ggplot(aes(x= mosaic, y = site)) +
-  geom_point()
-
-sites_cf %>%
-  filter(plot_no == 4,
-         mosaic == 0.5)
-
-sites_cf %>%
-  filter(plot_no >3) %>%
-  group_by(mosaic) %>%
-  summarize(agb_mosaic = mean(av_agb_site), av_agb_site = as.numeric(av_agb_site)) %>%
-  ggplot(aes(x = mosaic, y = av_agb_site)) +
-  geom_point() +
-  geom_point(aes(x= mosaic, y = agb_mosaic), color = "red")
-  
-save(sites_cf, file = "output/sites_cf3.RData")
-save(plots_cf, file = "output/plots_cf3.RData")
-save(trees_cf, file = "output/trees_cf3.RData")
-
-```
-
 ## Forest Disturbance
 
 Read and order FI forest disturbance dataset.
@@ -526,13 +176,217 @@ sites_cf <- agriculture_grazing %>%
 
 ```
 
+## Forest Succession
+
+### Non-hierarchical cluster analysis and PCA
+
+Select structure attributes and scale dataset so that variables in different units can be compared
+
+```{r}
+
+# Plots
+# tree_no_ave and av_treedensity_site are completly correlated.
+# Remove tree_no_ave to avoid correlation in further analyses.
+plots_str <- plots_cf %>%
+  select(plot_id,
+         tree_density,
+         loreys_height,
+         basal_area_ha,
+         agb_plot_ha)
+
+plot(plots_str)
+
+# Scale data so that variables in different units can be compared
+plots_str_scaled <- scale(plots_str[,-c(1,5)])
+row.names(plots_str_scaled) <- plots_str$plot_id
+
+```
+
+Compute K-means with several number of clusters and compare plots
+
+```{r}
+
+# Plots
+k2_structure_plots <- kmeans(plots_str_scaled, centers = 2, nstart = 25)
+k3_structure_plots <- kmeans(plots_str_scaled, centers = 3, nstart = 25)
+k4_structure_plots <- kmeans(plots_str_scaled, centers = 4, nstart = 25)
+k5_structure_plots <- kmeans(plots_str_scaled, centers = 5, nstart = 25)
+
+# Compare plots:
+p1_str_plots <- fviz_cluster(k2_structure_plots, geom = "point", data = plots_str_scaled) + ggtitle("k = 2")
+p2_str_plots <- fviz_cluster(k3_structure_plots, geom = "point",  data = plots_str_scaled) + ggtitle("k = 3")
+p3_str_plots <- fviz_cluster(k4_structure_plots, geom = "point",  data = plots_str_scaled) + ggtitle("k = 4")
+p4_str_plots <- fviz_cluster(k5_structure_plots, geom = "point",  data = plots_str_scaled) + ggtitle("k = 5")
+grid.arrange(p1_str_plots, p2_str_plots, p3_str_plots, p4_str_plots, nrow = 2)
+
+```
+Data can be classified in many different number of clusters.
+To define the best number of clusters, we're using NbClust.
+
+```{r}
+# Plots
+
+str_clusters_plots <- NbClust((plots_str_scaled^2), distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D2", index = "all")
+
+
+```
+
+Most indices proposed 3 as the best number of clusters (for both sites and plots).
+Now I can classify data in three classes. Also, I can visualize these three classes in a PCA to see how structure attributes defined them.
+
+```{r}
+# Plots
+
+# Save a vector of 3 clusters:
+str_k3_plots <- k3_structure_plots$cluster
+as.numeric(str_k3_plots)
+
+#pca with structural data
+
+pca_str_plots <- rda(plots_str_scaled, scale = F)
+summary(pca_str_plots) # 
+plot(pca_str_plots)
+
+ordiplot(pca_str_plots, display = 'sites', type = 'n')
+points(pca_str_plots, col = str_k3_plots)
+biplot(pca_str_plots, display = 'species')
+
+```
+
+Add cluster class plots_cf dataset.
+
+```{r}
+
+# Plots
+
+str_k3_plots <- as_tibble(str_k3_plots, rownames = "plot_id")
+
+str_k3_plots <- str_k3_plots %>%
+  mutate(str_class_plots = as.character(value)) %>%
+  select(-value)
+
+plots_cf <- plots_cf %>%
+  left_join(str_k3_plots, by = "plot_id")
+
+
+```
+
+### Strucutre attributes across clusters 
+
+Let's see how structure attributes change in these three clusters.
+
+```{r}
+# Plots
+
+plots_cf %>%
+  ggplot(aes(x = tree_no, group = str_class_plots, fill = str_class_plots)) +
+  geom_density(alpha= 0.5) +
+  ggtitle("Tree number")
+
+plots_cf %>%
+  ggplot(aes(x = loreys_height, group = str_class_plots, fill = str_class_plots)) +
+  geom_density(alpha= 0.5) +
+  ggtitle("Tree height")
+
+plots_cf %>%
+  ggplot(aes(x = basal_area_ha, group = str_class_plots, fill = str_class_plots)) +
+  geom_density(alpha= 0.5) +
+  ggtitle("Basal area")
+
+#plots_cf %>%
+#  ggplot(aes(x = agb_plot_ha, group = str_class_plots, fill = str_class_plots)) +
+#  geom_density(alpha= 0.5) +
+#  ggtitle("Biomass")
+
+```
+
+```{r}
+
+# Plots
+
+plots_cf %>%
+  ggplot(aes(y = tree_density, color = str_class_plots)) +
+  geom_boxplot()
+
+plots_cf %>%
+  ggplot(aes(y = loreys_height, color = str_class_plots)) +
+  geom_boxplot()
+
+plots_cf %>%
+  ggplot(aes(y = basal_area_ha, color = str_class_plots)) +
+  geom_boxplot()
+
+plots_cf %>%
+  ggplot(aes(y = agb_plot_ha, color = str_class_plots)) +
+  geom_boxplot()
+
+plots_cf %>%
+  ggplot(aes(y = shannon, color = str_class_plots)) +
+  geom_boxplot()
+
+plots_cf %>%
+  ggplot(aes(y = simpson, color = str_class_plots)) +
+  geom_boxplot()
+```
+
+* Note: there's a plot with more than 600 Mg/ha of biomass, which sounds like too much. Perhaps there's a mistake in the data. *
+
+Structure attributes are clearly different among clusters. It seems that plots split in those with very few trees, many trees of medium size, and plots with very big trees with medium tree density. This broadly coincides with succession stages: very young, young-medium, and mature forests. 
+
+### Mosaics description
+
+```{r}
+
+mosaic <- plots_cf %>%
+  mutate(str_class_plots = as.numeric(str_class_plots),
+         site = as.character(site)) %>%
+  group_by(site) %>%
+  # normalized mosaic = value - min value / max value - min value
+  # mosaic goes from 1 (all mature forest) to 0 (all agriculture/very young forest)
+  summarize(mosaic4 = ifelse(n()==4, (sum(str_class_plots)-4)/(12-4), NA),
+            mosaic3 = ifelse(n()==3, (sum(str_class_plots)-3)/(9-3), NA),
+            mosaic2 = ifelse(n()==2, (sum(str_class_plots)-2)/(6-2), NA),
+            mosaic1 = ifelse(n()==1, (sum(str_class_plots)-1)/(3-1), NA),
+            mosaic = ifelse(n()==4, mosaic4,
+                            ifelse(n()==3, mosaic3,
+                                   ifelse(n()==2, mosaic2, mosaic1)))) %>%
+  arrange(mosaic)
+
+sites_cf <- sites_cf %>%
+  left_join(mosaic, by = "site") %>%
+  select(-c(mosaic1, mosaic2, mosaic3, mosaic4))
+
+sites_cf %>%
+  filter(plot_no == 4) %>%
+  ggplot(aes(x= mosaic, y = site)) +
+  geom_point()
+
+sites_cf %>%
+  filter(plot_no == 4,
+         mosaic == 0.5)
+
+sites_cf %>%
+  filter(plot_no >3) %>%
+  group_by(mosaic) %>%
+  summarize(agb_mosaic = mean(av_agb_site), av_agb_site = as.numeric(av_agb_site)) %>%
+  ggplot(aes(x = mosaic, y = av_agb_site)) +
+  geom_point() +
+  geom_point(aes(x= mosaic, y = agb_mosaic), color = "red")
+  
+save(sites_cf, file = "output/sites_cf3.RData")
+save(plots_cf, file = "output/plots_cf3.RData")
+save(trees_cf, file = "output/trees_cf3.RData")
+
+```
+
 ###############################################################
 **Normality tests, remove from here**
 ```{r}
 # Normality tests
 # In summary, tree height is the only normal variable. The others don't have a normal distribution
 # when variables are grouped in structural classes, normality increases.
-
+library(ggpubr)
+library(rstatix)
 plots_cf %>%
   group_by(str_class_plots) %>%
   shapiro_test(tree_density)
