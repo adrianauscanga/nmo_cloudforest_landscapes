@@ -344,7 +344,38 @@ Moran test shows that there's spatial autocorrelation among sites that are at le
 To account for this spatial autocorrelation, I'll cluster the data in subregions.
 Fortunately, Toledo-Aceves et al (2011) already divided the NMO region in smaller subregions, which fit pretty well with the network of neighbors using d=10km.
 
-Add a column with subregions
+First, let's conduct a Moran's I test with a diversity index.
+
+```{r}
+#distance neighbors
+loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(sites_subset_neighbors_dist)
+plot(sites_subset_neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$simpson_av_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
+```
+It's not significant in neighborhoods of 10 km.
+
+Add a column with subregions to the data frame.
+```{r}
+sites_huautla <- read.csv("input/sites_huautla.csv", header = T)
+sites_ixtlan <- read.csv("input/sites_ixtlan.csv", header = T)
+sites_mixe <- read.csv("input/sites_mixe.csv", header = T)
+sites_guevea <- read.csv("input/sites_guevea.csv", header = T)
+```
+
+Bind all subregions data sets in one and join to main data set
+
+```{r}
+subregions <- rbind(sites_huautla, sites_ixtlan, sites_mixe, sites_guevea)
+subregions <- mutate(subregions, subregion = as.character(SUBREGIONE))
+subregions <- select(subregions, -SUBREGIONE)
+```
 
 
 
