@@ -159,7 +159,62 @@ moran.test(sites_cf$av_agb_site, zero.policy=T,
 
 
 ```
+*25km apart*:
+	Moran I test under randomisation
 
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")    
+
+Moran I statistic standard deviate = 3.2834, p-value =
+0.0005128
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.106909344      -0.009433962       0.001255547
+      
+
+*20 km apart:*
+Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")    
+
+Moran I statistic standard deviate = 2.7158, p-value =
+0.003305
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.105901804      -0.009433962       0.001803527 
+
+*15 km apart:*
+Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")  n reduced by no-neighbour observations
+  
+
+Moran I statistic standard deviate = 1.9438, p-value =
+0.02596
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.098077538      -0.009523810       0.003064303 
+
+*10 km apart:*
+Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")  n reduced by no-neighbour observations
+  
+
+Moran I statistic standard deviate = 1.1365, p-value =
+0.1279
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.084236860      -0.010000000       0.006875416 
+
+      
 Run the analysis with sites that have at least 3 plots, to reduce some noise
 
 ```{r}
@@ -225,10 +280,69 @@ moran.test(sites_subset$av_agb_site, zero.policy=T,
 #Moran I statistic       Expectation          Variance 
 #       0.07981275       -0.03703704        0.06031799 
 ```
+Let's explore distances between 5 and 10:
 
-Moran test shows that there's spatial autocorrelation among sites that are 10 km apart.
+```{r}
+#distance neighbors
+loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
+d_subs <- 5 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(sites_subset_neighbors_dist)
+plot(sites_subset_neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
+
+#10
+#Moran I statistic standard deviate = 2.9615, p-value =0.001531
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.38509221       -0.01754386        0.01848425 
+
+#9
+#Moran I statistic standard deviate = 2.5088, p-value = 0.006056
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.34235874       -0.01923077        0.02077221 
+
+#8
+#Moran I statistic standard deviate = 2.5088, p-value =
+#0.006056
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.34235874       -0.01923077        0.02077221
+
+#7
+#Moran I statistic standard deviate = 2.032, p-value =0.02108
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.33073160       -0.02325581        0.03034737
+
+#6
+#Moran I statistic standard deviate = 0.79832, p-value =0.2123
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.12408276       -0.02500000        0.03487432
+
+#5
+#Moran I statistic standard deviate = 0.47578, p-value =0.3171
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.07981275       -0.03703704        0.06031799
+```
+
+
+Moran test shows that there's spatial autocorrelation among sites that are at least 7 km apart when only sites with more than 2 plots are considered (closer than that, the neighborhoods are too small). When all sites are considered, Moran test is not significant at 10 km.
 To account for this spatial autocorrelation, I'll cluster the data in subregions.
-Fortunately, Toledo-Aceves et al (2011) already divided the NMO region in smaller subregions, which fit pretty well with the network of neighbors.
+Fortunately, Toledo-Aceves et al (2011) already divided the NMO region in smaller subregions, which fit pretty well with the network of neighbors using d=10km.
 
 Add a column with subregions
 
