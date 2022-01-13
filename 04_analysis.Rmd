@@ -17,6 +17,12 @@ library(ggplot2)
 library(sf)
 library(spdep)
 library(leaps)
+library(MASS)
+library(car)
+library(ggpubr)
+library(rstatix)
+library(corrplot)
+library(lme4)
 
 load("output/sites_cf3.RData")
 load("output/plots_cf3.RData")
@@ -142,13 +148,6 @@ plot(loc)
 ```
 
 
-Plot environmental variables to reveal the relationships and spatial patterns among them
-
-```{r}
-
-plot(sites_cf[-22,c(10:14,18,20,34)]) #remove site 70307 (outlier)
-plot(sites_cf[-22,c(12,13,18,20,34,40,48)])
-```
 
 Moran test
 
@@ -375,8 +374,14 @@ Bind all subregions data sets in one and join to main data set
 subregions <- rbind(sites_huautla, sites_ixtlan, sites_mixe, sites_guevea)
 subregions <- mutate(subregions, subregion = as.character(SUBREGIONE))
 subregions <- select(subregions, -SUBREGIONE)
-```
+subregions <- subregions %>%
+  mutate(site = as.character(site))
 
+sites_cf <- sites_cf %>%
+  left_join(subregions, by = "site") %>%
+  relocate(subregion, .after = site)
+
+```
 
 
 # Exploration model: effect of disturbance, succession*patchiness, and environmental factors
@@ -399,34 +404,153 @@ First, know your data. Is it normal?
 http://www.sthda.com/english/wiki/normality-test-in-r
 https://www.datanovia.com/en/lessons/normality-test-in-r/
 
+Visual inspection 
+
 ```{r}
-# First, explore correlation coefficients between variables
+#density plot
+ggdensity(sites_cf$av_agb_site)
+ggdensity(sites_cf$simpson_av_site)
+
+#qqplot
+ggqqplot(sites_cf$av_agb_site)
+ggqqplot(sites_cf$simpson_av_site)
+```
+
+Shapiro-Wilk's normality test:
+
+```{r}
+shapiro.test(sites_cf$av_agb_site)
+shapiro.test(sites_cf$simpson_av_site)
 
 sites_cf %>%
-  filter(plot_no > 2) %>%
-  select(av_agb_site, longitude, latitude, altitude, temp, precip, average_slope, av_agb_site, shannon_av_site, simpson_av_site,sp_richness_site_av, mosaic) %>%
-  na.omit() %>%
-  cor()
+  group_by(subregion) %>%
+  shapiro_test(av_agb_site)
 
 sites_cf %>%
-  filter(plot_no > 2) %>%
-  select(av_agb_site, longitude, latitude, altitude, temp, precip, sp_richness_site_av, mosaic) %>%
-  na.omit() %>%
-  plot()
+  group_by(subregion) %>%
+  shapiro_test(simpson_av_site)
 
-sites_cf %>%
-  filter(plot_no > 2) %>%
-  filter(mosaic > 0.5) %>%
-  select(av_agb_site, longitude, latitude, altitude, temp, precip, average_slope, av_agb_site, shannon_av_site, simpson_av_site,sp_richness_site_av, mosaic) %>%
-  na.omit() %>%
-  cor()
 
-# EXTRACT ASPECT WITH GEE 
-sites_cf %>%
-  filter(plot_no > 2) %>%
-  filter(mosaic > 0.4) %>%
-  ggplot(aes(x = landform, y = av_agb_site)) +
-  geom_boxplot()
+shapiro.test(sites_cf$temp)
+shapiro.test(sites_cf$precip)
+shapiro.test(sites_cf$aspect_gee) #Marginally normal p=0.02
+shapiro.test(sites_cf$slope_gee)
+shapiro.test(sites_cf$mosaic)
+shapiro.test(sites_cf$agriculture)
+shapiro.test(sites_cf$grazing)
+shapiro.test(sites_cf$sp_richness_site_av) #Marginally normal p=0.01
+shapiro.test(sites_cf$shannon_av_site) #Normal
+shapiro.test(sites_cf$simpson_av_site)
 
+ggdensity(sites_cf$temp)
+ggdensity(sites_cf$precip)
+ggdensity(sites_cf$aspect_gee)
+ggdensity(sites_cf$slope_gee)
+ggdensity(sites_cf$mosaic)
+ggdensity(sites_cf$agriculture)
+ggdensity(sites_cf$grazing)
+ggdensity(sites_cf$sp_richness_site_av)
+ggdensity(sites_cf$shannon_av_site)
+ggdensity(sites_cf$simpson_av_site)
+```
+In general, data is not normal (p<0.05)
+
+Data distribution
+What probability distribution best fits my data?
+
+```{r}
+agb_test <- sites_cf %>%
+  dplyr::filter(plot_no > 2) %>%
+  select(av_agb_site)
+
+agb_test <- agb_test$av_agb_site
+
+qqp(agb_test, "norm")
+qqp(agb_test, "lnorm")
+
+gamma <- fitdistr(agb_test, "gamma")
+qqp(agb_test, "gamma", shape = gamma$estimate[[1]], rate = gamma$estimate[[2]])
+
+```
+
+Diversity
+
+```{r}
+simpson_test <- sites_cf %>%
+  dplyr::filter(plot_no > 2) %>%
+  select(simpson)
+
+simpson_test <- simpson_test$simpson
+
+shapiro.test(simpson_test)
+
+qqp(simpson_test, "norm")
+qqp(simpson_test, "lnorm")
+
+gamma2 <- fitdistr(simpson_test, "gamma", lower = c(0, 0))
+qqp(simpson_test, "gamma", shape = gamma2$estimate[[1]], rate = gamma2$estimate[[2]])
+
+```
+
+Let's take a look at the data
+
+```{r}
+numeric_variables <- sites_cf %>%
+  filter(plot_no > 2) %>%
+  select(temp, precip, altitude, aspect_gee, slope_gee, sp_richness_site_av, shannon_av_site, simpson_av_site, av_agb_site, mosaic, agriculture, grazing) 
+
+corr <- cor(drop_na(numeric_variables[,-1]))
+corrplot(corr, method = 'ellipse')
+corrplot(corr, method = 'number')
+plot(numeric_variables)
+
+aspect_agb <- lm(numeric_variables$aspect_gee ~ numeric_variables$av_agb_site, data = numeric_variables)
+
+summary(aspect_agb)
+plot(numeric_variables$aspect_gee, numeric_variables$av_agb_site)
+abline(aspect_agb)
+
+slope_agb <- lm(numeric_variables$slope_gee ~ numeric_variables$av_agb_site, data = numeric_variables)
+
+summary(slope_agb)
+plot(numeric_variables$slope_gee, numeric_variables$av_agb_site)
+abline(slope_agb)
+```
+
+It seems like aspect and slope are not correlated with the rest of the variables (although empirical data at local scales have shown a correlation between these variables and biomass)
+
+Model
+
+```{r}
+
+lm1 <- lm(numeric_variables$av_agb_site ~ numeric_variables$mosaic)
+plot(numeric_variables$av_agb_site ~ numeric_variables$mosaic)
+abline(lm1)
+summary(lm1)
+
+lm2 <- lm(numeric_variables$av_agb_site ~ numeric_variables$agriculture)
+plot(numeric_variables$av_agb_site ~ numeric_variables$agriculture)
+abline(lm2)
+summary(lm2)
+
+lm3 <- lm(numeric_variables$av_agb_site ~ numeric_variables$grazing)
+plot(numeric_variables$av_agb_site ~ numeric_variables$grazing)
+abline(lm3)
+summary(lm3)
+
+lm4 <- lm(numeric_variables$av_agb_site ~ numeric_variables$sp_richness_site_av)
+plot(numeric_variables$av_agb_site ~ numeric_variables$sp_richness_site_av)
+abline(lm4)
+summary(lm4)
+
+lm5 <- lm(numeric_variables$av_agb_site ~ numeric_variables$shannon_av_site)
+plot(numeric_variables$av_agb_site ~ numeric_variables$shannon_av_site)
+abline(lm5)
+summary(lm5)
+
+lm6 <- lm(numeric_variables$av_agb_site ~ numeric_variables$simpson_av_site)
+plot(numeric_variables$av_agb_site ~ numeric_variables$simpson_av_site)
+abline(lm6)
+summary(lm6)
 ```
 # Biomass and tree diversity over landscape composition
