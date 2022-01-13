@@ -552,5 +552,15 @@ lm6 <- lm(numeric_variables$av_agb_site ~ numeric_variables$simpson_av_site)
 plot(numeric_variables$av_agb_site ~ numeric_variables$simpson_av_site)
 abline(lm6)
 summary(lm6)
+
+lm7 <- lm(numeric_variables$av_agb_site ~ numeric_variables$precip)
+plot(numeric_variables$av_agb_site ~ numeric_variables$precip)
+abline(lm7)
+summary(lm7)
+
+lm8 <- lm(numeric_variables$av_agb_site ~ numeric_variables$temp)
+plot(numeric_variables$av_agb_site ~ numeric_variables$temp)
+abline(lm8)
+summary(lm8)
 ```
 # Biomass and tree diversity over landscape composition
