@@ -407,63 +407,72 @@ https://www.datanovia.com/en/lessons/normality-test-in-r/
 Visual inspection 
 
 ```{r}
+# First, remove sites with less than 3 plots because they're noisy
+
+sites_cf2 <- sites_cf %>%
+  filter(plot_no > 2)
+
 #density plot
-ggdensity(sites_cf$av_agb_site)
-ggdensity(sites_cf$simpson_av_site)
+ggdensity(sites_cf2$av_agb_site)
+ggdensity(sites_cf2$simpson_av_site)
 
 #qqplot
-ggqqplot(sites_cf$av_agb_site)
-ggqqplot(sites_cf$simpson_av_site)
+ggqqplot(sites_cf2$av_agb_site)
+ggqqplot(sites_cf2$simpson_av_site)
 ```
 
 Shapiro-Wilk's normality test:
 
 ```{r}
-shapiro.test(sites_cf$av_agb_site)
-shapiro.test(sites_cf$simpson_av_site)
+shapiro.test(sites_cf2$av_agb_site)
+shapiro.test(sites_cf2$simpson_av_site)
 
-sites_cf %>%
+sites_cf2 %>%
   group_by(subregion) %>%
   shapiro_test(av_agb_site)
 
-sites_cf %>%
+sites_cf2 %>%
   group_by(subregion) %>%
   shapiro_test(simpson_av_site)
 
 
-shapiro.test(sites_cf$temp)
-shapiro.test(sites_cf$precip)
-shapiro.test(sites_cf$aspect_gee) #Marginally normal p=0.02
-shapiro.test(sites_cf$slope_gee)
-shapiro.test(sites_cf$mosaic)
-shapiro.test(sites_cf$agriculture)
-shapiro.test(sites_cf$grazing)
-shapiro.test(sites_cf$sp_richness_site_av) #Marginally normal p=0.01
-shapiro.test(sites_cf$shannon_av_site) #Normal
-shapiro.test(sites_cf$simpson_av_site)
+shapiro.test(sites_cf2$temp)
+shapiro.test(sites_cf2$precip)
+shapiro.test(sites_cf2$aspect_gee) #Marginally normal p=0.02
+shapiro.test(sites_cf2$slope_gee)
+shapiro.test(sites_cf2$mosaic)
+shapiro.test(sites_cf2$agriculture)
+shapiro.test(sites_cf2$grazing)
+shapiro.test(sites_cf2$sp_richness_site_av) #Marginally normal p=0.01
+shapiro.test(sites_cf2$shannon_av_site) #Normal
+shapiro.test(sites_cf2$simpson_av_site)
 
-ggdensity(sites_cf$temp)
-ggdensity(sites_cf$precip)
-ggdensity(sites_cf$aspect_gee)
-ggdensity(sites_cf$slope_gee)
-ggdensity(sites_cf$mosaic)
-ggdensity(sites_cf$agriculture)
-ggdensity(sites_cf$grazing)
-ggdensity(sites_cf$sp_richness_site_av)
-ggdensity(sites_cf$shannon_av_site)
-ggdensity(sites_cf$simpson_av_site)
+ggdensity(sites_cf2$temp)
+ggdensity(sites_cf2$precip)
+ggdensity(sites_cf2$aspect_gee)
+ggdensity(sites_cf2$slope_gee)
+ggdensity(sites_cf2$mosaic)
+ggdensity(sites_cf2$agriculture)
+ggdensity(sites_cf2$grazing)
+ggdensity(sites_cf2$sp_richness_site_av)
+ggdensity(sites_cf2$shannon_av_site)
+ggdensity(sites_cf2$simpson_av_site)
 ```
 In general, data is not normal (p<0.05)
 
 Data distribution
 What probability distribution best fits my data?
 
-```{r}
-agb_test <- sites_cf %>%
-  dplyr::filter(plot_no > 2) %>%
-  select(av_agb_site)
+'the distribution for a response variable can be
+any member of the natural exponential dispersion family. Members of the natural
+exponential family for continuous response variables include the normal, gamma,
+and inverse Gaussian distributions, and for discrete outcome variables the Poisson, Bernoulli, and binomial distributions.'
+'A natural exponential dispersion distribution has two parameters, a natural parameter θ and a dispersion parameter φ . The parameter θ conveys information about the location of the distribution (i.e., mean). When the distribution is expressed in its most basic or canonical form, the natural parameter θ is a function of the mean μ of the distribution. This function is known as the canonical link.'
+https://education.illinois.edu/docs/default-source/carolyn-anderson/edpsy587/GLM_GLMM_LMM.pdf
 
-agb_test <- agb_test$av_agb_site
+```{r}
+
+agb_test <- sites_cf2$av_agb_site
 
 qqp(agb_test, "norm")
 qqp(agb_test, "lnorm")
