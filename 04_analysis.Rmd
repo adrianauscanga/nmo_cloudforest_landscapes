@@ -23,6 +23,9 @@ library(ggpubr)
 library(rstatix)
 library(corrplot)
 library(lme4)
+library(fitdistrplus)
+library(asbio)
+library(RColorBrewer)
 
 load("output/sites_cf3.RData")
 load("output/plots_cf3.RData")
@@ -384,8 +387,10 @@ sites_cf <- sites_cf %>%
 ```
 
 
-# Exploration model: effect of disturbance, succession*patchiness, and environmental factors
+# Exploration model: effect of disturbance, succession, and environmental factors
 
+Linear model
+or adding random effects:
 Generalized Linear Mixed Model (GLMM; when data is not normal)
 Linear Mixed Effects Model (when data is normal)
 Examples: 
@@ -400,9 +405,12 @@ https://ourcodingclub.github.io/tutorials/mixed-models/
 https://m-clark.github.io/mixed-models-with-R/random_intercepts.html
 https://m-clark.github.io/generalized-additive-models/introduction.html
 
-First, know your data. Is it normal?
-http://www.sthda.com/english/wiki/normality-test-in-r
+First, know your data. Is it normal? Can it be easily transformed?
+
+https://www.davidzeleny.net/anadat-r/doku.php/en:data_preparation
 https://www.datanovia.com/en/lessons/normality-test-in-r/
+http://www.css.cornell.edu/faculty/dgr2/_static/files/R_html/Transformations.html
+
 
 Visual inspection 
 
@@ -460,6 +468,101 @@ ggdensity(sites_cf2$simpson_av_site)
 ```
 In general, data is not normal (p<0.05)
 
+Multiple regression
+
+```{r}
+lm1 <- lm(av_agb_site ~ temp, data = sites_cf2)
+summary(lm1)
+plot(av_agb_site ~ temp, data = sites_cf2)
+abline(lm1)
+oldpar <- par(mfrow = c(2, 2))
+plot(lm1, which=c(1,2,4,5))
+
+bc1 <- boxcox(lm1)
+bc1_power <- bc1$x[which.max(bc1$y)] # 0.1414
+
+# Log Transformation:
+lm2 <- lm(log(av_agb_site) ~ temp, data = sites_cf2)
+summary(lm2)
+plot(log(av_agb_site) ~ temp, data = sites_cf2)
+abline(lm2)
+oldpar <- par(mfrow = c(2, 2))
+plot(lm2, which=c(1,2,4,5))
+
+
+```
+
+Let's add variables to the model
+
+```{r}
+
+lm3 <- lm(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm3)
+
+# Only mosaic and simpson are significant, slope and ag marginally significant
+
+numeric_variables <- sites_cf %>%
+  filter(plot_no > 2) %>%
+  select(temp, precip, altitude, aspect_gee, slope_gee, sp_richness_site_av, shannon_av_site, simpson_av_site, av_agb_site, mosaic, agriculture, grazing) %>%
+  mutate(log_agb = log(av_agb_site))
+
+corr <- cor(drop_na(numeric_variables[,-1]))
+corrplot(corr, method = 'ellipse')
+corrplot(corr, method = 'number')
+plot(numeric_variables)
+
+plot(numeric_variables$slope_gee, numeric_variables$log_agb)
+plot(numeric_variables$agriculture, numeric_variables$log_agb)
+plot(numeric_variables$grazing, numeric_variables$log_agb)
+plot(numeric_variables$mosaic, numeric_variables$log_agb)
+
+partial.resid.plot(lm3)
+```
+
+```{r}
+lm3_residuals <- lm3$residuals
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = longitude, y = latitude, shape = subregion)) +
+  geom_point(aes(color = lm3$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+
+```
+
+Test for spatial autocorrelation of residuals:
+
+```{r}
+
+lm3_sites_coords <- sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  dplyr::select(longitude, latitude)
+
+#distance neighbors
+loc_subs <- cbind(lm3_sites_coords$longitude, lm3_sites_coords$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(neighbors_dist)
+plot(neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm3_residuals, zero.policy=T, 
+     nb2listw(neighbors_dist, zero.policy=T, style="W"))
+
+# p = 0.6696
+# No spatial autocorrelation!
+```
+
+
+
+-----------------------------------------------------------------------
 Data distribution
 What probability distribution best fits my data?
 
@@ -474,30 +577,34 @@ https://education.illinois.edu/docs/default-source/carolyn-anderson/edpsy587/GLM
 
 agb_test <- sites_cf2$av_agb_site
 
+agb_test_log <- log(sites_cf2$av_agb_site)
+agb_test_sr <- sqrt(sites_cf2$av_agb_site)
+
 qqp(agb_test, "norm")
+qqp(agb_test_log, "norm")
+qqp(agb_test_sr, "norm")
+
 qqp(agb_test, "lnorm")
 
 gamma <- fitdistr(agb_test, "gamma")
 qqp(agb_test, "gamma", shape = gamma$estimate[[1]], rate = gamma$estimate[[2]])
+
+inv <- fitdist(agb_test, "invgauss", start = list(mean = 2, shape = 1))
+qqp(agb_test, "invgauss", mean = inv$estimate[[1]], shape = inv$estimate[[2]])
 
 ```
 
 Diversity
 
 ```{r}
-simpson_test <- sites_cf %>%
-  dplyr::filter(plot_no > 2) %>%
-  select(simpson)
 
-simpson_test <- simpson_test$simpson
+simpson_test <- sites_cf2$simpson_av_site
+simpson_test_p <- (sites_cf2$simpson_av_site)^2
 
 shapiro.test(simpson_test)
 
 qqp(simpson_test, "norm")
-qqp(simpson_test, "lnorm")
-
-gamma2 <- fitdistr(simpson_test, "gamma", lower = c(0, 0))
-qqp(simpson_test, "gamma", shape = gamma2$estimate[[1]], rate = gamma2$estimate[[2]])
+qqp(simpson_test_p, "norm")
 
 ```
 
@@ -572,4 +679,3 @@ plot(numeric_variables$av_agb_site ~ numeric_variables$temp)
 abline(lm8)
 summary(lm8)
 ```
-# Biomass and tree diversity over landscape composition
