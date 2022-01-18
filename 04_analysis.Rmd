@@ -546,7 +546,7 @@ lm3_sites_coords <- sites_cf %>%
 
 #distance neighbors
 loc_subs <- cbind(lm3_sites_coords$longitude, lm3_sites_coords$latitude)
-d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+d_subs <- 25 #distance has to be larger than the distance that exists between sites, which is 2.5 km
 neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
 str(neighbors_dist)
 plot(neighbors_dist, loc_subs)
@@ -556,10 +556,45 @@ plot(neighbors_dist, loc_subs)
 moran.test(lm3_residuals, zero.policy=T, 
      nb2listw(neighbors_dist, zero.policy=T, style="W"))
 
-# p = 0.6696
+# p = 0.6696 with d= 10
+#p = 0.7727 with d= 25
 # No spatial autocorrelation!
 ```
 
+Eliminate some variables from the model using regsubsets function:
+
+```{r}
+# regsubsets function
+
+lm4 <- regsubsets(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm4)
+```
+Run again the model, selecting one of the best subsets regression:
+
+```{r}
+lm5 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + sp_richness_site_av + mosaic + agriculture, data = sites_cf2)
+summary(lm5)
+```
+Test for spatial autocorrelation:
+
+```{r}
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = longitude, y = latitude, shape = subregion)) +
+  geom_point(aes(color = lm5$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm5$residuals, zero.policy=T, 
+     nb2listw(neighbors_dist, zero.policy=T, style="W"))
+# p = 0.6769 with d=10. No spatial autocorrelation detected!
+# p = 0.7723 with d=25. No spatial autocorrelation detected!
+partial.resid.plot(lm5)
+```
 
 
 -----------------------------------------------------------------------
