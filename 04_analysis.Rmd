@@ -405,6 +405,8 @@ https://ourcodingclub.github.io/tutorials/mixed-models/
 https://m-clark.github.io/mixed-models-with-R/random_intercepts.html
 https://m-clark.github.io/generalized-additive-models/introduction.html
 
+GLMM book: https://education.illinois.edu/docs/default-source/carolyn-anderson/edpsy587/GLM_GLMM_LMM.pdf
+
 First, know your data. Is it normal? Can it be easily transformed?
 
 https://www.davidzeleny.net/anadat-r/doku.php/en:data_preparation
