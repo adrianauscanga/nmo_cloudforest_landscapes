@@ -589,6 +589,15 @@ sites_cf %>%
   scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
   theme_classic()
 
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm5$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
 #Moran test
 # spatial autocorrelation of lm3 residuals
 moran.test(lm5$residuals, zero.policy=T, 
@@ -598,6 +607,71 @@ moran.test(lm5$residuals, zero.policy=T,
 partial.resid.plot(lm5)
 ```
 
+Is there a relationship with some of the categorical variables?
+
+```{r}
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = subregion, y = log(av_agb_site))) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = subregion, y = lm5$residuals)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = land_tenure, y = lm5$residuals)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = landform, y = lm5$residuals)) +
+  geom_boxplot()
+
+```
+
+```{r}
+# Doesn't look like subregion has a strong effect but I'll run the model with subregion as a random effect just in case
+
+lm6 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + sp_richness_site_av + mosaic + agriculture + subregion, data = sites_cf2)
+summary(lm6)
+```
+Subregion is not significant.
+
+From these results, it's very obvious that disturbance and succession/patchiness drive the distribution of biomass.
+Let's test the relationship between these same variables and tree diversity.
+
+```{r}
+
+lm7 <- lm(shannon_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm7)
+
+lm8 <- lm(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm8)
+
+lm9 <- lm(sp_richness_site_av ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm9)
+```
+The trend is a bit different when it comes to diversity. Here, grazing seems to be more important than in past models.
+Let's look for the best model
+
+```{r}
+# regsubsets function
+
+lm10 <- regsubsets(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm10)
+```
 
 -----------------------------------------------------------------------
 Data distribution
