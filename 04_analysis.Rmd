@@ -639,6 +639,20 @@ sites_cf %>%
   ggplot(aes(x = landform, y = lm5$residuals)) +
   geom_boxplot()
 
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = aspect, y = log(av_agb_site))) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = aspect, y = lm5$residuals)) +
+  geom_boxplot()
+
 ```
 
 ```{r}
