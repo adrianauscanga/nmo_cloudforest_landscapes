@@ -672,8 +672,72 @@ Let's look for the best model
 lm10 <- regsubsets(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm10)
 ```
+```{r}
+lm11 <- lm(simpson_av_site ~ altitude + slope_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm11)
 
------------------------------------------------------------------------
+partial.resid.plot(lm11)
+```
+
+Relationship with categorical variables
+
+```{r}
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = subregion, y = simpson_av_site)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = subregion, y = lm11$residuals)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = land_tenure, y = simpson_av_site)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = land_tenure, y = lm11$residuals)) +
+  geom_boxplot()
+```
+
+```{r}
+
+lm12 <- lm(simpson_av_site ~ altitude + slope_gee + av_agb_site +  mosaic + agriculture + grazing + subregion, data = sites_cf2)
+summary(lm12)
+```
+Map residuals of best model
+```{r}
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm11$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm11$residuals, zero.policy=T, 
+     nb2listw(neighbors_dist, zero.policy=T, style="W"))
+#no spatial autocorrelation
+#p = 0.8025
+
+```
+
+---------------------------------------------------------------------
 Data distribution
 What probability distribution best fits my data?
 
