@@ -116,6 +116,19 @@ sites_cf <- sites_cf %>%
   left_join(aspect_slope_sites, by = "site") %>%
   relocate(c("aspect_gee", "aspect_se_gee", "slope_gee", "slope_se_gee"), .after = aspect)
 ```
+Change aspect_gee to categories and compare aspect and slope in dataset
+
+```{r}
+
+sites_cf <- sites_cf %>%
+  dplyr::mutate(aspect_gee_c = ifelse(aspect_gee < 45 | aspect_gee > 315, "N",
+                                       ifelse(aspect_gee > 135 | aspect < 225, "S",
+                                              ifelse(aspect_gee > 225 | aspect_gee < 315, "W",
+                                                     ifelse(aspect_gee > 45 | aspect_gee < 135, "E", NA))))) %>%
+  relocate(aspect_gee_c, .after = aspect_gee)
+
+
+```
 
 
 # Spatial autocorrelation
@@ -436,25 +449,15 @@ Shapiro-Wilk's normality test:
 ```{r}
 shapiro.test(sites_cf2$av_agb_site)
 shapiro.test(sites_cf2$simpson_av_site)
-
-sites_cf2 %>%
-  group_by(subregion) %>%
-  shapiro_test(av_agb_site)
-
-sites_cf2 %>%
-  group_by(subregion) %>%
-  shapiro_test(simpson_av_site)
-
-
 shapiro.test(sites_cf2$temp)
 shapiro.test(sites_cf2$precip)
-shapiro.test(sites_cf2$aspect_gee) #Marginally normal p=0.02
-shapiro.test(sites_cf2$slope_gee)
+shapiro.test(sites_cf2$aspect_gee) # normal p = 0.42
+shapiro.test(sites_cf2$slope_gee) # marginally normal p = 0.02
 shapiro.test(sites_cf2$mosaic)
 shapiro.test(sites_cf2$agriculture)
 shapiro.test(sites_cf2$grazing)
-shapiro.test(sites_cf2$sp_richness_site_av) #Marginally normal p=0.01
-shapiro.test(sites_cf2$shannon_av_site) #Normal
+shapiro.test(sites_cf2$sp_richness_site_av) # normal p=0.15
+shapiro.test(sites_cf2$shannon_av_site) # normal p = 0.60
 shapiro.test(sites_cf2$simpson_av_site)
 
 ggdensity(sites_cf2$temp)
@@ -494,7 +497,7 @@ plot(lm2, which=c(1,2,4,5))
 
 ```
 
-Let's add variables to the model
+Looking good. Let's add variables to the model
 
 ```{r}
 
@@ -502,6 +505,7 @@ lm3 <- lm(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee +
 summary(lm3)
 
 # Only mosaic and simpson are significant, slope and ag marginally significant
+partial.resid.plot(lm3)
 
 numeric_variables <- sites_cf %>%
   filter(plot_no > 2) %>%
@@ -518,7 +522,7 @@ plot(numeric_variables$agriculture, numeric_variables$log_agb)
 plot(numeric_variables$grazing, numeric_variables$log_agb)
 plot(numeric_variables$mosaic, numeric_variables$log_agb)
 
-partial.resid.plot(lm3)
+
 ```
 
 ```{r}
@@ -540,15 +544,15 @@ Test for spatial autocorrelation of residuals:
 
 ```{r}
 
-lm3_sites_coords <- sites_cf %>%
+sites_coords <- sites_cf %>%
   filter(plot_no > 2) %>%
   filter(!is.na(agriculture)) %>%
   filter(!is.na(grazing)) %>%
   dplyr::select(longitude, latitude)
 
 #distance neighbors
-loc_subs <- cbind(lm3_sites_coords$longitude, lm3_sites_coords$latitude)
-d_subs <- 25 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+loc_subs <- cbind(sites_coords$longitude, sites_coords$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
 neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
 str(neighbors_dist)
 plot(neighbors_dist, loc_subs)
@@ -574,7 +578,7 @@ summary(lm4)
 Run again the model, selecting one of the best subsets regression:
 
 ```{r}
-lm5 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + sp_richness_site_av + mosaic + agriculture, data = sites_cf2)
+lm5 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + mosaic + agriculture, data = sites_cf2)
 summary(lm5)
 ```
 Test for spatial autocorrelation:
@@ -598,13 +602,18 @@ sites_cf %>%
   scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
   theme_classic()
 
+partial.resid.plot(lm5)
+
+oldpar <- par(mfrow = c(2, 2))
+plot(lm5, which=c(1,2,4,5))
+
 #Moran test
 # spatial autocorrelation of lm3 residuals
 moran.test(lm5$residuals, zero.policy=T, 
      nb2listw(neighbors_dist, zero.policy=T, style="W"))
-# p = 0.6769 with d=10. No spatial autocorrelation detected!
-# p = 0.7723 with d=25. No spatial autocorrelation detected!
-partial.resid.plot(lm5)
+# p = 0.66 with d=10. No spatial autocorrelation detected!
+# p = 0.6339 with d=25. No spatial autocorrelation detected!
+
 ```
 
 Is there a relationship with some of the categorical variables?
@@ -643,14 +652,14 @@ sites_cf %>%
   filter(plot_no > 2) %>%
   filter(!is.na(agriculture)) %>%
   filter(!is.na(grazing)) %>%
-  ggplot(aes(x = aspect, y = log(av_agb_site))) +
+  ggplot(aes(x = aspect_gee_c, y = log(av_agb_site))) +
   geom_boxplot()
 
 sites_cf %>%
   filter(plot_no > 2) %>%
   filter(!is.na(agriculture)) %>%
   filter(!is.na(grazing)) %>%
-  ggplot(aes(x = aspect, y = lm5$residuals)) +
+  ggplot(aes(x = aspect_gee_c, y = lm5$residuals)) +
   geom_boxplot()
 
 ```
@@ -662,6 +671,13 @@ lm6 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + sp_ri
 summary(lm6)
 ```
 Subregion is not significant.
+Now I'll test aspect:
+
+```{r}
+lm6b <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + sp_richness_site_av + mosaic + agriculture + aspect_gee_c, data = sites_cf2)
+summary(lm6b)
+```
+Aspect doesn't seem to be relevant either.
 
 From these results, it's very obvious that disturbance and succession/patchiness drive the distribution of biomass.
 Let's test the relationship between these same variables and tree diversity.
@@ -674,6 +690,10 @@ summary(lm7)
 lm8 <- lm(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm8)
 
+lm8b <- lm((simpson_av_site)^2 ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm8b)
+ggqqplot((sites_cf2$simpson_av_site)^2)
+
 lm9 <- lm(sp_richness_site_av ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm9)
 ```
@@ -685,12 +705,30 @@ Let's look for the best model
 
 lm10 <- regsubsets(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm10)
+
+lm10b <- regsubsets((simpson_av_site)^2 ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm10b)
 ```
 ```{r}
 lm11 <- lm(simpson_av_site ~ altitude + slope_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm11)
 
 partial.resid.plot(lm11)
+
+lm11b <- lm((simpson_av_site)^2 ~ altitude + slope_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm11b)
+
+partial.resid.plot(lm11b)
+```
+
+QQplots 
+
+```{r}
+oldpar <- par(mfrow = c(2, 2))
+plot(lm11, which=c(1,2,4,5))
+
+oldpar <- par(mfrow = c(2, 2))
+plot(lm11b, which=c(1,2,4,5))
 ```
 
 Relationship with categorical variables
@@ -723,6 +761,20 @@ sites_cf %>%
   filter(!is.na(grazing)) %>%
   ggplot(aes(x = land_tenure, y = lm11$residuals)) +
   geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = aspect_gee_c, y = simpson_av_site)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = aspect_gee_c, y = lm11$residuals)) +
+  geom_boxplot()
 ```
 
 ```{r}
@@ -751,6 +803,52 @@ moran.test(lm11$residuals, zero.policy=T,
 
 ```
 
+Let's take a look at individual relations
+
+```{r}
+# biomass ~ mosaic
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = log(av_agb_site))) +
+  geom_point()
+
+
+# diversity ~ mosaic
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = simpson_av_site)) +
+  geom_point()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = sp_richness_site_av)) +
+  geom_point()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = shannon_av_site)) +
+  geom_point()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = altitude)) +
+  geom_point()
+
+```
+
+
 Now let's remove the effect of management filtering out sites with very young forests and disturbance
 
 ```{r}
@@ -775,12 +873,19 @@ forest %>%
   scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
   theme_classic()
 
+#distance neighbors
+loc_subs2 <- cbind(forest$longitude, forest$latitude)
+d_subs <- 25 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+forest_neighbors_dist <- dnearneigh(loc_subs2, 0, d_subs, longlat = T)
+str(forest_neighbors_dist)
+plot(forest_neighbors_dist, loc_subs2)
+
 #Moran test
 # spatial autocorrelation of lm3 residuals
 moran.test(lm13$residuals, zero.policy=T, 
-     nb2listw(neighbors_dist, zero.policy=T, style="W"))
-#make neighbors dist!
+     nb2listw(forest_neighbors_dist, zero.policy=T, style="W"))
 
+# Didn't find spatial autocorrelation in the residuals. I tested d =10, 25, and 50
 ```
 
 Boxplots:
@@ -794,8 +899,21 @@ forest %>%
   ggplot(aes(x = subregion, y = lm13$residuals)) +
   geom_boxplot()
 
-lm15 <- lm(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + simpson_av_site + subregion, data = forest)
+forest %>%
+  ggplot(aes(x = aspect_gee_c, y = log(av_agb_site))) +
+  geom_boxplot()
+
+forest %>%
+  ggplot(aes(x = aspect_gee_c, y = lm13$residuals)) +
+  geom_boxplot()
+
+lm15 <- lm(log(av_agb_site) ~ temp + precip + altitude + slope_gee + simpson_av_site + aspect_gee_c, data = forest)
 summary(lm15)
+
+oldpar <- par(mfrow = c(2, 2))
+plot(lm15, which=c(1,2,4,5))
+
+
 ```
 How is biomass related to these environmental variables
 
@@ -812,19 +930,96 @@ forest %>%
   geom_smooth(method = 'lm')
 
 forest %>%
-  ggplot(aes(x = simpson_av_site, y = av_agb_site)) +
+  ggplot(aes(x = altitude, y = av_agb_site)) +
   geom_point() +
   geom_smooth(method = 'lm')
 
 forest %>%
+  filter(plot_no > 3) %>%
+  ggplot(aes(x = simpson, y = av_agb_site)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+
+forest %>%
+  filter(plot_no > 3) %>%
   ggplot(aes(x = sp_richness_site, y = av_agb_site)) +
   geom_point() +
   geom_smooth(method = 'lm')
 
 forest %>%
-  ggplot(aes(x = longitude, y = latitude)) +
+  ggplot(aes(x = longitude, y = latitude, shape = aspect_gee_c)) +
   geom_point(aes(color = av_agb_site), size = 3) +
   scale_colour_gradient(low = "#f5f5f5", high = "darkgreen") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm15$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm15$residuals, zero.policy=T, 
+     nb2listw(forest_neighbors_dist, zero.policy=T, style="W"))
+
+# No spatial autocorrelation when d= 50 nor when d=25
+
+```
+Let's explore the relationship between temp, precip and biomass
+
+```{r}
+forest %>%
+  ggplot(aes(x = temp, y = precip, color = av_agb_site, shape = aspect_gee_c)) +
+  geom_point(size = 4) +
+  scale_colour_gradient(low = "#f5f5f5", high = "darkgreen") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = temp, y = av_agb_site, color = precip, shape = aspect_gee_c)) +
+  geom_point(size = 4) +
+  scale_colour_gradient(low = "#f5f5f5", high = "darkblue") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = precip, y = av_agb_site, color = temp, shape = aspect_gee_c)) +
+  geom_point(size = 4) +
+  scale_colour_gradient(low = "#f5f5f5", high = "red") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = precip, y = altitude, color = av_agb_site, shape = aspect_gee_c)) +
+  geom_point(size = 4) +
+  scale_colour_gradient(low = "#f5f5f5", high = "darkgreen") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = av_agb_site, y = altitude, color = precip, shape = aspect_gee_c)) +
+  geom_point(size = 4) +
+  scale_colour_gradient(low = "#f5f5f5", high = "darkblue") +
+  theme_classic()
+```
+
+```{r}
+
+forest %>%
+  ggplot(aes(x = av_loreys_site, y = av_agb_site)) +
+  geom_point(size = 4) +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = av_treeheight_site, y = av_agb_site)) +
+  geom_point(size = 4) +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = av_basalarea_site, y = av_agb_site)) +
+  geom_point(size = 4) +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = tree_no_ave, y = av_agb_site)) +
+  geom_point(size = 4) +
   theme_classic()
 ```
 

@@ -707,6 +707,49 @@ sites_cf <- sites_cf %>%
 
 ```
 
+Rank abundance curves
+
+```{r}
+# Use only sites with 4 plots
+
+sites4p <- sites_cf %>%
+  filter(plot_no > 3) %>%
+  select(site)
+
+sites4p_list <- as.list(sites4p)
+
+sp_site4p <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  right_join(sites4p) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+#Remove spp with abundance = 0 
+sp_site4p <- sp_site4p[, which(colSums(sp_site4p) != 0)]
+
+sp_site4p <- sp_site4p[which(rowSums(sp_site4p) != 0), ]
+
+#Loop to make abundance curves:
+
+racurvex <- NULL
+sitex <- NULL
+site_id <- NULL
+
+for (row in 1:nrow(sp_site4p)) {
+  sitex <- sp_site4p[row, colSums(sp_site4p[row,])>0]
+  site_id <- row.names(sitex)
+  racurvex <- racurve(sitex, nlab = 5, main = paste0("Rank-abundance ",site_id))
+  assign(paste0("rac_",site_id), racurvex)
+}
+
+
+```
+
 Save these datasets to use them in following analyses:
 
 ```{r}

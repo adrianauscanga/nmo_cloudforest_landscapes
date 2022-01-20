@@ -379,38 +379,6 @@ save(trees_cf, file = "output/trees_cf3.RData")
 
 ```
 
-###############################################################
-**Normality tests, remove from here**
-```{r}
-# Normality tests
-# In summary, tree height is the only normal variable. The others don't have a normal distribution
-# when variables are grouped in structural classes, normality increases.
-library(ggpubr)
-library(rstatix)
-plots_cf %>%
-  group_by(str_class_plots) %>%
-  shapiro_test(tree_density)
-
-ggqqplot(plots_cf$basal_area_ha)
-shapiro_test(plots_cf$basal_area_ha)
-
-sites_cf %>%
-  shapiro_test(av_treedensity_site)
-ggqqplot(sites_cf$av_agb_site)
-ggdensity(sites_cf$av_agb_site)
-
-agblog <- log(sites_cf$av_agb_site)
-shapiro.test(agblog)
-ggqqplot(agblog)
-ggdensity(agblog)
-
-sites_cf %>%
-  group_by(str_class) %>%
-  shapiro_test(av_agb_site)
-
-plotDist(agblog)
-
-```
 
 ### Species composition and diversity across classes
 
