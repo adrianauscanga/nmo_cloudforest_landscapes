@@ -24,7 +24,7 @@ library(vegan)
 library(lubridate)
 library(ggplot2)
 library(betapart)
-
+library(goeveg)
 
 load("output/sites_cf.RData")
 load("output/plots_cf.RData")
@@ -750,6 +750,8 @@ for (row in 1:nrow(sp_site4p)) {
 
 ```
 
+
+
 Save these datasets to use them in following analyses:
 
 ```{r}
@@ -767,7 +769,7 @@ To know whether linear or unimodal methods are better in this case, I'll calcula
 #### DCA
 
 ```{r}
-DCA <- decorana(log1p(sp_site))
+DCA <- decorana(log1p(sp_site4p))
 DCA
 
 ```
@@ -777,19 +779,29 @@ First axis of DCA is 1, so I will use linear methods (i.e. PCA).
 
 ```{r}
 
-pca_sp <- rda(log1p(sp_site))
+pca_sp <- rda(log1p(sp_site4p))
 pca_sp
 summary(pca_sp)
 biplot(pca_sp)
 plot(pca_sp)
 ```
 
-Some of the plots are different from the others, but the first two PC only explain 12% of the variation. Let's see if climate has an effect on this ordination.
+Some of the plots are different from the others, but the first two PC only explain 16% of the variation. Let's see if climate has an effect on this ordination.
 
+Add info on mosaic and disturbance (with color and shape) to PCA.
+Make hclust (dendogram) also showing mosaic and disturbance to see how sites group
+Assess how composition changes with env variables and disturbance and mosaic with RDA or DCA
+
+
+--------------------------------------------------------------------------------------
 ### Composition and climate
 
 ```{r}
-sp_rda <- rda(sp_site ~ sites_cf$precip + sites_cf$temp + sites_cf$altitude + sites_cf$latitude + sites_cf$longitude, data = sites_cf)
+
+sites_cf_4p <- sites_cf %>%
+  filter(plot_no > 3)
+
+sp_rda <- rda(log1p(sp_site4p) ~ sites_cf_4p$precip + sites_cf_4p$temp + sites_cf_4p$altitude, data = sites_cf_4p)
 sp_rda
 ordiplot(sp_rda)
 
