@@ -784,12 +784,26 @@ pca_sp
 summary(pca_sp)
 biplot(pca_sp)
 plot(pca_sp)
+
+ordiplot(pca_sp, display = 'sites', type = 'text')
+ordiplot(pca_sp, display = 'species', type = 'text')
+points(pca_str_plots, col = str_k3_plots)
+biplot(pca_str_plots, display = 'species')
 ```
 
 Some of the plots are different from the others, but the first two PC only explain 16% of the variation. Let's see if climate has an effect on this ordination.
 
 Add info on mosaic and disturbance (with color and shape) to PCA.
+
 Make hclust (dendogram) also showing mosaic and disturbance to see how sites group
+
+```{r}
+dis <- vegdist(log1p(sp_site4p), method = "euclidean")
+clust <- hclust(dis, method = "ward.D")
+plot(clust)
+rect.hclust(clust, k = 4)
+```
+
 Assess how composition changes with env variables and disturbance and mosaic with RDA or DCA
 
 
@@ -801,9 +815,10 @@ Assess how composition changes with env variables and disturbance and mosaic wit
 sites_cf_4p <- sites_cf %>%
   filter(plot_no > 3)
 
-sp_rda <- rda(log1p(sp_site4p) ~ sites_cf_4p$precip + sites_cf_4p$temp + sites_cf_4p$altitude, data = sites_cf_4p)
+sp_rda <- rda(sp_site4p ~ sites_cf_4p$mosaic, data = sites_cf_4p, scale = T)
 sp_rda
 ordiplot(sp_rda)
+summary(sp_rda)
 
 constrained_eig <- sp_rda$CCA$eig/sp_rda$tot.chi*100
 unconstrained_eig <- sp_rda$CA$eig/sp_rda$tot.chi*100
