@@ -769,8 +769,16 @@ To know whether linear or unimodal methods are better in this case, I'll calcula
 #### DCA
 
 ```{r}
-DCA <- decorana(log1p(sp_site4p))
+DCA <- decorana(log1p(sp_site4p_nona))
 DCA
+plot(DCA)
+summary(DCA)
+
+ordiplot(DCA, type = 'n')
+ordiplot(DCA, display = 'sites', type = 'text')
+ordiplot(DCA, type = 'n')
+orditorp(DCA, display = 'species', cex = 0.5)
+
 
 ```
 First axis of DCA is 1, so I will use linear methods (i.e. PCA).
@@ -787,8 +795,7 @@ plot(pca_sp)
 
 ordiplot(pca_sp, display = 'sites', type = 'text')
 ordiplot(pca_sp, display = 'species', type = 'text')
-points(pca_str_plots, col = str_k3_plots)
-biplot(pca_str_plots, display = 'species')
+
 ```
 
 Some of the plots are different from the others, but the first two PC only explain 16% of the variation. Let's see if climate has an effect on this ordination.
@@ -800,8 +807,155 @@ Make hclust (dendogram) also showing mosaic and disturbance to see how sites gro
 ```{r}
 dis <- vegdist(log1p(sp_site4p), method = "euclidean")
 clust <- hclust(dis, method = "ward.D")
-plot(clust)
+plot(clust, hang = -1, cex = 0.6)
 rect.hclust(clust, k = 4)
+```
+I'll filter out sites with NA in agricultural and grazing variables
+
+```{r}
+
+sites_cf_4p_nona <- sites_cf %>%
+  filter(plot_no >3) %>%
+  filter(!is.na(agriculture) | !is.na(grazing))
+
+sites4p_nona <- sites_cf_4p_nona %>%
+  select(site)
+
+sites4p_nona_list <- as.list(sites4p_nona)
+
+sp_site4p_nona <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  right_join(sites4p_nona) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+#Remove spp with abundance = 0 
+sp_site4p_nona <- sp_site4p_nona[, which(colSums(sp_site4p_nona) != 0)]
+
+sp_site4p_nona <- sp_site4p_nona[which(rowSums(sp_site4p_nona) != 0), ]
+```
+
+Repeat analyses
+
+```{r}
+pca_sp2 <- rda(log1p(sp_site4p_nona))
+pca_sp2
+summary(pca_sp2)
+biplot(pca_sp2)
+plot(pca_sp2)
+
+ordiplot(pca_sp2, display = 'sites', type = 'text')
+ordiplot(pca_sp2, display = 'species', type = 'text')
+```
+
+Hierarchical Cluster:
+
+```{r}
+dis2 <- vegdist(log1p(sp_site4p_nona), method = "euclidean")
+clust2 <- hclust(dis2, method = "ward.D")
+plot(clust2, hang = -1, cex = 0.6)
+rect.hclust(clust2, k = 3)
+```
+
+Add relevant info to hclust
+
+```{r}
+dend <- as.dendrogram(clust2)
+dend
+
+# Extract the data (for rectangular lines)
+# Type can be "rectangle" or "triangle"
+dend_data <- dendro_data(dend, type = "rectangle")
+names(dend_data)
+
+head(dend_data$segments)
+head(dend_data$labels)
+
+labels_info <- sites_cf_4p_nona %>%
+  select(mosaic, agriculture, grazing) %>%
+  mutate(disturbance = ifelse(agriculture > 0, 1,
+                              ifelse(grazing > 0, 1, 0)))
+
+dend_labels <- as_tibble(dend_data$labels) %>%
+  mutate(site = as.character(label)) %>%
+  left_join(labels_info, by = 'site')
+
+rect <- data.frame(x1=c(0, 28.6, 34.6), x2 = c(28.4, 34.4, 41), y1= c(-0.5, -0.5, -0.5), y2= c(16,16,16))
+
+# Plot line segments and add labels
+ggplot(dend_data$segments) + 
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
+  geom_text(data = dend_labels, aes(x, y = -1, label = label), hjust = 1, angle = 90, size = 3) +
+  ylim(-3, 20) +
+  geom_point(data = dend_labels, aes(x, y, color = mosaic, shape = as.factor(disturbance)), size = 2) +
+  scale_colour_gradient(low = "darkolivegreen1", high = "darkgreen") +
+  geom_rect(data = rect, mapping= aes(xmin = x1, xmax = x2, ymin = y1, ymax = y2), fill = NA, color = "gray50", linetype = 3, size = 0.2) +
+  theme_classic()
+  
+
+```
+
+By plot
+
+```{r}
+sp_plot <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "plot_id")
+
+#Remove spp with abundance = 0 
+sp_plot <- sp_plot[, which(colSums(sp_plot) != 0)]
+sp_plot <- sp_plot[which(rowSums(sp_plot) != 0), ]
+```
+
+PCA and hclust
+
+```{r}
+pca_sp3 <- rda(log1p(sp_plot))
+pca_sp3
+summary(pca_sp3)
+biplot(pca_sp3)
+plot(pca_sp3)
+
+ordiplot(pca_sp3, display = 'sites', type = 'text')
+ordiplot(pca_sp3, display = 'species', type = 'text')
+
+
+ordiplot(pca_sp3, display = 'sites', type = 'n')
+points(pca_sp3, col = plots_cf$str_class_plots)
+
+```
+
+```{r}
+dis3 <- vegdist(log1p(sp_plot), method = "euclidean")
+clust3 <- hclust(dis3, method = "ward.D")
+plot(clust3, hang = -1, cex = 0.6)
+rect.hclust(clust3, k = 3)
+```
+It seems that by plot the pattern is similar but more confusing. Structural classes don't group together
+
+NMDS
+
+```{r}
+nmds <- metaMDS(log1p(sp_site4p_nona), distance = "bray", k= 2, trymax = 1000, autotransform = T)
+stressplot(nmds)
+plot(nmds)
+```
+
+```{r}
+ordiplot(nmds,type="n")
+orditorp(nmds,display="species",col="red",air=0.01)
+orditorp(nmds,display="sites",cex=0.7,air=0.01)
 ```
 
 Assess how composition changes with env variables and disturbance and mosaic with RDA or DCA
@@ -811,11 +965,9 @@ Assess how composition changes with env variables and disturbance and mosaic wit
 ### Composition and climate
 
 ```{r}
+#RDA with management
 
-sites_cf_4p <- sites_cf %>%
-  filter(plot_no > 3)
-
-sp_rda <- rda(sp_site4p ~ sites_cf_4p$mosaic, data = sites_cf_4p, scale = T)
+sp_rda <- rda(sp_site4p_nona ~ sites_cf_4p_nona$mosaic + sites_cf_4p_nona$agriculture + sites_cf_4p_nona$grazing, data = sites_cf_4p_nona, scale = T)
 sp_rda
 ordiplot(sp_rda)
 summary(sp_rda)
@@ -826,6 +978,17 @@ expl_var <- c(constrained_eig, unconstrained_eig)
 barplot (expl_var[1:20], col = c(rep ('red', length (constrained_eig)), rep ('black', length (unconstrained_eig))),
          las = 2, ylab = '% variation')
 
+#RDA with env variables
+sp_rda2 <- rda(sp_site4p_nona ~ sites_cf_4p_nona$temp + sites_cf_4p_nona$precip + sites_cf_4p_nona$altitude, data = sites_cf_4p_nona, scale = T)
+sp_rda2
+ordiplot(sp_rda2)
+summary(sp_rda2)
+
+constrained_eig <- sp_rda2$CCA$eig/sp_rda2$tot.chi*100
+unconstrained_eig <- sp_rda2$CA$eig/sp_rda2$tot.chi*100
+expl_var <- c(constrained_eig, unconstrained_eig)
+barplot (expl_var[1:20], col = c(rep ('red', length (constrained_eig)), rep ('black', length (unconstrained_eig))),
+         las = 2, ylab = '% variation')
 ```
 Environmental variables (temp, precip, elevation) explain 5% of the variance.
 While species explain the remaining 95%. The first two components explain 17.5 and 11.6% of variation, respectively.
