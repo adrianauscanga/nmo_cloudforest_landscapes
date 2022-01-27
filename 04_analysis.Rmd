@@ -908,6 +908,14 @@ rda3 <- rda(log1p(sp_site4p_forest) ~ forest4p$temp + forest4p$precip + forest4p
 rda3
 summary(rda3)
 
+
+rda3b <- rda(log1p(sp_site4p_forest) ~ forest4p$temp + forest4p$precip + forest4p$altitude, scale = T)
+rda3b
+summary(rda3b)
+
+rda3c <- rda(log1p(sp_site4p_forest) ~ forest4p$aspect_gee_c, scale = T)
+rda3c
+summary(rda3c)
 ```
 
 Plots
@@ -923,6 +931,22 @@ ordiplot(rda3, display = 'sites', choices = c(7,8), type = 'text')
 
 ordiplot (rda3, display = 'species', choices = c(1,2), type = 'n')
 orditorp (rda3, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+
+plot(rda3b)
+ordiplot(rda3b, display = 'sites', type = 'text')
+ordiplot(rda3b, display = 'species', type = 'text')
+ordiplot (rda3b, display = 'species', choices = c(1,2), type = 'n')
+orditorp (rda3b, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+ordiplot (rda3b, display = 'species', choices = c(4,5), type = 'n')
+orditorp (rda3b, display = 'species', choices = c(4,5), pcol = 'grey', pch = '+')
+
+plot(rda3c)
+ordiplot(rda3c, display = 'sites', type = 'text')
+ordiplot(rda3c, display = 'species', type = 'text')
+ordiplot(rda3c, display = 'species', choices = c(1,2), type = 'n')
+orditorp(rda3c, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+ordiplot(rda3c, display = 'species', choices = c(3,4), type = 'n')
+orditorp(rda3c, display = 'species', choices = c(3,4), pcol = 'grey', pch = '+')
 
 ```
 
@@ -940,6 +964,48 @@ orditorp (pca_forest, display = 'species', choices = c(1,2), pcol = 'grey', pch 
 ordiplot (pca_forest, display = 'species', choices = c(3,4), type = 'n')
 orditorp (pca_forest, display = 'species', choices = c(3,4), pcol = 'grey', pch = '+')
 
+```
+
+Hierarchical cluster with forest sites
+
+```{r}
+dis_forest <- vegdist(log1p(sp_site4p_forest), method = "euclidean")
+clust_forest <- hclust(dis_forest, method = "ward.D")
+plot(clust_forest, cex = 1)
+rect.hclust(clust_forest, k = 4)
+```
+Add relevant info to cluster
+
+```{r}
+dend_forest <- as.dendrogram(clust_forest)
+dend_forest
+
+# Extract the data (for rectangular lines)
+# Type can be "rectangle" or "triangle"
+dend_data_f <- dendro_data(dend_forest, type = "rectangle")
+names(dend_data_f)
+
+head(dend_data_f$segments)
+head(dend_data_f$labels)
+
+labels_info_f <- forest4p %>%
+  select(altitude, temp, precip, land_tenure, landform, slope_gee, aspect_gee_c) 
+
+dend_labels_f <- as_tibble(dend_data_f$labels) %>%
+  mutate(site = as.character(label)) %>%
+  left_join(labels_info_f, by = 'site')
+
+#rect_f <- data.frame(x1=c(0, 28.6, 34.6), x2 = c(28.4, 34.4, 41), y1= c(-0.5, -0.5, -0.5), y2= c(16,16,16))
+
+# Plot line segments and add labels
+ggplot(dend_data_f$segments) + 
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
+  geom_text(data = dend_labels_f, aes(x, y = -0.7, label = label), hjust = 1, angle = 90, size = 3) +
+  ylim(-3, 20) +
+  geom_point(data = dend_labels_f, aes(x, y, color = as.factor(aspect_gee_c)), size = 3) +
+  #scale_colour_gradient(low = "lightblue", high = "darkblue") +
+  #geom_rect(data = rect, mapping= aes(xmin = x1, xmax = x2, ymin = y1, ymax = y2), fill = NA, color = "gray70", linetype = 2, size = 0.2) +
+  theme_classic()
 ```
 
 ---------------------------------------------------------------------
