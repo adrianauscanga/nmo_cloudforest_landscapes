@@ -130,15 +130,6 @@ sites_cf <- sites_cf %>%
 
 ```
 
-
-# Spatial autocorrelation
-
-Examples: 
-- https://www.spatialanalysisonline.com/An%20Introduction%20to%20Spatial%20Data%20Analysis%20in%20R.pdf
-- https://gwenantell.com/exploring-spatial-autocorrelation-in-r/
-- https://rpubs.com/quarcs-lab/spatial-autocorrelation
-- Bart's class: https://pjbartlein.github.io/GeogDataAnalysis/lec13.html
-
 Site 71213 in sites_cf data set lacks geographic coordinates.
 Which are: 17.50506, -96.30769
 
@@ -148,235 +139,8 @@ sites_cf <- sites_cf %>%
          latitude = ifelse(site == "71213", 17.50506, latitude))
 ```
 
-Get distance-neighbor matrix  and plot network of sites.
-
-```{r}
-
-#distance neighbors
-loc <- cbind(sites_cf$longitude, sites_cf$latitude)
-d <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
-sites_neighbors_dist <- dnearneigh(loc, 0, d, longlat = T)
-str(sites_neighbors_dist)
-plot(sites_neighbors_dist, loc)
-
-plot(loc)
-
-```
-
-
-
-Moran test
-
-```{r}
-# spatial autocorrelation of dependent variable (AGB and Simpson)
-moran.test(sites_cf$av_agb_site, zero.policy=T, 
-     nb2listw(sites_neighbors_dist, zero.policy=T, style="W"))
-
-
-```
-*25km apart*:
-	Moran I test under randomisation
-
-data:  sites_cf$av_agb_site  
-weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")    
-
-Moran I statistic standard deviate = 3.2834, p-value =
-0.0005128
-alternative hypothesis: greater
-sample estimates:
-Moran I statistic       Expectation          Variance 
-      0.106909344      -0.009433962       0.001255547
-      
-
-*20 km apart:*
-Moran I test under randomisation
-
-data:  sites_cf$av_agb_site  
-weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")    
-
-Moran I statistic standard deviate = 2.7158, p-value =
-0.003305
-alternative hypothesis: greater
-sample estimates:
-Moran I statistic       Expectation          Variance 
-      0.105901804      -0.009433962       0.001803527 
-
-*15 km apart:*
-Moran I test under randomisation
-
-data:  sites_cf$av_agb_site  
-weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")  n reduced by no-neighbour observations
-  
-
-Moran I statistic standard deviate = 1.9438, p-value =
-0.02596
-alternative hypothesis: greater
-sample estimates:
-Moran I statistic       Expectation          Variance 
-      0.098077538      -0.009523810       0.003064303 
-
-*10 km apart:*
-Moran I test under randomisation
-
-data:  sites_cf$av_agb_site  
-weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")  n reduced by no-neighbour observations
-  
-
-Moran I statistic standard deviate = 1.1365, p-value =
-0.1279
-alternative hypothesis: greater
-sample estimates:
-Moran I statistic       Expectation          Variance 
-      0.084236860      -0.010000000       0.006875416 
-
-      
-Run the analysis with sites that have at least 3 plots, to reduce some noise
-
-```{r}
-sites_subset <- sites_cf %>%
-  filter(plot_no > 2)
-
-#plot variables
-plot(sites_subset[,c(10:14,18,20,34)]) 
-plot(sites_subset[,c(12,13,18,20,34,40,48)])
-
-#distance neighbors
-loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
-d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
-sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
-str(sites_subset_neighbors_dist)
-plot(sites_subset_neighbors_dist, loc_subs)
-
-#Moran test
-# spatial autocorrelation of dependent variable (AGB and Simpson)
-moran.test(sites_subset$av_agb_site, zero.policy=T, 
-     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
-
-# Moran test with distance = 10
-#Moran I statistic standard deviate = 2.9615, p-value = 0.001531
-#alternative hypothesis: greater
-#sample estimates:
-#Moran I statistic       Expectation          Variance 
-#       0.38509221       -0.01754386        0.01848425 
-
-## Distance = 20
-d_subs2 <- 20 #distance has to be larger than the distance that exists between sites, which is 2.5 km
-sites_subset_neighbors_dist2 <- dnearneigh(loc_subs, 0, d_subs2, longlat = T)
-
-plot(sites_subset_neighbors_dist2, loc_subs)
-
-#Moran test
-# spatial autocorrelation of dependent variable (AGB and Simpson)
-moran.test(sites_subset$av_agb_site, zero.policy=T, 
-     nb2listw(sites_subset_neighbors_dist2, zero.policy=T, style="W"))
-
-#Moran I statistic standard deviate = 4.5796, p-value = 2.329e-06
-#alternative hypothesis: greater
-#sample estimates:
-#Moran I statistic       Expectation          Variance 
-#      0.317644918      -0.015151515       0.005280796 
-
-
-## Distance = 5
-
-d_subs3 <- 5 #distance has to be larger than the distance that exists between sites, which is 2.5 km
-sites_subset_neighbors_dist3 <- dnearneigh(loc_subs, 0, d_subs3, longlat = T)
-
-plot(sites_subset_neighbors_dist3, loc_subs)
-
-#Moran test
-# spatial autocorrelation of dependent variable (AGB and Simpson)
-moran.test(sites_subset$av_agb_site, zero.policy=T, 
-     nb2listw(sites_subset_neighbors_dist3, zero.policy=T, style="W"))
-
-#Moran I statistic standard deviate = 0.47578, p-value = 0.3171
-#alternative hypothesis: greater
-#sample estimates:
-#Moran I statistic       Expectation          Variance 
-#       0.07981275       -0.03703704        0.06031799 
-```
-Let's explore distances between 5 and 10:
-
-```{r}
-#distance neighbors
-loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
-d_subs <- 5 #distance has to be larger than the distance that exists between sites, which is 2.5 km
-sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
-str(sites_subset_neighbors_dist)
-plot(sites_subset_neighbors_dist, loc_subs)
-
-#Moran test
-# spatial autocorrelation of dependent variable (AGB and Simpson)
-moran.test(sites_subset$av_agb_site, zero.policy=T, 
-     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
-
-#10
-#Moran I statistic standard deviate = 2.9615, p-value =0.001531
-#alternative hypothesis: greater
-#sample estimates:
-#Moran I statistic       Expectation          Variance 
-#       0.38509221       -0.01754386        0.01848425 
-
-#9
-#Moran I statistic standard deviate = 2.5088, p-value = 0.006056
-#alternative hypothesis: greater
-#sample estimates:
-#Moran I statistic       Expectation          Variance 
-#       0.34235874       -0.01923077        0.02077221 
-
-#8
-#Moran I statistic standard deviate = 2.5088, p-value =
-#0.006056
-#alternative hypothesis: greater
-#sample estimates:
-#Moran I statistic       Expectation          Variance 
-#       0.34235874       -0.01923077        0.02077221
-
-#7
-#Moran I statistic standard deviate = 2.032, p-value =0.02108
-#alternative hypothesis: greater
-#sample estimates:
-#Moran I statistic       Expectation          Variance 
-#       0.33073160       -0.02325581        0.03034737
-
-#6
-#Moran I statistic standard deviate = 0.79832, p-value =0.2123
-#alternative hypothesis: greater
-#sample estimates:
-#Moran I statistic       Expectation          Variance 
-#       0.12408276       -0.02500000        0.03487432
-
-#5
-#Moran I statistic standard deviate = 0.47578, p-value =0.3171
-#alternative hypothesis: greater
-#sample estimates:
-#Moran I statistic       Expectation          Variance 
-#       0.07981275       -0.03703704        0.06031799
-```
-
-
-Moran test shows that there's spatial autocorrelation among sites that are at least 7 km apart when only sites with more than 2 plots are considered (closer than that, the neighborhoods are too small). When all sites are considered, Moran test is not significant at 10 km.
-To account for this spatial autocorrelation, I'll cluster the data in subregions.
-Fortunately, Toledo-Aceves et al (2011) already divided the NMO region in smaller subregions, which fit pretty well with the network of neighbors using d=10km.
-
-First, let's conduct a Moran's I test with a diversity index.
-
-```{r}
-#distance neighbors
-loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
-d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
-sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
-str(sites_subset_neighbors_dist)
-plot(sites_subset_neighbors_dist, loc_subs)
-
-#Moran test
-# spatial autocorrelation of dependent variable (AGB and Simpson)
-moran.test(sites_subset$simpson_av_site, zero.policy=T, 
-     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
-```
-It's not significant in neighborhoods of 10 km.
-
 Add a column with subregions to the data frame.
+
 ```{r}
 sites_huautla <- read.csv("input/sites_huautla.csv", header = T)
 sites_ixtlan <- read.csv("input/sites_ixtlan.csv", header = T)
@@ -471,9 +235,10 @@ ggdensity(sites_cf2$sp_richness_site_av)
 ggdensity(sites_cf2$shannon_av_site)
 ggdensity(sites_cf2$simpson_av_site)
 ```
-In general, data is not normal (p<0.05)
+In general, data is not normal (p<0.05). 
+Data transformation may solve the problem.
 
-Multiple regression
+## Multiple regression
 
 ```{r}
 lm1 <- lm(av_agb_site ~ temp, data = sites_cf2)
@@ -574,6 +339,16 @@ Eliminate some variables from the model using regsubsets function:
 
 lm4 <- regsubsets(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm4)
+
+lm4b <- regsubsets(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing + aspect_gee_c, data = sites_cf2)
+summary(lm4b)
+
+summary(lm4)
+data.frame(
+  Adj.R2 = which.max(res.sum$adjr2),
+  CP = which.min(res.sum$cp),
+  BIC = which.min(res.sum$bic)
+)
 ```
 Run again the model, selecting one of the best subsets regression:
 
@@ -715,7 +490,7 @@ summary(lm11)
 
 partial.resid.plot(lm11)
 
-lm11b <- lm((simpson_av_site)^2 ~ altitude + slope_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+lm11b <- lm((simpson_av_site)^2 ~ altitude + aspect_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm11b)
 
 partial.resid.plot(lm11b)
@@ -848,6 +623,7 @@ sites_cf %>%
 
 ```
 
+# Environment and AGB
 
 Now let's remove the effect of management filtering out sites with very young forests and disturbance
 
@@ -1023,6 +799,149 @@ forest %>%
   theme_classic()
 ```
 
+# Environment and diversity
+
+```{r}
+
+forest4p <- forest %>%
+  filter(plot_no == 4)
+
+lm16 <- lm(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee, data = forest)
+summary(lm16)
+```
+Diversity didn't show a relationship with these environmental variables.
+
+# RDA
+
+```{r}
+sites_cf_4p_nona <- sites_cf %>%
+  filter(plot_no >3) %>%
+  filter(!is.na(agriculture) | !is.na(grazing))
+
+sites4p_nona <- sites_cf_4p_nona %>%
+  select(site)
+
+sites4p_nona_list <- as.list(sites4p_nona)
+
+sp_site4p_nona <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  right_join(sites4p_nona) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+#Remove spp with abundance = 0 
+sp_site4p_nona <- sp_site4p_nona[, which(colSums(sp_site4p_nona) != 0)]
+
+sp_site4p_nona <- sp_site4p_nona[which(rowSums(sp_site4p_nona) != 0), ]
+
+rda1 <- rda(log1p(sp_site4p_nona) ~ sites_cf_4p_nona$mosaic + sites_cf_4p_nona$agriculture + sites_cf_4p_nona$grazing, scale = T)
+rda1
+summary(rda1)
+```
+The three variables explain 8.56% of the variance ((5.042+4.050+3.583)/148) = 0.08564189).
+PC1 and PC2 together explain 13.455% of the variance.
+
+```{r}
+plot(rda1)
+ordiplot(rda1, display = 'sites', type = 'text')
+ordiplot(rda1, display = 'species', type = 'text')
+
+ordiplot (rda1, display = 'species', choices = c(4,5), type = 'n')
+orditorp (rda1, display = 'species', choices = c(4,5), pcol = 'grey', pch = '+')
+
+```
+It seems that these three variables are not enough for explaining variation in sp composition.
+Let's add temp and precip.
+
+```{r}
+rda2 <- rda(log1p(sp_site4p_nona) ~ sites_cf_4p_nona$mosaic + sites_cf_4p_nona$agriculture + sites_cf_4p_nona$grazing + sites_cf_4p_nona$temp + sites_cf_4p_nona$precip, scale = T)
+rda2
+summary(rda2)
+```
+
+Plots
+
+```{r}
+plot(rda2)
+ordiplot(rda2, display = 'sites', type = 'text')
+ordiplot(rda2, display = 'species', type = 'text')
+
+ordiplot (rda2, display = 'species', choices = c(6,7), type = 'n')
+orditorp (rda2, display = 'species', choices = c(6,7), pcol = 'grey', pch = '+')
+
+ordiplot (rda2, display = 'species', choices = c(1,2), type = 'n')
+orditorp (rda2, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+```
+Although this rda explains a bit more of variation, the pattern is not clear.
+
+# Forest ~ environment
+
+```{r}
+
+sites_forest4p <- forest4p %>%
+  select(site)
+
+sp_site4p_forest <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  right_join(sites_forest4p) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+#Remove spp with abundance = 0 
+sp_site4p_forest <- sp_site4p_forest[, which(colSums(sp_site4p_forest) != 0)]
+
+sp_site4p_forest <- sp_site4p_forest[which(rowSums(sp_site4p_forest) != 0), ]
+
+# RDA
+
+rda3 <- rda(log1p(sp_site4p_forest) ~ forest4p$temp + forest4p$precip + forest4p$altitude + forest4p$slope_gee + forest4p$aspect_gee_c, scale = T)
+rda3
+summary(rda3)
+
+```
+
+Plots
+
+```{r}
+plot(rda3)
+ordiplot(rda3, display = 'sites', type = 'text')
+ordiplot(rda3, display = 'species', type = 'text')
+
+ordiplot (rda3, display = 'species', choices = c(7,8), type = 'n')
+orditorp (rda3, display = 'species', choices = c(7,8), pcol = 'grey', pch = '+')
+ordiplot(rda3, display = 'sites', choices = c(7,8), type = 'text')
+
+ordiplot (rda3, display = 'species', choices = c(1,2), type = 'n')
+orditorp (rda3, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+
+```
+
+# Composition of only forest
+
+```{r}
+pca_forest <- rda(log1p(sp_site4p_forest))
+summary(pca_forest)
+
+plot(pca_forest)
+
+ordiplot(pca_forest, display = 'sites', type = 'text')
+ordiplot (pca_forest, display = 'species', choices = c(1,2), type = 'n')
+orditorp (pca_forest, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+ordiplot (pca_forest, display = 'species', choices = c(3,4), type = 'n')
+orditorp (pca_forest, display = 'species', choices = c(3,4), pcol = 'grey', pch = '+')
+
+```
+
 ---------------------------------------------------------------------
 Data distribution
 What probability distribution best fits my data?
@@ -1140,3 +1059,240 @@ plot(numeric_variables$av_agb_site ~ numeric_variables$temp)
 abline(lm8)
 summary(lm8)
 ```
+
+# Spatial autocorrelation
+
+Examples: 
+- https://www.spatialanalysisonline.com/An%20Introduction%20to%20Spatial%20Data%20Analysis%20in%20R.pdf
+- https://gwenantell.com/exploring-spatial-autocorrelation-in-r/
+- https://rpubs.com/quarcs-lab/spatial-autocorrelation
+- Bart's class: https://pjbartlein.github.io/GeogDataAnalysis/lec13.html
+
+Get distance-neighbor matrix  and plot network of sites.
+
+```{r}
+
+#distance neighbors
+loc <- cbind(sites_cf$longitude, sites_cf$latitude)
+d <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_neighbors_dist <- dnearneigh(loc, 0, d, longlat = T)
+str(sites_neighbors_dist)
+plot(sites_neighbors_dist, loc)
+
+plot(loc)
+
+```
+
+
+
+Moran test
+
+```{r}
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_cf$av_agb_site, zero.policy=T, 
+     nb2listw(sites_neighbors_dist, zero.policy=T, style="W"))
+
+
+```
+*25km apart*:
+	Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")    
+
+Moran I statistic standard deviate = 3.2834, p-value =
+0.0005128
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.106909344      -0.009433962       0.001255547
+      
+
+*20 km apart:*
+Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")    
+
+Moran I statistic standard deviate = 2.7158, p-value =
+0.003305
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.105901804      -0.009433962       0.001803527 
+
+*15 km apart:*
+Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")  n reduced by no-neighbour observations
+  
+
+Moran I statistic standard deviate = 1.9438, p-value =
+0.02596
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.098077538      -0.009523810       0.003064303 
+
+*10 km apart:*
+Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")  n reduced by no-neighbour observations
+  
+
+Moran I statistic standard deviate = 1.1365, p-value =
+0.1279
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.084236860      -0.010000000       0.006875416 
+
+      
+Run the analysis with sites that have at least 3 plots, to reduce some noise
+
+```{r}
+sites_subset <- sites_cf %>%
+  filter(plot_no > 2)
+
+#plot variables
+plot(sites_subset[,c(10:14,18,20,34)]) 
+plot(sites_subset[,c(12,13,18,20,34,40,48)])
+
+#distance neighbors
+loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(sites_subset_neighbors_dist)
+plot(sites_subset_neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
+
+# Moran test with distance = 10
+#Moran I statistic standard deviate = 2.9615, p-value = 0.001531
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.38509221       -0.01754386        0.01848425 
+
+## Distance = 20
+d_subs2 <- 20 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist2 <- dnearneigh(loc_subs, 0, d_subs2, longlat = T)
+
+plot(sites_subset_neighbors_dist2, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist2, zero.policy=T, style="W"))
+
+#Moran I statistic standard deviate = 4.5796, p-value = 2.329e-06
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#      0.317644918      -0.015151515       0.005280796 
+
+
+## Distance = 5
+
+d_subs3 <- 5 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist3 <- dnearneigh(loc_subs, 0, d_subs3, longlat = T)
+
+plot(sites_subset_neighbors_dist3, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist3, zero.policy=T, style="W"))
+
+#Moran I statistic standard deviate = 0.47578, p-value = 0.3171
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.07981275       -0.03703704        0.06031799 
+```
+
+Let's explore distances between 5 and 10:
+
+```{r}
+#distance neighbors
+loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
+d_subs <- 5 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(sites_subset_neighbors_dist)
+plot(sites_subset_neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
+
+#10
+#Moran I statistic standard deviate = 2.9615, p-value =0.001531
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.38509221       -0.01754386        0.01848425 
+
+#9
+#Moran I statistic standard deviate = 2.5088, p-value = 0.006056
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.34235874       -0.01923077        0.02077221 
+
+#8
+#Moran I statistic standard deviate = 2.5088, p-value =
+#0.006056
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.34235874       -0.01923077        0.02077221
+
+#7
+#Moran I statistic standard deviate = 2.032, p-value =0.02108
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.33073160       -0.02325581        0.03034737
+
+#6
+#Moran I statistic standard deviate = 0.79832, p-value =0.2123
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.12408276       -0.02500000        0.03487432
+
+#5
+#Moran I statistic standard deviate = 0.47578, p-value =0.3171
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.07981275       -0.03703704        0.06031799
+```
+
+
+Moran test shows that there's spatial autocorrelation among sites that are at least 7 km apart when only sites with more than 2 plots are considered (closer than that, the neighborhoods are too small). When all sites are considered, Moran test is not significant at 10 km.
+To account for this spatial autocorrelation, I'll cluster the data in subregions.
+Fortunately, Toledo-Aceves et al (2011) already divided the NMO region in smaller subregions, which fit pretty well with the network of neighbors using d=10km.
+
+First, let's conduct a Moran's I test with a diversity index.
+
+```{r}
+#distance neighbors
+loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(sites_subset_neighbors_dist)
+plot(sites_subset_neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$simpson_av_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
+```
+It's not significant in neighborhoods of 10 km.

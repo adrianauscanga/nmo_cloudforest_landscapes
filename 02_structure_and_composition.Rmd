@@ -890,15 +890,17 @@ rect <- data.frame(x1=c(0, 28.6, 34.6), x2 = c(28.4, 34.4, 41), y1= c(-0.5, -0.5
 # Plot line segments and add labels
 ggplot(dend_data$segments) + 
   geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
-  geom_text(data = dend_labels, aes(x, y = -1, label = label), hjust = 1, angle = 90, size = 3) +
+  geom_text(data = dend_labels, aes(x, y = -0.7, label = label), hjust = 1, angle = 90, size = 3) +
   ylim(-3, 20) +
   geom_point(data = dend_labels, aes(x, y, color = mosaic, shape = as.factor(disturbance)), size = 2) +
   scale_colour_gradient(low = "darkolivegreen1", high = "darkgreen") +
-  geom_rect(data = rect, mapping= aes(xmin = x1, xmax = x2, ymin = y1, ymax = y2), fill = NA, color = "gray50", linetype = 3, size = 0.2) +
+  geom_rect(data = rect, mapping= aes(xmin = x1, xmax = x2, ymin = y1, ymax = y2), fill = NA, color = "gray70", linetype = 2, size = 0.2) +
   theme_classic()
   
 
 ```
+
+Add this info to PCA
 
 By plot
 
