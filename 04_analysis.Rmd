@@ -234,6 +234,8 @@ ggdensity(sites_cf2$grazing)
 ggdensity(sites_cf2$sp_richness_site_av)
 ggdensity(sites_cf2$shannon_av_site)
 ggdensity(sites_cf2$simpson_av_site)
+ggdensity(sites_cf2$av_treedensity_site)
+ggdensity(sites_cf2$av_loreys_site)
 ```
 In general, data is not normal (p<0.05). 
 Data transformation may solve the problem.
@@ -1006,6 +1008,56 @@ ggplot(dend_data_f$segments) +
   #scale_colour_gradient(low = "lightblue", high = "darkblue") +
   #geom_rect(data = rect, mapping= aes(xmin = x1, xmax = x2, ymin = y1, ymax = y2), fill = NA, color = "gray70", linetype = 2, size = 0.2) +
   theme_classic()
+```
+
+# Tree size contribution to total AGB
+
+```{r}
+trees_cf %>%
+  ggplot(aes(x= diam_bh)) +
+  geom_histogram()
+
+sites <- sites_cf2 %>%
+  select(site)
+
+agb_class_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(agb_class_site = sum(agb))
+
+agb_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(agb_site = sum(agb))  
+
+head(agb_site)
+head(agb_class_site)
+
+agb_class_site %>%
+  left_join(agb_site, by = "site") %>%
+  mutate(agb_prop = agb_class_site/agb_site) %>%
+  ggplot(aes(x = diam_class, y = agb_prop)) +
+  geom_boxplot()
 ```
 
 ---------------------------------------------------------------------
