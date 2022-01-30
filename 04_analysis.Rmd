@@ -1060,6 +1060,188 @@ agb_class_site %>%
   geom_boxplot()
 ```
 
+```{r}
+
+stems_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(stems = n())
+
+stems_class_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(stems_class = n())
+
+head(stems_site)
+head(stems_class_site)
+
+stems_class_site %>%
+  left_join(stems_site, by = "site") %>%
+  mutate(prop_stems = stems_class/stems) %>%
+  ggplot(aes(x = diam_class, y = prop_stems)) +
+  geom_boxplot()
+```
+
+Repeat with only forest
+
+```{r}
+
+forest_sites <- select(forest, site)
+
+agb_class_forest <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(agb_class_forest = sum(agb))
+
+agb_forest <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(agb_forest = sum(agb))  
+
+head(agb_forest)
+head(agb_class_forest)
+
+agb_class_forest %>%
+  left_join(agb_forest, by = "site") %>%
+  mutate(agb_prop_f = agb_class_forest/agb_forest) %>%
+  ggplot(aes(x = diam_class, y = agb_prop_f)) +
+  geom_boxplot()
+```
+
+```{r}
+
+stems_forest <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(stems_f = n())
+
+stems_class_forest <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(stems_class_f = n())
+
+head(stems_forest)
+head(stems_class_forest)
+
+stems_class_forest %>%
+  left_join(stems_forest, by = "site") %>%
+  mutate(prop_stems_f = stems_class_f/stems_f) %>%
+  ggplot(aes(x = diam_class, y = prop_stems_f)) +
+  geom_boxplot()
+
+```
+
+Density of trees > 50cm
+
+```{r}
+
+sd6 <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(sd = n()/0.16) %>% # not exact because some sites have only three plots
+  filter(diam_class == "6")
+
+sites_cf2 %>%
+  right_join(sd6) %>%
+  ggplot(aes(x = mosaic, y = sd)) +
+  geom_point()
+```
+
+Species contribution to AGB
+
+```{r}
+
+agb_sp_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, species) %>%
+  summarise(agb_sp_site = sum(agb))
+
+agb_sp_site %>%
+  left_join(agb_site, by = "site") %>%
+  #mutate(agb_prop_sp = agb_sp_site/agb_site) %>%
+  group_by(species) %>%
+  summarise(agb_sp_total = sum(agb_sp_site)) %>%
+  filter(agb_sp_total > 50) %>%
+  ggplot(aes(x = species, y = agb_sp_total)) +
+  geom_boxplot()
+
+```
+
 ---------------------------------------------------------------------
 Data distribution
 What probability distribution best fits my data?
