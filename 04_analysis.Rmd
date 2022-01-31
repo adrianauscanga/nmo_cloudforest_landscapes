@@ -1392,6 +1392,15 @@ trees_cf %>%
   arrange(diam_class, -agb_class_sp, - class_species) #%>%
 #  filter(diam_class == "6") # Change this to see the contribution of each class
 ```
+# Relationship between stem density and sp richness
+
+```{r}
+sites_cf2 %>%
+  ggplot(aes(x = av_treedensity_site, y = sp_richness_site_av)) +
+  geom_point() +
+  geom_smooth(method = "gam", color = "tomato")
+
+```
 
 ---------------------------------------------------------------------
 Data distribution

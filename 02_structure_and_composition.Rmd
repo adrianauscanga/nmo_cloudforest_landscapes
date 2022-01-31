@@ -714,6 +714,7 @@ Rank abundance curves
 
 sites4p <- sites_cf %>%
   filter(plot_no > 3) %>%
+  arrange(mosaic) %>%
   select(site)
 
 sites4p_list <- as.list(sites4p)
