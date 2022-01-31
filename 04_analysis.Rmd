@@ -1217,6 +1217,99 @@ sites_cf2 %>%
   geom_point()
 ```
 
+Forest-agriculture mosaics patterns removing forest sites
+
+```{r}
+mosaic <- sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(mosaic < 0.49)
+
+mosaic_sites <- mosaic %>%
+  select(site)
+
+agb_class_m <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(agb_class_m = sum(agb))
+
+agb_site_m <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(agb_m = sum(agb))  
+
+head(agb_site_m)
+head(agb_class_m)
+
+agb_class_m %>%
+  left_join(agb_site_m, by = "site") %>%
+  mutate(agb_prop = agb_class_m/agb_m) %>%
+  ggplot(aes(x = diam_class, y = agb_prop)) +
+  geom_boxplot()
+
+```
+Stem density in mosaics
+
+```{r}
+stems_m <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(stems_m = n())
+
+stems_class_m <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(stems_class_m = n())
+
+head(stems_m)
+head(stems_class_m)
+
+stems_class_m %>%
+  left_join(stems_m, by = "site") %>%
+  mutate(prop_stems = stems_class_m/stems_m) %>%
+  ggplot(aes(x = diam_class, y = prop_stems)) +
+  geom_boxplot()
+```
+
 Species contribution to AGB
 
 ```{r}
@@ -1240,6 +1333,64 @@ agb_sp_site %>%
   ggplot(aes(x = species, y = agb_sp_total)) +
   geom_boxplot()
 
+```
+Species by diam class
+
+```{r}
+
+# All sites:
+trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(diam_class, species) %>%
+  summarise(class_species = n(), agb_class_sp = sum(agb)) %>%
+  arrange(diam_class, -agb_class_sp, - class_species) #%>%
+#  filter(diam_class == "6") # Change this to see the contribution of each class
+
+# Forest sites
+trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(diam_class, species) %>%
+  summarise(class_species = n(), agb_class_sp = sum(agb)) %>%
+  arrange(diam_class, -agb_class_sp, - class_species) #%>%
+#  filter(diam_class == "6") # Change this to see the contribution of each class
+
+# Mosaic sites
+trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(diam_class, species) %>%
+  summarise(class_species = n(), agb_class_sp = sum(agb)) %>%
+  arrange(diam_class, -agb_class_sp, - class_species) #%>%
+#  filter(diam_class == "6") # Change this to see the contribution of each class
 ```
 
 ---------------------------------------------------------------------
