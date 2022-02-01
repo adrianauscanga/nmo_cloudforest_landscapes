@@ -358,6 +358,13 @@ Run again the model, selecting one of the best subsets regression:
 lm5 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + mosaic + agriculture, data = sites_cf2)
 summary(lm5)
 ```
+
+lm5 plots
+
+```{r}
+partial.resid.plot(lm5)
+```
+
 Test for spatial autocorrelation:
 
 ```{r}
@@ -1398,8 +1405,25 @@ trees_cf %>%
 sites_cf2 %>%
   ggplot(aes(x = av_treedensity_site, y = sp_richness_site_av)) +
   geom_point() +
-  geom_smooth(method = "gam", color = "tomato")
+  geom_smooth(span = 1, se= T) +
+  #geom_smooth(method= "lm", color="tomato", se= F) +
+  scale_x_continuous(limits = c(0,1500))
 
+```
+
+# Relationship between basal area, stem density and lorey's height
+
+```{r}
+
+sites_cf2 %>%
+  ggplot(aes(y = av_basalarea_site, x = av_treedensity_site)) +
+  geom_point() +
+  geom_smooth(span = 1, se= T)
+
+sites_cf2 %>%
+  ggplot(aes(y = av_loreys_site, x = av_treedensity_site)) +
+  geom_point() +
+  geom_smooth(span = 1, se= T)
 ```
 
 ---------------------------------------------------------------------
