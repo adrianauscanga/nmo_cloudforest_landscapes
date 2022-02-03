@@ -490,7 +490,7 @@ Let's look for the best model
 lm10 <- regsubsets(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm10)
 
-lm10b <- regsubsets((simpson_av_site)^2 ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+lm10b <- regsubsets((simpson_av_site)^2 ~ temp + precip + altitude + slope_gee  + aspect_gee_c + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm10b)
 ```
 ```{r}
@@ -499,10 +499,13 @@ summary(lm11)
 
 partial.resid.plot(lm11)
 
-lm11b <- lm((simpson_av_site)^2 ~ altitude + aspect_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+lm11b <- lm((simpson_av_site)^2 ~ altitude + aspect_gee_c + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
 summary(lm11b)
 
 partial.resid.plot(lm11b)
+
+plot((simpson_av_site)^2 ~ aspect_gee, data = sites_cf2)
+abline(lm((sites_cf2$simpson_av_site)^2 ~ sites_cf2$aspect_gee))
 ```
 
 QQplots 
@@ -698,7 +701,7 @@ summary(lm15)
 oldpar <- par(mfrow = c(2, 2))
 plot(lm15, which=c(1,2,4,5))
 
-
+partial.resid.plot(lm15)
 ```
 How is biomass related to these environmental variables
 
@@ -761,9 +764,10 @@ forest %>%
   theme_classic()
 
 forest %>%
-  ggplot(aes(x = temp, y = av_agb_site, color = precip, shape = aspect_gee_c)) +
+  ggplot(aes(x = precip, y = log(av_agb_site))) +
   geom_point(size = 4) +
-  scale_colour_gradient(low = "#f5f5f5", high = "darkblue") +
+  geom_smooth(method= "lm") +
+  #scale_colour_gradient(low = "#f5f5f5", high = "darkblue") +
   theme_classic()
 
 forest %>%
@@ -815,8 +819,19 @@ forest %>%
 forest4p <- forest %>%
   filter(plot_no == 4)
 
-lm16 <- lm(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee, data = forest)
+lm16 <- lm((simpson_av_site)^2 ~ temp + precip + altitude + slope_gee + aspect_gee_c, data = forest)
 summary(lm16)
+
+lm16b <- lm((shannon_av_site) ~ temp + precip + altitude + slope_gee + aspect_gee_c, data = forest)
+summary(lm16b)
+
+lm16c <- lm((sp_richness_site_av) ~ temp + precip + altitude + slope_gee + aspect_gee_c, data = forest)
+summary(lm16c)
+
+summary(regsubsets(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee_c, data = forest))
+
+lm16d <- lm(sp_richness_site_av ~ precip, data = forest)
+summary(lm16d)
 ```
 Diversity didn't show a relationship with these environmental variables.
 
@@ -916,11 +931,13 @@ sp_site4p_forest <- sp_site4p_forest[which(rowSums(sp_site4p_forest) != 0), ]
 rda3 <- rda(log1p(sp_site4p_forest) ~ forest4p$temp + forest4p$precip + forest4p$altitude + forest4p$slope_gee + forest4p$aspect_gee_c, scale = T)
 rda3
 summary(rda3)
+plot(rda3)
 
 
 rda3b <- rda(log1p(sp_site4p_forest) ~ forest4p$temp + forest4p$precip + forest4p$altitude, scale = T)
 rda3b
 summary(rda3b)
+plot(rda3b)
 
 rda3c <- rda(log1p(sp_site4p_forest) ~ forest4p$aspect_gee_c, scale = T)
 rda3c
