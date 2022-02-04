@@ -163,6 +163,14 @@ sites_cf <- sites_cf %>%
 
 ```
 
+Change direction of Mosaic values (so that 0-forest and 1-ag)
+
+```{r}
+sites_cf <- sites_cf %>%
+ mutate(mosaic_inv = 1- mosaic)
+  
+```
+
 
 # Exploration model: effect of disturbance, succession, and environmental factors
 
@@ -355,7 +363,7 @@ data.frame(
 Run again the model, selecting one of the best subsets regression:
 
 ```{r}
-lm5 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + mosaic + agriculture, data = sites_cf2)
+lm5 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + mosaic_inv + agriculture, data = sites_cf2)
 summary(lm5)
 ```
 
@@ -499,7 +507,7 @@ summary(lm11)
 
 partial.resid.plot(lm11)
 
-lm11b <- lm((simpson_av_site)^2 ~ altitude + aspect_gee_c + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+lm11b <- lm((simpson_av_site)^2 ~ altitude + aspect_gee_c + av_agb_site +  mosaic_inv + agriculture + grazing, data = sites_cf2)
 summary(lm11b)
 
 partial.resid.plot(lm11b)
@@ -1239,6 +1247,23 @@ sites_cf2 %>%
   right_join(sd6) %>%
   ggplot(aes(x = mosaic, y = sd)) +
   geom_point()
+
+trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  filter(diam_class == "6") %>%
+  group_by(species) %>%
+  summarise(sp = n(), agb_total = sum(agb)) %>%
+  arrange(-sp)
 ```
 
 Forest-agriculture mosaics patterns removing forest sites
@@ -1353,6 +1378,9 @@ agb_sp_site %>%
   #mutate(agb_prop_sp = agb_sp_site/agb_site) %>%
   group_by(species) %>%
   summarise(agb_sp_total = sum(agb_sp_site)) %>%
+  arrange(-agb_sp_total)
+
+
   filter(agb_sp_total > 50) %>%
   ggplot(aes(x = species, y = agb_sp_total)) +
   geom_boxplot()

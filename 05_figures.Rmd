@@ -5,6 +5,122 @@ date: "2/2/2022"
 output: html_document
 ---
 
+# Figure 3: DBH class contribution to AGB and stem density
+
+```{r}
+# Make a list of sites
+
+sites <- sites_cf2 %>%
+  select(site, mosaic_inv)
+
+#Estimate total agb per class and site
+
+agb_class_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(agb_class_site = sum(agb))
+
+# Estimate total AGB per site
+
+agb_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb, mosaic_inv) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(agb_site = sum(agb), mosaic_inv = as.numeric(mosaic_inv))  
+
+head(agb_site)
+head(agb_class_site)
+
+agb_class_site %>%
+  left_join(agb_site, by = "site") %>%
+  mutate(agb_prop = agb_class_site/agb_site,
+         mosaic_class = ifelse(mosaic_inv <= 0.5, "mature forest", "forest-agriculture"))  %>%
+  ggplot(aes(x = diam_class, y = agb_prop, fill = mosaic_class)) +
+  geom_boxplot() +
+  theme_classic() +
+  scale_fill_brewer(palette = "Accent")
+
+class1 <- agb_class_site %>%
+  left_join(agb_site, by = "site") %>%
+  mutate(agb_prop = agb_class_site/agb_site,
+         mosaic_class = ifelse(mosaic_inv <= 0.5, "mature forest", "forest-agriculture")) %>%
+  filter(diam_class == "1")
+
+class1
+
+agb_class_site %>%
+  left_join(agb_site, by = "site") %>%
+  mutate(agb_prop = agb_class_site/agb_site,
+         mosaic_class = ifelse(mosaic_inv <= 0.5, "mature forest", "forest-agriculture")) %>%
+  group_by(diam_class) %>%
+  t_test(data= ., agb_prop ~ mosaic_class, paired = T)
+```
+```{r}
+stems_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(stems = n())
+
+stems_class_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb, mosaic_inv) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(stems_class = n(), mosaic_inv = as.numeric(mosaic_inv))
+
+head(stems_site)
+head(stems_class_site)
+
+stems_class_site %>%
+  left_join(stems_site, by = "site") %>%
+  mutate(prop_stems = stems_class/stems,
+         mosaic_class = ifelse(mosaic_inv <= 0.5, "mature forest", "forest-agriculture"))  %>%
+  ggplot(aes(x = diam_class, y = prop_stems, fill = mosaic_class)) +
+  geom_boxplot() +
+  theme_classic() +
+  scale_fill_brewer(palette = "Accent")
+```
+
+
+
+
 # Figure 6: AGB, D, and Mosaic
 
 
@@ -16,27 +132,67 @@ calcSE<-function(x){
 }
 
 sites_cf2 %>%
-  group_by(mosaic) %>%
+  group_by(mosaic_inv) %>%
   summarize(agb_mosaic = mean(log(av_agb_site)),
             av_agb_site = as.numeric(av_agb_site),
             se = calcSE(log(av_agb_site)),
             log_se = log(se)) %>%
-  ggplot(aes(x = mosaic, y = log(av_agb_site))) +
+  ggplot(aes(x = mosaic_inv, y = log(av_agb_site))) +
   geom_point(color = "gray") +
   geom_smooth(method = "loess", span = 1, color = "darkgray", alfa = 0.5, se = F, linetype = "dashed") +
-  geom_point(aes(x= mosaic, y = agb_mosaic), color = "black", size = 3) +
+  geom_point(aes(x= mosaic_inv, y = agb_mosaic), color = "black", size = 3) +
   #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
   theme_classic()
 
 sites_cf2 %>%
-  group_by(mosaic) %>%
+  group_by(mosaic_inv) %>%
   summarize(d = as.numeric(simpson_av_site),
             d_mosaic = mean(d)) %>%
-  ggplot(aes(x = mosaic, y = d)) +
+  ggplot(aes(x = mosaic_inv, y = d)) +
   geom_point(color = "gray") +
   geom_smooth(method = "loess", span = 1, color = "darkgray", alfa = 0.5, se = F, linetype = "dashed") +
-  geom_point(aes(x= mosaic, y = d_mosaic), color = "black", size = 3) +
+  geom_point(aes(x= mosaic_inv, y = d_mosaic), color = "black", size = 3) +
   #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
+  theme_classic()
+```
+
+# Figure 7: hierarchical cluster analysis, disturbance and mosaic
+
+```{r}
+
+library(ggdendro)
+
+dend <- as.dendrogram(clust2)
+dend
+
+# Extract the data (for rectangular lines)
+# Type can be "rectangle" or "triangle"
+dend_data <- dendro_data(dend, type = "rectangle")
+names(dend_data)
+
+head(dend_data$segments)
+head(dend_data$labels)
+
+labels_info <- sites_cf_4p_nona %>%
+  select(mosaic_inv, agriculture, grazing) %>%
+  mutate(disturbance = ifelse(agriculture > 0, 1,
+                              ifelse(grazing > 0, 1, 0)))
+
+dend_labels <- as_tibble(dend_data$labels) %>%
+  mutate(site = as.character(label)) %>%
+  left_join(labels_info, by = 'site')
+
+rect <- data.frame(x1=c(0, 28.6, 34.6), x2 = c(28.4, 34.4, 41), y1= c(-0.5, -0.5, -0.5), y2= c(16,16,16))
+
+# Plot line segments and add labels
+ggplot(dend_data$segments) + 
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
+  geom_text(data = dend_labels, aes(x, y = -0.7, label = label), hjust = 1, angle = 90, size = 3) +
+  ylim(-3, 20) +
+  geom_point(data = dend_labels, aes(x, y, color = mosaic_inv, shape = as.factor(disturbance)), size = 2) +
+  #scale_color_brewer(palette = "PRGn") +
+  scale_colour_gradient(high = "darkolivegreen1", low = "darkgreen") +
+  geom_rect(data = rect, mapping= aes(xmin = x1, xmax = x2, ymin = y1, ymax = y2), fill = NA, color = "gray70", linetype = 2, size = 0.2) +
   theme_classic()
 ```
 
