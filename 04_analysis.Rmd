@@ -472,6 +472,41 @@ summary(lm6b)
 Aspect doesn't seem to be relevant either.
 
 From these results, it's very obvious that disturbance and succession/patchiness drive the distribution of biomass.
+
+### Repeat analysis with only 40 sites
+
+```{r}
+
+sites_cf_4p <- sites_cf %>%
+  filter(plot_no == 4) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing))
+
+lm_agb_4p <- regsubsets(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing + aspect_gee_c, data = sites_cf_4p)
+
+
+
+lm_agb_4p_summ <- summary(lm_agb_4p)
+data.frame(
+  Adj.R2 = which.max(lm_agb_4p_summ$adjr2),
+  CP = which.min(lm_agb_4p_summ$cp),
+  BIC = which.min(lm_agb_4p_summ$bic)
+)
+
+
+```
+```{r}
+data.frame(
+  Adj.R2 = (lm_agb_4p_summ$adjr2),
+  CP = (lm_agb_4p_summ$cp),
+  BIC = (lm_agb_4p_summ$bic)
+)
+
+```
+
+
+## Multiple regression analysis: tree diversity
+
 Let's test the relationship between these same variables and tree diversity.
 
 ```{r}
