@@ -482,11 +482,13 @@ sites_cf_4p <- sites_cf %>%
   filter(!is.na(agriculture)) %>%
   filter(!is.na(grazing))
 
-lm_agb_4p <- regsubsets(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing + aspect_gee_c, data = sites_cf_4p)
+lm_agb_4p <- regsubsets(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing + aspect_gee_c, data = sites_cf_4p)
 
 
 
 lm_agb_4p_summ <- summary(lm_agb_4p)
+
+lm_agb_4p_summ
 data.frame(
   Adj.R2 = which.max(lm_agb_4p_summ$adjr2),
   CP = which.min(lm_agb_4p_summ$cp),
@@ -495,6 +497,8 @@ data.frame(
 
 
 ```
+
+
 ```{r}
 data.frame(
   Adj.R2 = (lm_agb_4p_summ$adjr2),
@@ -502,6 +506,87 @@ data.frame(
   BIC = (lm_agb_4p_summ$bic)
 )
 
+```
+
+Compare best two models:
+
+```{r}
+# 6 variables
+lm2_agb_4p <- lm(log(av_agb_site) ~ altitude + slope_gee + simpson_av_site + mosaic_inv + agriculture + grazing , data = sites_cf_4p)
+summary(lm2_agb_4p)
+
+lm2_agb_4p_residuals <- lm2_agb_4p$residuals
+```
+
+3 variables:
+```{r}
+
+# 3 variables
+
+lm3_agb_4p <- lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p)
+summary(lm3_agb_4p)
+```
+
+The one with 6 variables looks better (greater R2 and lower RSE).
+```{r}
+partial.resid.plot(lm2_agb_4p)
+```
+
+Let's test for spatial autocorrelation:
+
+```{r}
+
+sites_coords_4p <- sites_cf_4p %>%
+  dplyr::select(longitude, latitude)
+
+#distance neighbors
+loc_subs <- cbind(sites_coords_4p$longitude, sites_coords_4p$latitude)
+d_subs <- 25 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(neighbors_dist)
+plot(neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm2_agb_4p_residuals, zero.policy=T, 
+     nb2listw(neighbors_dist, zero.policy=T, style="W"))
+
+# p-value = 0.558 with d= 10 Moran I= -0.0726
+# p-value = 0.5982 with d= 25 Moran I= -0.0490
+# p-value = 0.1479 with d= 50 Moran I= 0.0289
+# No spatial autocorrelation!
+```
+
+There's no spatial autocorrelation.
+
+Map of residuals:
+
+```{r}
+sites_coords_4p %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm2_agb_4p_residuals), size = 4) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+```
+
+Relationship between subregion and land tenure
+
+```{r}
+sites_cf_4p %>%
+  ggplot(aes(x = subregion, y = lm2_agb_4p_residuals)) +
+  geom_boxplot()
+
+sites_cf_4p %>%
+  ggplot(aes(x = subregion, y = av_agb_site)) +
+  geom_boxplot()
+
+sites_cf_4p %>%
+  ggplot(aes(x = land_tenure, y = lm2_agb_4p_residuals)) +
+  geom_boxplot()
+
+sites_cf_4p %>%
+  ggplot(aes(x = land_tenure, y = av_agb_site)) +
+  geom_boxplot()
 ```
 
 
@@ -633,7 +718,56 @@ moran.test(lm11$residuals, zero.policy=T,
 
 ```
 
-Let's take a look at individual relations
+### Repeat diversity regressions with sites with 4p
+
+```{r}
+lm_div_4p <- regsubsets(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee_c + mosaic_inv + agriculture + grazing + log(av_agb_site), data = sites_cf_4p)
+
+lm_div_4p_summ <- summary(lm_div_4p)
+
+lm_div_4p_summ
+data.frame(
+  Adj.R2 = which.max(lm_div_4p_summ$adjr2),
+  CP = which.min(lm_div_4p_summ$cp),
+  BIC = which.min(lm_div_4p_summ$bic)
+)
+
+
+```
+
+Models: 
+
+```{r}
+data.frame(
+  Adj.R2 = (lm_div_4p_summ$adjr2),
+  CP = (lm_div_4p_summ$cp),
+  BIC = (lm_div_4p_summ$bic)
+)
+
+```
+
+The best model has only two variables, agriculture and grazing:
+
+```{r}
+lm2_div_4p <- lm((simpson_av_site)^2 ~ mosaic_inv + grazing, data = sites_cf_4p)
+summary(lm2_div_4p)
+```
+
+However, the r2 is low
+
+```{r}
+partial.resid.plot(lm2_div_4p)
+```
+
+QQplots
+
+```{r}
+oldpar <- par(mfrow = c(2, 2))
+plot(lm2_div_4p, which=c(1,2,4,5))
+```
+
+
+### Let's take a look at individual relations
 
 ```{r}
 # biomass ~ mosaic

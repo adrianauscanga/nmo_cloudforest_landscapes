@@ -131,7 +131,7 @@ calcSE<-function(x){
   sd(x)/sqrt(length(x))
 }
 
-sites_cf2 %>%
+sites_cf_4p %>%
   group_by(mosaic_inv) %>%
   summarize(agb_mosaic = mean(log(av_agb_site)),
             av_agb_site = as.numeric(av_agb_site),
@@ -144,7 +144,19 @@ sites_cf2 %>%
   #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
   theme_classic()
 
-sites_cf2 %>%
+sites_cf_4p %>%
+  group_by(mosaic_inv) %>%
+  summarize(agb_mosaic = mean(av_agb_site),
+            av_agb_site = as.numeric(av_agb_site),
+            se = calcSE(av_agb_site)) %>%
+  ggplot(aes(x = mosaic_inv, y = av_agb_site)) +
+  geom_point(color = "gray") +
+  geom_smooth(method = "loess", span = 1, color = "darkgray", alfa = 0.5, se = F, linetype = "dashed") +
+  geom_point(aes(x= mosaic_inv, y = agb_mosaic), color = "black", size = 3) +
+  #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
+  theme_classic()
+
+sites_cf_4p %>%
   group_by(mosaic_inv) %>%
   summarize(d = as.numeric(simpson_av_site),
             d_mosaic = mean(d)) %>%
@@ -152,6 +164,17 @@ sites_cf2 %>%
   geom_point(color = "gray") +
   geom_smooth(method = "loess", span = 1, color = "darkgray", alfa = 0.5, se = F, linetype = "dashed") +
   geom_point(aes(x= mosaic_inv, y = d_mosaic), color = "black", size = 3) +
+  #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
+  theme_classic()
+
+sites_cf_4p %>%
+  group_by(mosaic_inv) %>%
+  summarize(spr = as.numeric(sp_richness_site),
+            spr_mosaic = mean(spr)) %>%
+  ggplot(aes(x = mosaic_inv, y = spr)) +
+  geom_point(color = "gray") +
+  geom_smooth(method = "loess", span = 1, color = "darkgray", alfa = 0.5, se = F, linetype = "dashed") +
+  geom_point(aes(x= mosaic_inv, y = spr_mosaic), color = "black", size = 3) +
   #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
   theme_classic()
 ```
