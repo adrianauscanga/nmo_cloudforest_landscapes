@@ -589,6 +589,34 @@ sites_cf_4p %>%
   geom_boxplot()
 ```
 
+## PCA with environmental variables to reduce predictors 
+
+```{r}
+env <- sites_cf_4p %>%
+  select(temp, precip, altitude, slope_gee)
+env <- as.data.frame(env)
+env$site -> row.names(env)
+env <- env[,-1]
+
+pca_env <- rda(env, scale = T)
+summary(pca_env)
+plot(pca_env)
+biplot(pca_env)
+
+```
+
+```{r}
+pc1 <- as.data.frame(pca_env$CA$u[,1])
+pc1$PC1 -> colnames(pc1)
+pc1
+
+plot(pc1[,1], sites_cf_4p$precip)
+plot(pc1[,1], sites_cf_4p$temp)
+plot(pc1[,1], sites_cf_4p$altitude)
+
+summary(lm(pc1[,1] ~ sites_cf_4p$altitude))
+```
+
 
 ## Multiple regression analysis: tree diversity
 
@@ -1994,3 +2022,10 @@ moran.test(sites_subset$simpson_av_site, zero.policy=T,
      nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
 ```
 It's not significant in neighborhoods of 10 km.
+
+```{r}
+sites_cf_4p %>%
+  select(mosaic_inv) %>%
+  arrange(mosaic_inv)
+```
+
