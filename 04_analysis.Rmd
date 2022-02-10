@@ -26,6 +26,7 @@ library(lme4)
 library(fitdistrplus)
 library(asbio)
 library(RColorBrewer)
+library(mgcv)
 
 load("output/sites_cf3.RData")
 load("output/plots_cf3.RData")
@@ -589,6 +590,51 @@ sites_cf_4p %>%
   geom_boxplot()
 ```
 
+Again, but scaling variables:
+
+```{r}
+#Make data frame with variables
+
+df <- sites_cf_4p %>%
+  select(av_agb_site, temp, precip, altitude, slope_gee, shannon_av_site, simpson_av_site, sp_richness_site, mosaic_inv, agriculture, grazing) %>%
+  as.data.frame()
+df$site -> row.names(df)
+df <- df[,-1]
+df
+
+df_s <- as.data.frame(scale(df))
+head(df_s)
+class(df_s)
+
+
+lm_df <- regsubsets(av_agb_site ~ temp + precip + altitude + slope_gee +  shannon_av_site + simpson_av_site + sp_richness_site + mosaic_inv + agriculture + grazing, data = df_s)
+lm_df_su <- summary(lm_df)
+```
+
+Best model:
+```{r}
+data.frame(
+  Adj.R2 = (lm_df_su$adjr2),
+  CP = (lm_df_su$cp),
+  BIC = (lm_df_su$bic)
+)
+
+data.frame(
+  Adj.R2 = which.max(lm_df_su$adjr2),
+  CP = which.min(lm_df_su$cp),
+  BIC = which.min(lm_df_su$bic)
+)
+```
+
+Best model with 3 predictors:
+
+```{r}
+lm_df1 <- lm(av_agb_site ~ temp + sp_richness_site + mosaic_inv, data = df_s)
+summary(lm_df1)
+
+partial.resid.plot(lm_df1)
+```
+
 ## PCA with environmental variables to reduce predictors 
 
 ```{r}
@@ -607,7 +653,7 @@ biplot(pca_env)
 
 ```{r}
 pc1 <- as.data.frame(pca_env$CA$u[,1])
-pc1$PC1 -> colnames(pc1)
+colnames(pc1) <- "env_pc1"
 pc1
 
 plot(pc1[,1], sites_cf_4p$precip)
@@ -615,6 +661,63 @@ plot(pc1[,1], sites_cf_4p$temp)
 plot(pc1[,1], sites_cf_4p$altitude)
 
 summary(lm(pc1[,1] ~ sites_cf_4p$altitude))
+```
+
+### Multiple linear regression with env PC1
+
+```{r}
+# Add PC1 to data set
+
+class(pc1)
+
+env_pc1 <- as_tibble(pc1, .name_repair = "minimal", rownames = "site")
+
+
+sites_cf_4p <- sites_cf_4p %>%
+  left_join(env_pc1, by = "site")
+  
+# Run regression model with env_pc1
+
+ms <- regsubsets(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic_inv + agriculture + grazing, data = sites_cf_4p)
+
+ms_sum <- summary(ms)
+
+# Best model:
+
+data.frame(
+  Adj.R2 = (ms_sum$adjr2),
+  CP = (ms_sum$cp),
+  BIC = (ms_sum$bic)
+)
+
+data.frame(
+  Adj.R2 = which.max(ms_sum$adjr2),
+  CP = which.min(ms_sum$cp),
+  BIC = which.min(ms_sum$bic)
+)
+
+ms_sum
+
+# Best model has 3 predictors: 
+#  slope_gee
+#  mosaic_inv
+#  agriculture
+
+
+```
+
+Multiple regression model with 3 predictors:
+```{r}
+
+summary(lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p))
+
+partial.resid.plot(lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p))
+```
+
+## GAM
+
+```{r}
+gam1 <- gam(log(av_agb_site) ~ s(env_pc1) + s(mosaic_inv), data = sites_cf_4p)
 ```
 
 
