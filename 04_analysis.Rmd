@@ -718,6 +718,11 @@ partial.resid.plot(lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, d
 
 ```{r}
 gam1 <- gam(log(av_agb_site) ~ s(env_pc1) + s(mosaic_inv), data = sites_cf_4p)
+
+ggplot(sites_cf_4p, aes(x = env_pc1, y = av_agb_site, color = mosaic_inv)) +
+  geom_point(size = 4) +
+  scale_color_gradient(high = "white", low = "darkgreen")
+
 ```
 
 
