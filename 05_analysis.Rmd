@@ -296,4 +296,134 @@ TukeyHSD(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
 
 ## 3. AGB patterns along environmental and land-use gradients
 
+### PCA of environmental variables
+
+```{r}
+env <- sites_cf_4p %>%
+  select(temp, precip, altitude, slope_gee)
+env <- as.data.frame(env)
+env$site -> row.names(env)
+env <- env[,-1]
+
+pca_env <- rda(env, scale = T)
+summary(pca_env)
+plot(pca_env)
+biplot(pca_env)
+
+```
+
+PC1 explains 68.23% of variation and is correlated to temp, altitude an precip.
+
+```{r}
+pc1 <- as.data.frame(pca_env$CA$u[,1])
+colnames(pc1) <- "env_pc1"
+pc1
+
+plot(pc1[,1], sites_cf_4p$precip)
+plot(pc1[,1], sites_cf_4p$temp)
+plot(pc1[,1], sites_cf_4p$altitude)
+
+summary(lm(pc1[,1] ~ sites_cf_4p$precip))
+summary(lm(pc1[,1] ~ sites_cf_4p$temp))
+summary(lm(pc1[,1] ~ sites_cf_4p$altitude))
+```
+
+Multiple linear regression model with all variables:
+
+```{r}
+# Add PC1 to data set
+
+class(pc1)
+
+env_pc1 <- as_tibble(pc1, .name_repair = "minimal", rownames = "site")
+
+
+sites_cf_4p <- sites_cf_4p %>%
+  left_join(env_pc1, by = "site")
+  
+# Run regression model with env_pc1
+
+lm <- lm(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic_inv + agriculture + grazing, data = sites_cf_4p)
+summary(lm)
+```
+
+Stepwise model selection:
+
+```{r}
+ms <- regsubsets(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic_inv + agriculture + grazing, data = sites_cf_4p)
+
+ms_sum <- summary(ms)
+
+# Best model:
+
+data.frame(
+  Adj.R2 = (ms_sum$adjr2),
+  CP = (ms_sum$cp),
+  BIC = (ms_sum$bic)
+)
+
+data.frame(
+  Adj.R2 = which.max(ms_sum$adjr2),
+  CP = which.min(ms_sum$cp),
+  BIC = which.min(ms_sum$bic)
+)
+
+ms_sum
+
+# Best model has 3 predictors: 
+#  slope_gee
+#  mosaic_inv
+#  agriculture
+
+```
+
+Best model:
+
+```{r}
+lm2 <- lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p)
+summary(lm2)
+partial.resid.plot(lm2)
+
+lm2_res <- lm2$residuals #save residuals
+```
+
+
+Spatial autocorrelation test:
+
+```{r}
+
+sites_coords_4p <- sites_cf_4p %>%
+  dplyr::select(longitude, latitude)
+
+#distance neighbors
+loc_subs <- cbind(sites_coords_4p$longitude, sites_coords_4p$latitude)
+d_subs <- 50 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(neighbors_dist)
+plot(neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm2_res, zero.policy=T, 
+     nb2listw(neighbors_dist, zero.policy=T, style="W"))
+
+# p-value = 0.5176 with d= 10 Moran I= -0.04971499
+# p-value = 0.6049 with d= 25 Moran I= -0.050440447
+# p-value = 0.1875 with d= 50 Moran I= 0.020220697
+# No spatial autocorrelation!
+```
+
+There's no spatial autocorrelation.
+
+Map of residuals:
+
+```{r}
+sites_coords_4p %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm2_res), size = 4) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+```
+
+
 ## 4. AGB and tree diversity
