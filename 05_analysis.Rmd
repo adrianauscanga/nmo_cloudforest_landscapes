@@ -171,72 +171,126 @@ Trees of class 2 (20-30 cm of DBH) are the most abundant. All classes are statis
 
 ### Tree size contribution to AGB and stems in relation to successional stage
 
+Contribution to AGB
+
 ```{r}
 
 plots_cf_4p %>%
   select(plot_id, agb_plot, str_class_plots) %>%
   right_join(agb_class_plots, by = "plot_id") %>%
   mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
   group_by(str_class_plots, diam_class) %>%
-  ggplot(aes(x = diam_class, y = agb_prop, fill = str_class_plots)) +
+  ggplot(aes(x = diam_class, y = agb_prop, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
   geom_boxplot() +
-  theme_classic()
+  theme_classic() +
+  labs(fill ='Successional Stage') +
+  scale_fill_brewer(palette = "Accent")
+
+plots_cf_4p %>%
+  select(plot_id, str_class_plots) %>%
+  right_join(agb_prop, by = "plot_id") %>%
+  select(-site.x, -site.y) %>%
+  group_by(str_class_plots, diam_class) %>%
+  get_summary_stats(agb_prop, type = "mean_sd") 
+
+agb_prop_str <- plots_cf_4p %>%
+  select(plot_id, str_class_plots) %>%
+  right_join(agb_prop, by = "plot_id") %>%
+  select(-site.x, -site.y) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  group_by(str_class_plots, diam_class)
+
+anova3 <- aov(agb_prop ~ succ * diam_class, data = agb_prop_str)
+summary(anova3)
+TukeyHSD(anova3)
 ```
 
+Contribution to Stem Number
+
+```{r}
+plots_cf_4p %>%
+  select(plot_id, tree_no, str_class_plots) %>%
+  right_join(stems_class_plot, by = "plot_id") %>%
+  mutate(stem_prop = stems/tree_no)  %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  group_by(str_class_plots, diam_class) %>%
+  ggplot(aes(x = diam_class, y = stem_prop, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  geom_boxplot() +
+  theme_classic() +
+  labs(fill ='Successional Stage') +
+  scale_fill_brewer(palette = "Accent")
+
+plots_cf_4p %>%
+  select(plot_id, str_class_plots) %>%
+  right_join(stems_prop, by = "plot_id") %>%
+  select(-site.x, -site.y) %>%
+  group_by(str_class_plots, diam_class) %>%
+  get_summary_stats(stems_prop, type = "mean_sd") 
+
+stem_prop_str <- plots_cf_4p %>%
+  select(plot_id, str_class_plots) %>%
+  right_join(stems_prop, by = "plot_id") %>%
+  select(-site.x, -site.y) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  group_by(str_class_plots, diam_class)
+
+anova4 <- aov(stems_prop ~ succ * diam_class, data = stem_prop_str)
+summary(anova4)
+TukeyHSD(anova4)
+```
+
+### Structural attributes and AGB in three successional stages
 
 ```{r}
 
-plots_cf_4p %>%
-  select(plot_id, agb_plot) %>%
-  right_join(agb_class_plots, by = "plot_id") %>%
-  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-  group_by(diam_class) %>%
-  shapiro_test(agb_prop)
+# Tree density
 
 plots_cf_4p %>%
-  select(plot_id, agb_plot) %>%
-  right_join(agb_class_plots, by = "plot_id") %>%
-  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-#  ggqqplot("agb_prop") %>%
-  ggdensity("agb_plot")
-  
-group_by(diam_class) %>%
-  ggdensity("agb_prop", facet.by = "diam_class")
-  ggqqplot("agb_prop", facet.by = "diam_class")
-  
-plots_cf_4p %>%
-  select(plot_id, agb_plot) %>%
-  right_join(agb_class_plots, by = "plot_id") %>%
-  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-  group_by(diam_class) %>%
-  kruskal.test(agb_prop ~ diam_class)
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  group_by(succ) %>%
+  get_summary_stats(tree_density, type = "mean_sd")
 
-x <- plots_cf_4p %>%
-  select(plot_id, agb_plot) %>%
-  right_join(agb_class_plots, by = "plot_id") %>%
-  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-  arrange(diam_class)
+summary(aov(tree_density ~ str_class_plots, data = plots_cf_4p))
+TukeyHSD(aov(tree_density ~ str_class_plots, data = plots_cf_4p))
 
-pairwise.wilcox.test(x= x$agb_prop, g= x$diam_class, p.adjust.method = "bonferroni")
-
-anova <- aov(agb_prop ~ diam_class, data = x)
-TukeyHSD(anova)
+# Tree height
 
 plots_cf_4p %>%
-  select(plot_id, agb_plot, str_class_plots) %>%
-  right_join(agb_class_plots, by = "plot_id") %>%
-  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-  ggplot(aes(x = diam_class, y = agb_prop, fill = str_class_plots)) +
-  geom_boxplot() +
-  theme_classic()
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  group_by(succ) %>%
+  get_summary_stats(loreys_height, type = "mean_sd")
+
+summary(aov(loreys_height ~ str_class_plots, data = plots_cf_4p))
+TukeyHSD(aov(loreys_height ~ str_class_plots, data = plots_cf_4p))
+
+# Basal area
 
 plots_cf_4p %>%
-  select(plot_id, agb_plot, str_class_plots) %>%
-  right_join(agb_class_plots, by = "plot_id") %>%
-  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-  ggplot(aes(x = diam_class, y = agb_plot, fill = str_class_plots)) +
-  geom_boxplot() +
-  theme_classic()
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  group_by(succ) %>%
+  get_summary_stats(basal_area_ha, type = "mean_sd")
+
+summary(aov(basal_area_ha ~ str_class_plots, data = plots_cf_4p))
+TukeyHSD(aov(basal_area_ha ~ str_class_plots, data = plots_cf_4p))
+
+# AGB
+
+plots_cf_4p %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  group_by(succ) %>%
+  get_summary_stats(agb_plot_ha, type = "mean_sd")
+
+summary(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
+TukeyHSD(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
 ```
 
 
