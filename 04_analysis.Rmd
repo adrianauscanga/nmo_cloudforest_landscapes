@@ -283,8 +283,7 @@ summary(lm3)
 # Only mosaic and simpson are significant, slope and ag marginally significant
 partial.resid.plot(lm3)
 
-numeric_variables <- sites_cf %>%
-  filter(plot_no > 2) %>%
+numeric_variables <- sites_cf_4p %>%
   select(temp, precip, altitude, aspect_gee, slope_gee, sp_richness_site_av, shannon_av_site, simpson_av_site, av_agb_site, mosaic, agriculture, grazing) %>%
   mutate(log_agb = log(av_agb_site))
 
@@ -710,18 +709,51 @@ Multiple regression model with 3 predictors:
 ```{r}
 
 summary(lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p))
-
+AIC(lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p))
 partial.resid.plot(lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p))
 ```
 
 ## GAM
 
 ```{r}
-gam1 <- gam(log(av_agb_site) ~ s(env_pc1) + s(mosaic_inv), data = sites_cf_4p)
+gam1 <- gam(log(av_agb_site) ~ s(env_pc1) + s(mosaic_inv, k = 9), family = Gamma(link=log), data = sites_cf_4p)
+gam1
+summary(gam1)
+plot(gam1, residuals = T, cex=3)
+AIC(gam1)
 
-ggplot(sites_cf_4p, aes(x = env_pc1, y = av_agb_site, color = mosaic_inv)) +
+gam2 <- gam(log(av_agb_site) ~ s(slope_gee) + s(env_pc1) + s(mosaic_inv, k = 9), family = Gamma(link=log), data = sites_cf_4p)
+gam2
+summary(gam2)
+plot(gam2, residuals = T, cex=3)
+AIC(gam2)
+
+gam3 <- gam(log(av_agb_site) ~ s(slope_gee) + s(env_pc1) + s(mosaic_inv, k = 9) + s(agriculture, k=3), family = Gamma(link=log), data = sites_cf_4p)
+gam3
+summary(gam3)
+plot(gam3, residuals = T, cex=3)
+AIC(gam3)
+
+gam4 <- gam(log(av_agb_site) ~ s(slope_gee) + s(mosaic_inv, k = 9) + s(agriculture, k=3), family = Gamma(link=log), data = sites_cf_4p)
+gam4
+summary(gam4)
+plot(gam4, residuals = T, cex=3)
+AIC(gam4)
+
+gamlm <- gam(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p)
+summary(gamlm)
+AIC(gamlm)
+
+gamlm2 <- gam(log(av_agb_site) ~ env_pc1 + slope_gee + mosaic_inv + agriculture, data = sites_cf_4p)
+summary(gamlm2)
+AIC(gamlm2)
+
+anova(gam3, gam4, gamlm, gamlm2, test="Chisq")
+
+ggplot(sites_cf_4p, aes(x = env_pc1, y = mosaic_inv, color = av_agb_site)) +
   geom_point(size = 4) +
-  scale_color_gradient(high = "white", low = "darkgreen")
+  scale_color_gradient(high = "darkgreen", low = "yellow") +
+  geom_smooth(method = "lm", color = "darkgray")
 
 ```
 

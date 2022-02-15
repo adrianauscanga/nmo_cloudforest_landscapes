@@ -1,0 +1,227 @@
+---
+title: "04_data_preparation"
+author: "Adriana Uscanga"
+date: "14/2/2022"
+output: html_document
+---
+
+# Data preparation
+
+Load packages and data
+
+```{r}
+library(tidyverse)
+
+load("output/sites_cf3.RData")
+load("output/plots_cf3.RData")
+load("output/trees_cf3.RData")
+```
+
+Add slope and aspect to the data set.
+
+```{r}
+#Aspect and Slope from GEE 
+aspect <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/aspect_plots.csv", col_names = F)
+
+slope <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/slope_plots.csv", col_names = F)
+
+head(aspect)
+
+aspect <- aspect %>%
+  transmute(plot_id = as.character(X5),
+            lon = as.numeric(X3),
+            lat = as.numeric(X4),
+            aspect = as.numeric(X2))
+
+head(aspect)
+
+slope <- slope %>%
+  transmute(plot_id = as.character(X5),
+            lon = as.numeric(X3),
+            lat = as.numeric(X4),
+            slope = as.numeric(X2))
+head(slope)
+
+aspect_slope <- aspect %>%
+  left_join(slope, by = c("plot_id", "lon", "lat"))
+
+plots_cf <- plots_cf %>%
+  left_join(aspect_slope, by = c("plot_id")) %>%
+  select(-lon, -lat) %>%
+  relocate(c(aspect, slope), .after = altitude)
+
+plots_cf %>%
+  filter(duplicated(longitude), duplicated(latitude)) %>%
+  group_by(site) %>%
+  summarize(sites = unique(site), plots = unique(plot_id))
+
+plots_cf <- plots_cf %>%
+  group_by(site) %>%
+  summarize(plot_id = plot_id,
+            aspect_first = first(aspect),
+            dup = ifelse(duplicated(longitude) & duplicated(latitude), "duplicated", NA),
+            aspectdups = ifelse(dup == "duplicated", aspect_first, NA),
+            slope_first = first(slope),
+            dup_s = ifelse(duplicated(longitude) & duplicated(latitude), "duplicated", NA),
+            slopedups = ifelse(dup_s == "duplicated", slope_first, NA)) %>%
+  filter(!is.na(dup)) %>%
+  select(plot_id, aspectdups, slopedups) %>%
+  right_join(plots_cf) %>%
+  mutate(aspect = ifelse(is.na(aspect), aspectdups, aspect),
+         slope = ifelse(is.na(slope), slopedups, slope)) %>%
+  select(-aspectdups, -slopedups)
+
+plots_cf %>%
+  filter(is.na(aspect))
+#Weird, plot 67878_2 doesn't have aspect and slope, it must have been missing from the GEE feature collection. I'll extract data for this plot and add it.
+# aspect = 334.7877502441406
+# slope= 34.21200942993164
+
+plots_cf <- plots_cf %>%
+  mutate(aspect = ifelse(plot_id == "67878_2", 334.787750, aspect),
+         slope = ifelse(plot_id == "67878_2", 34.212009, slope))
+
+# Average aspect and slope by site
+
+calcSE<-function(x){
+  x <- x[is.na(x)==F]
+  sd(x)/sqrt(length(x))
+}
+
+aspect_slope_sites <- plots_cf %>%
+  select(site, plot_id, aspect, slope) %>%
+  group_by(site) %>%
+  summarize(aspect_gee = mean(aspect),
+            aspect_se_gee = calcSE(aspect),
+            slope_gee = mean(slope),
+            slope_se_gee = calcSE(slope)) %>%
+  mutate(site = as.character(site))
+
+sites_cf <- sites_cf %>%
+  left_join(aspect_slope_sites, by = "site") %>%
+  relocate(c("aspect_gee", "aspect_se_gee", "slope_gee", "slope_se_gee"), .after = aspect)
+```
+Change aspect_gee to categories and compare aspect and slope in dataset
+
+```{r}
+
+sites_cf <- sites_cf %>%
+  dplyr::mutate(aspect_gee_c = ifelse(aspect_gee < 45 | aspect_gee > 315, "N",
+                                       ifelse(aspect_gee > 135 | aspect < 225, "S",
+                                              ifelse(aspect_gee > 225 | aspect_gee < 315, "W",
+                                                     ifelse(aspect_gee > 45 | aspect_gee < 135, "E", NA))))) %>%
+  relocate(aspect_gee_c, .after = aspect_gee)
+
+
+```
+
+Site 71213 in sites_cf data set lacks geographic coordinates.
+Which are: 17.50506, -96.30769
+
+```{r}
+sites_cf <- sites_cf %>%
+  mutate(longitude = ifelse(site == "71213", -96.30769, longitude),
+         latitude = ifelse(site == "71213", 17.50506, latitude))
+```
+
+Add a column with subregions to the data frame.
+
+```{r}
+sites_huautla <- read.csv("input/sites_huautla.csv", header = T)
+sites_ixtlan <- read.csv("input/sites_ixtlan.csv", header = T)
+sites_mixe <- read.csv("input/sites_mixe.csv", header = T)
+sites_guevea <- read.csv("input/sites_guevea.csv", header = T)
+```
+
+Bind all subregions data sets in one and join to main data set
+
+```{r}
+subregions <- rbind(sites_huautla, sites_ixtlan, sites_mixe, sites_guevea)
+subregions <- mutate(subregions, subregion = as.character(SUBREGIONE))
+subregions <- select(subregions, -SUBREGIONE)
+subregions <- subregions %>%
+  mutate(site = as.character(site))
+
+sites_cf <- sites_cf %>%
+  left_join(subregions, by = "site") %>%
+  relocate(subregion, .after = site)
+
+```
+
+Change direction of Mosaic values (so that 0-forest and 1-ag)
+
+```{r}
+sites_cf <- sites_cf %>%
+ mutate(landscape = 1- mosaic)
+```
+
+Visual inspection of data
+
+```{r}
+# First, remove sites with less than 3 plots because they're noisy
+
+sites_cf2 <- sites_cf %>%
+  filter(plot_no > 2)
+
+#density plot
+ggdensity(sites_cf2$av_agb_site)
+ggdensity(sites_cf2$simpson_av_site)
+
+#qqplot
+ggqqplot(sites_cf2$av_agb_site)
+ggqqplot(sites_cf2$simpson_av_site)
+```
+
+Shapiro-Wilk's normality test:
+
+```{r}
+shapiro.test(sites_cf2$av_agb_site)
+shapiro.test(sites_cf2$simpson_av_site)
+shapiro.test(sites_cf2$temp)
+shapiro.test(sites_cf2$precip)
+shapiro.test(sites_cf2$aspect_gee) # normal p = 0.42
+shapiro.test(sites_cf2$slope_gee) # marginally normal p = 0.02
+shapiro.test(sites_cf2$mosaic)
+shapiro.test(sites_cf2$agriculture)
+shapiro.test(sites_cf2$grazing)
+shapiro.test(sites_cf2$sp_richness_site_av) # normal p=0.15
+shapiro.test(sites_cf2$shannon_av_site) # normal p = 0.60
+shapiro.test(sites_cf2$simpson_av_site)
+
+ggdensity(sites_cf2$temp)
+ggdensity(sites_cf2$precip)
+ggdensity(sites_cf2$aspect_gee)
+ggdensity(sites_cf2$slope_gee)
+ggdensity(sites_cf2$mosaic)
+ggdensity(sites_cf2$agriculture)
+ggdensity(sites_cf2$grazing)
+ggdensity(sites_cf2$sp_richness_site_av)
+ggdensity(sites_cf2$shannon_av_site)
+ggdensity(sites_cf2$simpson_av_site)
+ggdensity(sites_cf2$av_treedensity_site)
+ggdensity(sites_cf2$av_loreys_site)
+```
+
+In general, data is not normal (p<0.05). 
+Data transformation may solve the problem.
+
+```{r}
+
+shapiro.test(log(sites_cf2$av_agb_site))
+ggdensity(log(sites_cf2$av_agb_site))
+#p = 0.07
+#log(agb) works
+```
+
+## Select data
+
+Still noisy, let's select only sites with 4 plots and none NAs
+
+```{r}
+
+sites_cf_4p <- sites_cf %>%
+  filter(plot_no == 4) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing))
+```
+

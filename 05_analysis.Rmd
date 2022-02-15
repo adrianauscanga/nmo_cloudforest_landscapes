@@ -1,0 +1,245 @@
+---
+title: "05_analysis"
+author: "Adriana Uscanga"
+date: "14/2/2022"
+output: html_document
+---
+
+# Analysis
+
+Load packages and files
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(rstatix)
+```
+
+
+## 1. Summary statistics and data exploration
+
+Summary statistics
+
+```{r}
+summary(sites_cf_4p)
+```
+
+
+Correlations
+
+```{r}
+numeric_variables <- sites_cf_4p %>%
+  select(temp, precip, altitude, aspect_gee, slope_gee, sp_richness_site_av, shannon_av_site, simpson_av_site, av_agb_site, landscape, agriculture, grazing) %>%
+  mutate(log_agb = log(av_agb_site))
+
+corr <- cor(drop_na(numeric_variables[,-1]))
+corrplot(corr, method = 'ellipse')
+corrplot(corr, method = 'number')
+plot(numeric_variables)
+
+plot(numeric_variables$slope_gee, numeric_variables$log_agb)
+plot(numeric_variables$agriculture, numeric_variables$log_agb)
+plot(numeric_variables$grazing, numeric_variables$log_agb)
+plot(numeric_variables$landscape, numeric_variables$log_agb)
+
+plot(numeric_variables$agriculture, numeric_variables$landscape)
+plot(numeric_variables$grazing, numeric_variables$landscape)
+
+```
+
+
+## 2. AGB distribution in TMCF
+
+Tree size classes and contribution to AGB
+
+```{r}
+
+# Estimate total agb per class and plot
+
+agb_class_plots <- trees_cf %>%
+  right_join(plots_cf_4p, by = "plot_id") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(plot_id, species, genus, sp, family, diam_bh, agb, str_class_plots) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(plot_id, diam_class) %>%
+  summarise(agb_class_plot = sum(agb))
+
+agb_class_plots
+```
+
+```{r}
+# Contribution of tree size to AGB
+
+plots_cf_4p %>%
+  select(plot_id, agb_plot) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  group_by(diam_class) %>%
+  get_summary_stats(agb_prop, type = "mean_sd") 
+
+# Plot
+
+plots_cf_4p %>%
+  select(plot_id, agb_plot) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  group_by(diam_class) %>%
+  ggplot(aes(x = diam_class, y = agb_prop)) +
+  geom_boxplot() +
+  theme_classic()
+
+# Anova
+
+agb_prop <- plots_cf_4p %>%
+  select(plot_id, agb_plot) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot) %>%
+  arrange(diam_class)
+
+pairwise.wilcox.test(x= agb_prop$agb_prop, g= agb_prop$diam_class, p.adjust.method = "bonferroni")
+
+anova <- aov(agb_prop ~ diam_class, data = agb_prop)
+TukeyHSD(anova)
+  
+```
+
+Big trees (size class 6) contributes the most to AGB. Classes 1 and 6 are statistically different from the others.
+
+Tree size classes and contribution to total number of stems:
+
+```{r}
+# Contribution of size to stems
+
+stems_class_plot <- trees_cf %>%
+  right_join(plots_cf_4p, by = "plot_id") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(plot_id, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(plot_id, diam_class) %>%
+  summarise(stems = n())
+
+stems_class_plot
+```
+
+Contribution of tree size classes to stem density:
+
+```{r}
+plots_cf_4p %>%
+  select(plot_id, tree_no) %>%
+  right_join(stems_class_plot, by = "plot_id") %>%
+  mutate(stem_prop = stems/tree_no)  %>%
+  group_by(diam_class) %>%
+  get_summary_stats(stem_prop, type = "mean_sd") 
+
+plots_cf_4p %>%
+  select(plot_id, tree_no) %>%
+  right_join(stems_class_plot, by = "plot_id") %>%
+  mutate(stem_prop = stems/tree_no)  %>%
+  group_by(diam_class) %>%
+  ggplot(aes(x = diam_class, y = stem_prop)) +
+  geom_boxplot() +
+  theme_classic()
+
+# Anova
+
+stems_prop <- plots_cf_4p %>%
+  select(plot_id, tree_no) %>%
+  right_join(stems_class_plot, by = "plot_id") %>%
+  mutate(stems_prop = stems/tree_no) %>%
+  arrange(diam_class)
+
+pairwise.wilcox.test(x= stems_prop$stems_prop, g= stems_prop$diam_class, p.adjust.method = "bonferroni")
+
+anova2 <- aov(stems_prop ~ diam_class, data = stems_prop)
+TukeyHSD(anova2)
+  
+```
+
+Trees of class 2 (20-30 cm of DBH) are the most abundant. All classes are statistically different except for classes 4, 5 and 6.
+
+### Tree size contribution to AGB and stems in relation to successional stage
+
+```{r}
+
+plots_cf_4p %>%
+  select(plot_id, agb_plot, str_class_plots) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  group_by(str_class_plots, diam_class) %>%
+  ggplot(aes(x = diam_class, y = agb_prop, fill = str_class_plots)) +
+  geom_boxplot() +
+  theme_classic()
+```
+
+
+```{r}
+
+plots_cf_4p %>%
+  select(plot_id, agb_plot) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  group_by(diam_class) %>%
+  shapiro_test(agb_prop)
+
+plots_cf_4p %>%
+  select(plot_id, agb_plot) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+#  ggqqplot("agb_prop") %>%
+  ggdensity("agb_plot")
+  
+group_by(diam_class) %>%
+  ggdensity("agb_prop", facet.by = "diam_class")
+  ggqqplot("agb_prop", facet.by = "diam_class")
+  
+plots_cf_4p %>%
+  select(plot_id, agb_plot) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  group_by(diam_class) %>%
+  kruskal.test(agb_prop ~ diam_class)
+
+x <- plots_cf_4p %>%
+  select(plot_id, agb_plot) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  arrange(diam_class)
+
+pairwise.wilcox.test(x= x$agb_prop, g= x$diam_class, p.adjust.method = "bonferroni")
+
+anova <- aov(agb_prop ~ diam_class, data = x)
+TukeyHSD(anova)
+
+plots_cf_4p %>%
+  select(plot_id, agb_plot, str_class_plots) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  ggplot(aes(x = diam_class, y = agb_prop, fill = str_class_plots)) +
+  geom_boxplot() +
+  theme_classic()
+
+plots_cf_4p %>%
+  select(plot_id, agb_plot, str_class_plots) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  ggplot(aes(x = diam_class, y = agb_plot, fill = str_class_plots)) +
+  geom_boxplot() +
+  theme_classic()
+```
+
+
+## 3. AGB patterns along environmental and land-use gradients
+
+## 4. AGB and tree diversity
