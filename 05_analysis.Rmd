@@ -547,7 +547,7 @@ plots_cf_4p %>%
             agb_plot_ha = as.numeric(agb_plot_ha),
             simpson = as.numeric(simpson)) %>%
   ggplot(aes(x = agb_plot_ha, y = simpson)) +
-  geom_smooth(method = "gam", span = 1, color = "gray", se= T, alpha = 0.1) +
+  geom_smooth(method = "loess", span = 1, color = "gray", se= T, alpha = 0.1) +
   geom_point(aes(x= mean_agb, y = mean_simpson, color = str_class_plots, size = 3)) +
   geom_point(aes(color = str_class_plots), size= 1.5, alpha = 0.3) +
   theme_classic() +
@@ -566,7 +566,7 @@ plots_cf_4p %>%
             sp_richness_plot = as.numeric(sp_richness_plot)) %>%
   ggplot(aes(x = agb_plot_ha, y = sp_richness_plot, color = str_class_plots)) +
   #geom_smooth(method = "lm", se =F) +
-  geom_smooth(method = "gam", span = 1, color = "gray", se= T, alpha = 0.1) +
+  geom_smooth(method = "loess", span = 1, color = "gray", se= T, alpha = 0.1) +
   geom_point(aes(x= mean_agb, y = mean_sp, color = str_class_plots, size = 3)) +
   geom_point(aes(color = str_class_plots), size= 1.5, alpha = 0.5) +
   theme_classic() +
