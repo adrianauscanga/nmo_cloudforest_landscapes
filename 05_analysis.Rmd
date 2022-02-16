@@ -328,7 +328,7 @@ summary(lm(pc1[,1] ~ sites_cf_4p$temp))
 summary(lm(pc1[,1] ~ sites_cf_4p$altitude))
 ```
 
-Multiple linear regression model with all variables:
+### Multiple linear regression model with all variables:
 
 ```{r}
 # Add PC1 to data set
@@ -343,14 +343,14 @@ sites_cf_4p <- sites_cf_4p %>%
   
 # Run regression model with env_pc1
 
-lm <- lm(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic_inv + agriculture + grazing, data = sites_cf_4p)
+lm <- lm(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + landscape + agriculture + grazing, data = sites_cf_4p)
 summary(lm)
 ```
 
-Stepwise model selection:
+### Stepwise model selection:
 
 ```{r}
-ms <- regsubsets(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic_inv + agriculture + grazing, data = sites_cf_4p)
+ms <- regsubsets(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + landscape + agriculture + grazing, data = sites_cf_4p)
 
 ms_sum <- summary(ms)
 
@@ -372,7 +372,7 @@ ms_sum
 
 # Best model has 3 predictors: 
 #  slope_gee
-#  mosaic_inv
+#  landscape
 #  agriculture
 
 ```
@@ -380,7 +380,7 @@ ms_sum
 Best model:
 
 ```{r}
-lm2 <- lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p)
+lm2 <- lm(log(av_agb_site) ~ slope_gee + landscape + agriculture, data = sites_cf_4p)
 summary(lm2)
 partial.resid.plot(lm2)
 
@@ -388,7 +388,7 @@ lm2_res <- lm2$residuals #save residuals
 ```
 
 
-Spatial autocorrelation test:
+### Spatial autocorrelation test:
 
 ```{r}
 
@@ -423,7 +423,155 @@ sites_coords_4p %>%
   geom_point(aes(color = lm2_res), size = 4) +
   scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
   theme_classic()
+
 ```
+
+### Why is environmental gradient not relevant?
+
+```{r}
+lm3 <- lm(log(av_agb_site) ~ env_pc1, data = sites_cf_4p)
+summary(lm3)
+
+lm4 <- lm(landscape ~ env_pc1, data = sites_cf_4p)
+summary(lm4)
+
+ggplot(sites_cf_4p, aes(x = env_pc1, y = log(av_agb_site), color = landscape)) +
+  geom_point(size = 4) +
+  scale_color_gradient(low = "darkgreen", high = "yellow") +
+  geom_smooth(method = "lm", color = "darkgray")
+
+ggplot(sites_cf_4p, aes(x = env_pc1, y = landscape, color = av_agb_site)) +
+  geom_point(size = 4) +
+  scale_color_gradient(high = "darkgreen", low = "yellow") +
+  geom_smooth(method = "lm", color = "darkgray")
+
+```
+
+It is relevant but completely overshadowed by landscape composition. 
+Also, landscape composition is correlated to environmental gradient (adjusted R2= 0.372) thus there's little variation left to be explained by the environment. 
+Moreover, environment is already restricted because all sites are constrained to TMCF.
 
 
 ## 4. AGB and tree diversity
+
+### Loess curves
+
+Species richness 
+
+```{r}
+
+# Sp richness
+
+lo1 <- loess(sp_richness_site_av ~ log(av_agb_site), data = sites_cf_4p)
+summary(lo1)
+# poor man's R-squared value
+cor(sites_cf_4p$sp_richness_site_av, lo1$fitted)^2
+
+sites_cf_4p %>%
+  ggplot(aes(x = log(av_agb_site), y = sp_richness_site_av)) +
+  geom_smooth(alpha = 0.2, method = "loess", span = 1, color= "gray") +
+  geom_point(size=2) +
+  theme_classic()
+
+```
+
+Simpson 
+
+
+```{r}
+
+lo2 <- loess(simpson_av_site ~ log(av_agb_site), data = sites_cf_4p)
+summary(lo2)
+# poor man's R-squared value
+cor(sites_cf_4p$simpson_av_site, lo2$fitted)^2
+
+sites_cf_4p %>%
+  ggplot(aes(x = log(av_agb_site), y = simpson_av_site)) +
+  geom_point(size=2) +
+  geom_smooth(alpha = 0.2, method = "loess", span = 1, color= "gray") +
+  theme_classic()
+
+```
+
+Stem density
+
+
+```{r}
+
+# Stem density ~ sp richness
+
+lo3 <- loess(sp_richness_site_av ~ av_treedensity_site, data = sites_cf_4p)
+summary(lo3)
+# poor man's R-squared value
+cor(sites_cf_4p$sp_richness_site_av, lo3$fitted)^2
+
+sites_cf_4p %>%
+  ggplot(aes(x = av_treedensity_site, y = sp_richness_site_av)) +
+  geom_smooth(alpha = 0.2, method = "loess", span = 1, color= "gray") +
+  #geom_smooth(method = "lm", alpha = 0.2) +
+  geom_point(size=2) +
+  theme_classic()
+
+
+```
+
+Stem density ~ simpson
+
+```{r}
+lo4 <- loess(simpson_av_site ~ av_treedensity_site, data = sites_cf_4p)
+summary(lo4)
+# poor man's R-squared value
+cor(sites_cf_4p$simpson_av_site, lo4$fitted)^2
+
+sites_cf_4p %>%
+  ggplot(aes(x = av_treedensity_site, y = simpson_av_site, color = landscape)) +
+  geom_smooth(alpha = 0.1, method = "loess", span = 0.75, color= "gray", linetype = "dashed") +
+  #geom_smooth(method = "lm", alpha = 0.2) +
+  geom_point(size= 3) +
+  theme_classic() +
+  scale_colour_gradient(high = "darkolivegreen2", low = "darkgreen") 
+
+```
+
+At plot level
+
+```{r}
+
+plots_cf_4p %>%
+  filter(agb_plot_ha < 600) %>%
+  filter(!is.na(simpson)) %>%
+  filter(!is.na(agb_plot_ha)) %>%
+  group_by(str_class_plots) %>%
+  summarise(mean_simpson = mean(simpson),
+            mean_agb = mean(agb_plot_ha),
+            agb_plot_ha = as.numeric(agb_plot_ha),
+            simpson = as.numeric(simpson)) %>%
+  ggplot(aes(x = agb_plot_ha, y = simpson)) +
+  geom_smooth(method = "gam", span = 1, color = "gray", se= T, alpha = 0.1) +
+  geom_point(aes(x= mean_agb, y = mean_simpson, color = str_class_plots, size = 3)) +
+  geom_point(aes(color = str_class_plots), size= 1.5, alpha = 0.3) +
+  theme_classic() +
+  scale_color_brewer(palette = "Accent") +
+  labs(color = "Successional Stage",
+       size = "Average")
+  
+plots_cf_4p %>%
+  filter(agb_plot_ha < 600) %>%
+  filter(!is.na(simpson)) %>%
+  filter(!is.na(agb_plot_ha)) %>%
+  group_by(str_class_plots) %>%
+  summarise(mean_sp = mean(sp_richness_plot),
+            mean_agb = mean(agb_plot_ha),
+            agb_plot_ha = as.numeric(agb_plot_ha),
+            sp_richness_plot = as.numeric(sp_richness_plot)) %>%
+  ggplot(aes(x = agb_plot_ha, y = sp_richness_plot, color = str_class_plots)) +
+  #geom_smooth(method = "lm", se =F) +
+  geom_smooth(method = "gam", span = 1, color = "gray", se= T, alpha = 0.1) +
+  geom_point(aes(x= mean_agb, y = mean_sp, color = str_class_plots, size = 3)) +
+  geom_point(aes(color = str_class_plots), size= 1.5, alpha = 0.5) +
+  theme_classic() +
+  scale_color_brewer(palette = "Accent") +
+  labs(color = "Successional Stage",
+       size = "Average")
+
+```
