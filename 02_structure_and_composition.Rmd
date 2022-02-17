@@ -91,7 +91,7 @@ plots_cf <- plots_cf %>%
 
 ### Biomass
 
-Calculate aboveground biomass with BIOMASS package and other allometric equations. *NOTE: error propagation missing!!*
+Calculate aboveground biomass with BIOMASS package and other allometric equations. 
 
 Information about this package can be found here:
 https://cran.r-project.org/web/packages/BIOMASS/vignettes/plot.html
@@ -567,7 +567,7 @@ sites_cf <- sites_cf %>%
 
 ```
 
-## Forest Composition and Diversity
+## Tree Diversity
 
 ### Diversity indices: Shannon and Simpson
 
@@ -707,7 +707,23 @@ sites_cf <- sites_cf %>%
 
 ```
 
-Rank abundance curves
+
+Save these datasets to use them in following analyses:
+
+```{r}
+
+save(sites_cf, file = "output/sites_cf2.RData")
+save(plots_cf, file = "output/plots_cf2.RData")
+save(trees_cf, file = "output/trees_cf2.RData")
+
+```
+
+
+################################################################################
+#######################     EXTRA CODE BUCKET    ###############################
+################################################################################
+
+### Rank abundance curves
 
 ```{r}
 # Use only sites with 4 plots
@@ -753,16 +769,6 @@ for (row in 1:nrow(sp_site4p)) {
 
 
 
-Save these datasets to use them in following analyses:
-
-```{r}
-save(sites_cf, file = "output/sites_cf2.RData")
-save(plots_cf, file = "output/plots_cf2.RData")
-save(trees_cf, file = "output/trees_cf2.RData")
-
-
-```
-######################################################################
 ### Detrended Correspondence Analysis (DCA) and Principal Component Analysis (PCA)
 
 To know whether linear or unimodal methods are better in this case, I'll calculate a DCA. According to Lepš & Šmilauer (2003) if the first DCA axis (which is scaled in units of standard deviation, S.D.) > 4 S.D. the dataset is heterogeneous so unimodal methods should be used, while the length < 3 S.D. indicates a homogeneous dataset for which linear methods are suitable.

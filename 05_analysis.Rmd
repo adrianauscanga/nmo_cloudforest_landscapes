@@ -10,9 +10,18 @@ output: html_document
 Load packages and files
 
 ```{r}
+
+# Libraries
+
 library(tidyverse)
 library(ggplot2)
 library(rstatix)
+
+# Files
+
+load("output/sites_cf_4p.RData")
+load("output/plots_cf_4p.RData")
+load("output/trees_cf_4p.RData")
 ```
 
 
@@ -427,3 +436,19 @@ sites_coords_4p %>%
 
 
 ## 4. AGB and tree diversity
+
+Species richness and AGB
+
+```{r}
+# Loess curve
+
+# Plot
+
+
+```
+
+Simpson and AGB
+
+Species richness and AGB in relation to successional stage
+
+Simpson and AGB in relation to successional stage
