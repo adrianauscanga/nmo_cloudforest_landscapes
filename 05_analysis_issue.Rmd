@@ -10,9 +10,18 @@ output: html_document
 Load packages and files
 
 ```{r}
+
+# Libraries
+
 library(tidyverse)
 library(ggplot2)
 library(rstatix)
+
+# Files
+
+load("output/sites_cf_4p.RData")
+load("output/plots_cf_4p.RData")
+load("output/trees_cf_4p.RData")
 ```
 
 
@@ -464,6 +473,7 @@ Species richness
 
 lo1 <- loess(sp_richness_site_av ~ log(av_agb_site), data = sites_cf_4p)
 summary(lo1)
+
 # poor man's R-squared value
 cor(sites_cf_4p$sp_richness_site_av, lo1$fitted)^2
 
@@ -482,6 +492,7 @@ Simpson
 
 lo2 <- loess(simpson_av_site ~ log(av_agb_site), data = sites_cf_4p)
 summary(lo2)
+
 # poor man's R-squared value
 cor(sites_cf_4p$simpson_av_site, lo2$fitted)^2
 
