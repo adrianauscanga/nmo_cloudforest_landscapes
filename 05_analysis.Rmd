@@ -16,6 +16,11 @@ Load packages and files
 library(tidyverse)
 library(ggplot2)
 library(rstatix)
+library(corrplot)
+library(vegan)
+library(leaps)
+library(asbio)
+library(spdep)
 
 # Files
 
@@ -31,6 +36,7 @@ Summary statistics
 
 ```{r}
 summary(sites_cf_4p)
+
 ```
 
 
@@ -65,14 +71,14 @@ Tree size classes and contribution to AGB
 
 # Estimate total agb per class and plot
 
-agb_class_plots <- trees_cf %>%
+agb_class_plots <- trees_cf_4p %>%
   right_join(plots_cf_4p, by = "plot_id") %>%
   filter(status == "Vivo") %>%
   filter(is.na(life_form) | life_form == "Arbol") %>%
   select(plot_id, species, genus, sp, family, diam_bh, agb, str_class_plots) %>%
   mutate(diam_class = ifelse(diam_bh <= 10, "1",
                              ifelse(diam_bh > 10 & diam_bh <= 20, "2",
-                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3",
                                            ifelse(diam_bh > 30 & diam_bh <= 40, "4",
                                                   ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
   filter(!is.na(agb)) %>%
@@ -125,7 +131,7 @@ Tree size classes and contribution to total number of stems:
 ```{r}
 # Contribution of size to stems
 
-stems_class_plot <- trees_cf %>%
+stems_class_plot <- trees_cf_4p %>%
   right_join(plots_cf_4p, by = "plot_id") %>%
   filter(status == "Vivo") %>%
   filter(is.na(life_form) | life_form == "Arbol") %>%
