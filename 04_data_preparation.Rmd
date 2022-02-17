@@ -21,9 +21,9 @@ Add slope and aspect to the data set.
 
 ```{r}
 #Aspect and Slope from GEE 
-aspect <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/aspect_plots.csv", col_names = F)
+aspect <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/aspect_plots.csv", col_names = F) #Change this file to input directory!!!!!
 
-slope <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/slope_plots.csv", col_names = F)
+slope <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/slope_plots.csv", col_names = F) #Change this file to input directory!!!!!
 
 head(aspect)
 
@@ -148,7 +148,7 @@ sites_cf <- sites_cf %>%
 
 ```
 
-Change direction of Mosaic values (so that 0-forest and 1-ag)
+Change direction of mosaic values (so that 0-forest and 1-ag) and rename variable
 
 ```{r}
 sites_cf <- sites_cf %>%
@@ -219,9 +219,59 @@ Still noisy, let's select only sites with 4 plots and none NAs
 
 ```{r}
 
+# Sites
+
 sites_cf_4p <- sites_cf %>%
   filter(plot_no == 4) %>%
   filter(!is.na(agriculture)) %>%
   filter(!is.na(grazing))
+
+# Plots
+# subset plots_cf data set
+
+plots_cf <- plots_cf %>%
+  mutate(site = as.character(site))
+
+plots_cf_4p <- sites_cf_4p %>%
+  select(site) %>%
+  left_join(plots_cf, by ="site") #160 plots
+
+# Trees
+
+trees_cf_4p <- plots_cf_4p %>%
+  select(plot_id) %>%
+  left_join(trees_cf, by = "plot_id")
+
+# Let's double check that the number of trees is the same
+
+plots_cf_4p %>%
+  summarise(total_trees = sum(tree_no)) %>%
+  summarise(sum(total_trees))  # 4,106 trees
+
+trees_cf_4p %>%
+  filter(life_form == "Arbol" | is.na(life_form)) %>%
+  filter(status == "Vivo") %>%
+  # 4,106 trees
+  filter(is.na(species)) #out of which 12 do not have sp name
+
+
+  
+```
+
+## Save data
+
+```{r}
+# Large data sets
+
+save(sites_cf, file = "output/sites_cf3.RData")
+save(plots_cf, file = "output/plots_cf3.RData")
+save(trees_cf, file = "output/trees_cf3.RData")
+
+# 4 plots data sets
+
+save(sites_cf_4p, file = "output/sites_cf_4p.RData")
+save(plots_cf_4p, file = "output/plots_cf_4p.RData")
+save(trees_cf_4p, file = "output/trees_cf_4p.RData")
+
 ```
 
