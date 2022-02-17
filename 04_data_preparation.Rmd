@@ -11,6 +11,7 @@ Load packages and data
 
 ```{r}
 library(tidyverse)
+library(ggpubr)
 
 load("output/sites_cf3.RData")
 load("output/plots_cf3.RData")
@@ -21,9 +22,9 @@ Add slope and aspect to the data set.
 
 ```{r}
 #Aspect and Slope from GEE 
-aspect <- read_csv("input/aspect_plots.csv", col_names = F) #Change this file to input directory!!!!!
+aspect <- read_csv("input/aspect_plots.csv", col_names = F) 
 
-slope <- read_csv("input/slope_plots.csv", col_names = F) #Change this file to input directory!!!!!
+slope <- read_csv("input/slope_plots.csv", col_names = F) 
 
 head(aspect)
 
@@ -263,9 +264,9 @@ trees_cf_4p %>%
 ```{r}
 # Large data sets
 
-save(sites_cf, file = "output/sites_cf3.RData")
-save(plots_cf, file = "output/plots_cf3.RData")
-save(trees_cf, file = "output/trees_cf3.RData")
+save(sites_cf, file = "output/sites_cf4.RData")
+save(plots_cf, file = "output/plots_cf4.RData")
+save(trees_cf, file = "output/trees_cf4.RData")
 
 # 4 plots data sets
 
