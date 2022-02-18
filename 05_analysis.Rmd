@@ -182,7 +182,7 @@ TukeyHSD(anova2)
   
 ```
 
-Trees of class 2 (20-30 cm of DBH) are the most abundant. All classes are statistically different except for classes 4, 5 and 6.
+Trees of class 2 (10-20 cm of DBH) are the most abundant. All classes are statistically different except for classes 4, 5 and 6.
 
 ### Tree size contribution to AGB and stems in relation to successional stage
 
@@ -450,6 +450,9 @@ summary(lm3)
 lm4 <- lm(landscape ~ env_pc1, data = sites_cf_4p)
 summary(lm4)
 
+lm5 <- lm(log(av_agb_site) ~landscape, data = sites_cf_4p)
+summary(lm5)
+
 ggplot(sites_cf_4p, aes(x = env_pc1, y = log(av_agb_site), color = landscape)) +
   geom_point(size = 4) +
   scale_color_gradient(low = "darkgreen", high = "yellow") +
@@ -484,7 +487,7 @@ summary(lo1)
 cor(sites_cf_4p$sp_richness_site_av, lo1$fitted)^2
 
 sites_cf_4p %>%
-  ggplot(aes(x = log(av_agb_site), y = sp_richness_site_av)) +
+  ggplot(aes(x = av_agb_site, y = sp_richness_site_av)) +
   geom_smooth(alpha = 0.2, method = "loess", span = 1, color= "gray") +
   geom_point(size=2) +
   theme_classic()
@@ -503,7 +506,7 @@ summary(lo2)
 cor(sites_cf_4p$simpson_av_site, lo2$fitted)^2
 
 sites_cf_4p %>%
-  ggplot(aes(x = log(av_agb_site), y = simpson_av_site)) +
+  ggplot(aes(x = av_agb_site, y = simpson_av_site)) +
   geom_point(size=2) +
   geom_smooth(alpha = 0.2, method = "loess", span = 1, color= "gray") +
   theme_classic()
