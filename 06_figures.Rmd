@@ -1,0 +1,117 @@
+---
+title: "06_figures"
+author: "Adriana Uscanga"
+date: "19/2/2022"
+output: html_document
+---
+
+# Figures
+ 
+```{r}
+# Note: Run 05_analyisis first to have all needed data loaded
+
+# Load packages for making figures:
+library(ggpubr)
+library(cowplot)
+
+```
+
+# Figure 2. Structural attributes and tree size contribution to AGB and stem density at plot level
+
+```{r}
+
+# Tree size contribution to stem density
+
+p1 <- plots_cf_4p %>%
+  select(plot_id, tree_no, str_class_plots) %>%
+  right_join(stems_class_plot, by = "plot_id") %>%
+  mutate(stem_prop = stems/tree_no)  %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  mutate(size_class = ifelse(diam_class == "1", "<10",
+                             ifelse(diam_class == "2", "10-20",
+                                    ifelse(diam_class == "3", "20-30",
+                                           ifelse(diam_class == "4", "30-40",
+                                                  ifelse(diam_class == "5", "40-50", ">50")))))) %>%
+  group_by(str_class_plots, diam_class) %>%
+  # plot
+  ggplot(aes(x = factor(size_class, 
+                        levels =c("<10", "10-20", "20-30", "30-40", "40-50", ">50"),
+                        ordered = TRUE),
+             y = stem_prop,
+             fill = factor(succ,
+                           levels = c('vy','y', 'm'),
+                           ordered = TRUE))) +
+  geom_boxplot(color = "gray25") +
+  theme_half_open() +
+  labs(fill ='Successional Stage') +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+
+# Tree size contribution to AGB
+
+p2 <- plots_cf_4p %>%
+  select(plot_id, agb_plot, str_class_plots) %>%
+  right_join(agb_class_plots, by = "plot_id") %>%
+  mutate(agb_prop = agb_class_plot/agb_plot)  %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  mutate(size_class = ifelse(diam_class == "1", "<10",
+                             ifelse(diam_class == "2", "10-20",
+                                    ifelse(diam_class == "3", "20-30",
+                                           ifelse(diam_class == "4", "30-40",
+                                                  ifelse(diam_class == "5", "40-50", ">50")))))) %>%
+  group_by(str_class_plots, diam_class) %>%
+  ggplot(aes(x = factor(size_class,
+                        levels =c("<10", "10-20", "20-30", "30-40", "40-50", ">50"),
+                        ordered = TRUE),
+             y = agb_prop,
+             fill = factor(succ,
+                           levels = c('vy','y', 'm'),
+                           ordered = TRUE))) +
+  geom_boxplot(color = "gray25") +
+  theme_half_open() +
+  labs(fill ='Successional Stage') +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+
+# Structural attributes across succesional stages
+
+p3 <- plots_cf_4p %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  ggplot(aes(x= factor(succ, levels = c('vy','y', 'm'),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  geom_boxplot(color = "gray25") +
+  theme_half_open() +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+
+p4 <- plots_cf_4p %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  ggplot(aes(x= factor(succ, levels = c('vy','y', 'm'),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  geom_boxplot(color = "gray25") +
+  theme_half_open() +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+
+p5 <- plots_cf_4p %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  ggplot(aes(x= factor(succ, levels = c('vy','y', 'm'),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  geom_boxplot(color = "gray25") +
+  theme_half_open() +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+
+p6 <- plots_cf_4p %>%
+  mutate(succ = ifelse(str_class_plots == "1", "vy",
+                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  ggplot(aes(x= factor(succ, levels = c('vy','y', 'm'),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  geom_boxplot(color = "gray25") +
+  theme_half_open() +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+
+p1
+p2
+p3
+p4
+p5
+p6
+```
+
