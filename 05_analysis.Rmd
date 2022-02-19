@@ -365,7 +365,7 @@ summary(lm)
 ### Stepwise model selection:
 
 ```{r}
-ms <- regsubsets(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + landscape + agriculture + grazing, data = sites_cf_4p)
+ms <- regsubsets(log(av_agb_site) ~ env_pc1 + slope_gee + shannon_av_site + sp_richness_site_av + landscape + agriculture + grazing, data = sites_cf_4p)
 
 ms_sum <- summary(ms)
 
@@ -385,14 +385,16 @@ data.frame(
 
 ms_sum
 
-# Best model has 3 predictors: 
+# Best model according to BIC has 3 predictors: 
 #  slope_gee
 #  landscape
 #  agriculture
 
+#Best model according to CP has four:
+# Same but adding env_pc1
 ```
 
-Best model:
+Best models:
 
 ```{r}
 lm2 <- lm(log(av_agb_site) ~ slope_gee + landscape + agriculture, data = sites_cf_4p)
@@ -400,6 +402,43 @@ summary(lm2)
 partial.resid.plot(lm2)
 
 lm2_res <- lm2$residuals #save residuals
+
+lm2b <- lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1, data = sites_cf_4p)
+summary(lm2b)
+partial.resid.plot(lm2b)
+
+lm2b_res <- lm2b$residuals #save residuals
+
+lm2c <- lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing + shannon_av_site, data = sites_cf_4p)
+summary(lm2c)
+partial.resid.plot(lm2c)
+
+lm2c_res <- lm2c$residuals #save residuals
+```
+P value comparisons of all models:
+
+```{r}
+
+# 1 predictor
+summary(lm(log(av_agb_site) ~ landscape, data = sites_cf_4p))
+
+# 2 predictors
+summary(lm(log(av_agb_site) ~ landscape + agriculture, data = sites_cf_4p))
+
+# 3 predictors
+summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture, data = sites_cf_4p))
+
+# 4 predictors
+summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1, data = sites_cf_4p))
+
+# 5 predicotrs
+summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing, data = sites_cf_4p))
+
+# 6 predictors
+summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing + shannon_av_site, data = sites_cf_4p))
+
+# 7 predictors
+summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing + shannon_av_site + sp_richness_site_av, data = sites_cf_4p))
 ```
 
 
@@ -551,6 +590,13 @@ sites_cf_4p %>%
   theme_classic() +
   scale_colour_gradient(high = "darkolivegreen2", low = "darkgreen") 
 
+sites_cf_4p %>%
+  ggplot(aes(x = av_treedensity_site, y = shannon_av_site, color = landscape)) +
+  geom_smooth(alpha = 0.1, method = "loess", span = 0.75, color= "gray", linetype = "dashed") +
+  #geom_smooth(method = "lm", alpha = 0.2) +
+  geom_point(size= 3) +
+  theme_classic() +
+  scale_colour_gradient(high = "darkolivegreen2", low = "darkgreen") 
 ```
 
 At plot level
@@ -574,7 +620,25 @@ plots_cf_4p %>%
   scale_color_brewer(palette = "Accent") +
   labs(color = "Successional Stage",
        size = "Average")
-  
+
+plots_cf_4p %>%
+  filter(agb_plot_ha < 600) %>%
+  filter(!is.na(simpson)) %>%
+  filter(!is.na(agb_plot_ha)) %>%
+  group_by(str_class_plots) %>%
+  summarise(mean_shannon = mean(shannon),
+            mean_agb = mean(agb_plot_ha),
+            agb_plot_ha = as.numeric(agb_plot_ha),
+            shannon = as.numeric(shannon)) %>%
+  ggplot(aes(x = agb_plot_ha, y = shannon)) +
+  geom_smooth(method = "loess", span = 1, color = "gray", se= T, alpha = 0.1) +
+  geom_point(aes(x= mean_agb, y = mean_shannon, color = str_class_plots, size = 3)) +
+  geom_point(aes(color = str_class_plots), size= 1.5, alpha = 0.3) +
+  theme_classic() +
+  scale_color_brewer(palette = "Accent") +
+  labs(color = "Successional Stage",
+       size = "Average")
+
 plots_cf_4p %>%
   filter(agb_plot_ha < 600) %>%
   filter(!is.na(simpson)) %>%
