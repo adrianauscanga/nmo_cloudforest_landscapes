@@ -26,8 +26,8 @@ p1 <- plots_cf_4p %>%
   select(plot_id, tree_no, str_class_plots) %>%
   right_join(stems_class_plot, by = "plot_id") %>%
   mutate(stem_prop = stems/tree_no)  %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
   mutate(size_class = ifelse(diam_class == "1", "<10",
                              ifelse(diam_class == "2", "10-20",
                                     ifelse(diam_class == "3", "20-30",
@@ -40,12 +40,17 @@ p1 <- plots_cf_4p %>%
                         ordered = TRUE),
              y = stem_prop,
              fill = factor(succ,
-                           levels = c('vy','y', 'm'),
+                           levels = c("VY","Y", "M"),
                            ordered = TRUE))) +
   geom_boxplot(color = "gray25") +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme_half_open() +
-  labs(fill ='Successional Stage') +
-  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+  labs(x = "Size class",
+       y = "Proportion of stems") +
+  theme(axis.title.x = element_text(size = 9)) +
+  theme(axis.title.y = element_text(size = 9)) +
+  theme(axis.text = element_text(size = 8)) +
+  theme(legend.position = "none") 
 
 # Tree size contribution to AGB
 
@@ -53,8 +58,8 @@ p2 <- plots_cf_4p %>%
   select(plot_id, agb_plot, str_class_plots) %>%
   right_join(agb_class_plots, by = "plot_id") %>%
   mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
   mutate(size_class = ifelse(diam_class == "1", "<10",
                              ifelse(diam_class == "2", "10-20",
                                     ifelse(diam_class == "3", "20-30",
@@ -66,52 +71,88 @@ p2 <- plots_cf_4p %>%
                         ordered = TRUE),
              y = agb_prop,
              fill = factor(succ,
-                           levels = c('vy','y', 'm'),
+                           levels = c("VY","Y", "M"),
                            ordered = TRUE))) +
   geom_boxplot(color = "gray25") +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme_half_open() +
-  labs(fill ='Successional Stage') +
-  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+  labs(x = "Size class",
+       y = "Proportion of AGB") +
+  theme(axis.title.x = element_text(size = 9)) +
+  theme(axis.title.y = element_text(size = 9)) +
+  theme(axis.text = element_text(size = 8)) +
+  theme(legend.position = "none") 
+  
+   
 
 # Structural attributes across succesional stages
 
 p3 <- plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  ggplot(aes(x= factor(succ, levels = c('vy','y', 'm'),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = tree_density, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
   geom_boxplot(color = "gray25") +
   theme_half_open() +
-  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  theme(axis.title.x = element_blank()) +
+  labs(y = "Stem density (tree/ha)") +
+  theme(axis.title.y = element_text(size = 9)) +
+  theme(axis.text = element_text(size = 8)) +
+  theme(legend.position = "none") 
 
 p4 <- plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  ggplot(aes(x= factor(succ, levels = c('vy','y', 'm'),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = loreys_height, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
   geom_boxplot(color = "gray25") +
   theme_half_open() +
-  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  theme(axis.title.x = element_blank()) +
+  labs(y = "Lorey's height (m)") +
+  theme(axis.title.y = element_text(size = 9)) +
+  theme(axis.text = element_text(size = 8)) +
+  theme(legend.position = "none") 
 
 p5 <- plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  ggplot(aes(x= factor(succ, levels = c('vy','y', 'm'),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = basal_area_ha, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
   geom_boxplot(color = "gray25") +
   theme_half_open() +
-  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  theme(axis.title.x = element_blank()) +
+  labs(y = "Basal area (m/ha)") +
+  theme(axis.title.y = element_text(size = 9)) +
+  theme(axis.text = element_text(size = 8)) +
+  theme(legend.position = "none") 
 
 p6 <- plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  ggplot(aes(x= factor(succ, levels = c('vy','y', 'm'),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
   geom_boxplot(color = "gray25") +
   theme_half_open() +
-  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) 
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  theme(axis.title.x = element_blank()) +
+  labs(y = "AGB (Mg/ha)") +
+  theme(axis.title.y = element_text(size = 9)) +
+  theme(axis.text = element_text(size = 8)) +
+  theme(legend.position = "none") 
 
-p1
-p2
-p3
-p4
-p5
-p6
+
+row1 <- plot_grid(p1, p2,
+                  labels = c("a.", "b."),
+                  label_size = 8,
+                  hjust = -1)
+
+row2 <- plot_grid(p3,p4,p5,p6,
+                  ncol = 4,
+                  nrow = 1,
+                  label_size = 8, labels = c("c.", "d.", "e.", "f."),
+                  hjust = -1)
+
+figure2 <- ggarrange(row1, row2,
+                     nrow = 2)
+figure2
 ```
 
