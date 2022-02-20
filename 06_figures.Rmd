@@ -11,8 +11,10 @@ output: html_document
 # Note: Run 05_analyisis first to have all needed data loaded
 
 # Load packages for making figures:
+library(ggplot2)
 library(ggpubr)
 library(cowplot)
+library(rlang)
 
 ```
 
@@ -42,15 +44,19 @@ p1 <- plots_cf_4p %>%
              fill = factor(succ,
                            levels = c("VY","Y", "M"),
                            ordered = TRUE))) +
-  geom_boxplot(color = "gray25") +
+  geom_boxplot(color = "gray25",
+               outlier.alpha = 0.5,
+               outlier.color = "gray40",
+               outlier.size = 1.2) +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
-  theme_half_open() +
+  theme_classic() +
   labs(x = "Size class",
        y = "Proportion of stems") +
-  theme(axis.title.x = element_text(size = 9)) +
+  theme(axis.title.x = element_text(size = 10)) +
   theme(axis.title.y = element_text(size = 9)) +
   theme(axis.text = element_text(size = 8)) +
-  theme(legend.position = "none") 
+  theme(legend.position = "none") +
+  theme(plot.margin = margin(b= 10, t= 9))
 
 # Tree size contribution to AGB
 
@@ -73,15 +79,19 @@ p2 <- plots_cf_4p %>%
              fill = factor(succ,
                            levels = c("VY","Y", "M"),
                            ordered = TRUE))) +
-  geom_boxplot(color = "gray25") +
+  geom_boxplot(color = "gray25",
+               outlier.alpha = 0.5,
+               outlier.color = "gray40",
+               outlier.size = 1.2) +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
-  theme_half_open() +
+  theme_classic() +
   labs(x = "Size class",
        y = "Proportion of AGB") +
-  theme(axis.title.x = element_text(size = 9)) +
+  theme(axis.title.x = element_text(size = 10)) +
   theme(axis.title.y = element_text(size = 9)) +
   theme(axis.text = element_text(size = 8)) +
-  theme(legend.position = "none") 
+  theme(legend.position = "none") +
+  theme(plot.margin = margin(b= 10, t= 9))
   
    
 
@@ -91,68 +101,94 @@ p3 <- plots_cf_4p %>%
   mutate(succ = ifelse(str_class_plots == "1", "VY",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = tree_density, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
-  geom_boxplot(color = "gray25") +
-  theme_half_open() +
+  geom_boxplot(color = "gray25",
+               outlier.alpha = 0.5,
+               outlier.color = "gray40",
+               outlier.size = 1.2) +
+  theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
   labs(y = "Stem density (tree/ha)") +
   theme(axis.title.y = element_text(size = 9)) +
   theme(axis.text = element_text(size = 8)) +
-  theme(legend.position = "none") 
+  theme(legend.position = "none") +
+  theme(plot.margin = margin(t= 5))
 
 p4 <- plots_cf_4p %>%
   mutate(succ = ifelse(str_class_plots == "1", "VY",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = loreys_height, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
-  geom_boxplot(color = "gray25") +
-  theme_half_open() +
+  geom_boxplot(color = "gray25",
+               outlier.alpha = 0.5,
+               outlier.color = "gray40",
+               outlier.size = 1.2) +
+  theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
   labs(y = "Lorey's height (m)") +
   theme(axis.title.y = element_text(size = 9)) +
   theme(axis.text = element_text(size = 8)) +
-  theme(legend.position = "none") 
+  theme(legend.position = "none") +
+  theme(plot.margin = margin(t= 5))
 
 p5 <- plots_cf_4p %>%
   mutate(succ = ifelse(str_class_plots == "1", "VY",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = basal_area_ha, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
-  geom_boxplot(color = "gray25") +
-  theme_half_open() +
+  geom_boxplot(color = "gray25",
+               outlier.alpha = 0.5,
+               outlier.color = "gray40",
+               outlier.size = 1.2) +
+  theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
   labs(y = "Basal area (m/ha)") +
   theme(axis.title.y = element_text(size = 9)) +
   theme(axis.text = element_text(size = 8)) +
-  theme(legend.position = "none") 
+  theme(legend.position = "none") +
+  theme(plot.margin = margin(t= 5))
 
 p6 <- plots_cf_4p %>%
   mutate(succ = ifelse(str_class_plots == "1", "VY",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
-  geom_boxplot(color = "gray25") +
-  theme_half_open() +
+  geom_boxplot(color = "gray25",
+               outlier.alpha = 0.5,
+               outlier.color = "gray40",
+               outlier.size = 1.2) +
+  theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
   labs(y = "AGB (Mg/ha)") +
   theme(axis.title.y = element_text(size = 9)) +
   theme(axis.text = element_text(size = 8)) +
-  theme(legend.position = "none") 
+  theme(legend.justification = "bottom") +
+  theme(plot.margin = margin(t= 5))
 
+p6b <- p6 + theme(legend.position = "none") 
+
+legend <- get_legend(p6)
 
 row1 <- plot_grid(p1, p2,
-                  labels = c("a.", "b."),
+                  labels = c("a)", "b)"),
                   label_size = 8,
                   hjust = -1)
 
-row2 <- plot_grid(p3,p4,p5,p6,
+row2 <- plot_grid(p3,p4,p5,p6b,
                   ncol = 4,
                   nrow = 1,
-                  label_size = 8, labels = c("c.", "d.", "e.", "f."),
-                  hjust = -1)
+                  label_size = 8, labels = c("c)", "d)", "e)", "f)"),
+                  vjust = 1,
+                  hjust = -1,
+                  rel_widths = c(1,1,1,1))
 
-figure2 <- ggarrange(row1, row2,
-                     nrow = 2)
+figure2 <- ggarrange(row1, row2, legend,
+                     nrow = 3,
+                     heights = c(2, 1, 0.2),
+                     common.legend = T)
 figure2
+
+# add significance
+# add legend
 ```
 
