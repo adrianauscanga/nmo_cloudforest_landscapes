@@ -18,7 +18,7 @@ library(rlang)
 
 ```
 
-# Figure 2. Structural attributes and tree size contribution to AGB and stem density at plot level
+## Figure 2. Structural attributes and tree size contribution to AGB and stem density at plot level
 
 ```{r}
 
@@ -190,5 +190,44 @@ figure2
 
 # add significance
 # add legend
+```
+
+## Figure 3. Relationship between AGB and landscape composition, and diversity and landscape composition
+
+```{r}
+
+# AGB ~ landscape composition
+
+p1 <- sites_cf_4p %>%
+  ggplot(aes(x = landscape, y = av_agb_site)) +
+  geom_smooth(method = "lm", color = "gray30", se = F, linetype = "dashed") +
+  geom_smooth(method = "loess", span=1, color = "gray80", se = F, linetype = "dashed") +
+  geom_point(color = "black", size = 2) +
+  theme_classic() +
+  labs(x = "Landscape composition",
+       y = "AGB (Mg/ha)")
+
+
+p2 <- sites_cf_4p %>%
+  ggplot(aes(x = landscape, y = shannon_av_site)) +
+  geom_smooth(method = "lm", color = "gray30", se = F, linetype = "dashed") +
+  geom_smooth(method = "loess", span=1, color = "gray80", se = F, linetype = "dashed") +
+  geom_point(color = "black", size = 2) +
+  theme_classic() +
+  labs(x = "Landscape composition",
+       y = "H")
+
+figure3 <- plot_grid(p1, p2,
+          labels = c("a)", "b)"),
+          label_size = 10,
+          hjust = -1)
+
+figure3
+```
+
+## Figure 4.  Regressions between AGB and env_pc1 and landscape composition and env_pc1
+
+```{r}
+
 ```
 
