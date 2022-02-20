@@ -207,6 +207,7 @@ p1 <- sites_cf_4p %>%
   labs(x = "Landscape composition",
        y = "AGB (Mg/ha)")
 
+# Tree diversity ~ landscape composition
 
 p2 <- sites_cf_4p %>%
   ggplot(aes(x = landscape, y = shannon_av_site)) +
@@ -229,5 +230,51 @@ figure3
 
 ```{r}
 
+# AGB ~ env_pc1
+
+p1 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = av_agb_site)) +
+  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "dashed") +
+  geom_point(aes(color = landscape), size = 4) +
+  scale_color_gradient(low = "forestgreen", high =  "lightgoldenrod2") +
+  theme_classic() +
+  labs(x = "Environmental gradient",
+       y = "AGB (Mg/ha)",
+       color = "Landscape \ncomposition   ") +
+  theme(legend.position='top', 
+        legend.justification='right',
+        legend.direction='horizontal',
+        legend.key.height = unit(0.25, "cm"),
+        legend.key.width = unit(0.75, "cm"),
+        legend.text = element_text(size= 8),
+        legend.title = element_text(size = 9),
+        legend.title.align = 0)
+
+
+# Landscape composition ~ env_pc1
+
+p2 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = landscape)) +
+  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "dashed") +
+  geom_point(aes(color = av_agb_site), size = 4) +
+  scale_color_gradient(high = "darkgreen", low = "darkseagreen1") +
+  theme_classic() +
+  labs(x = "Environmental gradient",
+       y = "Landscape composition",
+       color = "AGB (Mg/ha)") +
+  scale_y_continuous(limits = c(0.0, 1.0), breaks = c(0.0, 0.25, 0.50, 0.75, 1.00)) +
+  theme(legend.position='top', 
+        legend.justification='right',
+        legend.direction='horizontal',
+        legend.key.height = unit(0.25, "cm"),
+        legend.key.width = unit(0.75, "cm"),
+        legend.text = element_text(size= 8),
+        legend.title = element_text(size = 9),
+        legend.title.align = 0)
+
+figure4 <- plot_grid(p1, p2,
+          labels = c("a)", "b)"),
+          label_size = 10,
+          hjust = -1)
+
+figure4
 ```
 
