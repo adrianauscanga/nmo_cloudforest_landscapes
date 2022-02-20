@@ -278,3 +278,81 @@ figure4 <- plot_grid(p1, p2,
 figure4
 ```
 
+# Figure 5. Loess curves of AGB and tree diversity at site and plot levels
+
+```{r}
+
+# Sites
+
+## Shannon
+
+sites_cf_4p %>%
+  ggplot(aes(x = av_agb_site, y = shannon_av_site)) +
+  geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
+  geom_point(size=2) +
+  theme_classic() +
+  labs(x = "AGB (Mg/ha)",
+       y = "H")
+
+## Sp richness
+
+sites_cf_4p %>%
+  ggplot(aes(x = av_agb_site, y = sp_richness_site_av)) +
+  geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
+  geom_point(size=2) +
+  theme_classic() +
+  labs(x= "AGB (Mg/ha)",
+       y= "S")
+
+# Plots
+
+## Shannon 
+
+plots_cf_4p %>%
+  filter(agb_plot_ha < 600) %>%
+  filter(!is.na(shannon)) %>%
+  filter(!is.na(agb_plot_ha)) %>%
+  group_by(str_class_plots) %>%
+  summarise(mean_shannon = mean(shannon),
+            mean_agb = mean(agb_plot_ha),
+            agb_plot_ha = as.numeric(agb_plot_ha),
+            shannon = as.numeric(shannon)) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  ggplot(aes(x = agb_plot_ha, y = shannon)) +
+  #geom_point(aes(x= mean_agb, y = mean_shannon, color = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), size = 3)) +
+  geom_point(aes(color = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE)), size= 2, alpha = 0.75) +
+  geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
+  theme_classic() +
+  scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  labs(color = "Successional Stage",
+       size = "Average H in successional stage",
+       x = "AGB (Mg/ha)",
+       y = "H")
+
+## Species richness
+
+plots_cf_4p %>%
+  filter(agb_plot_ha < 600) %>%
+  filter(!is.na(simpson)) %>%
+  filter(!is.na(agb_plot_ha)) %>%
+  group_by(str_class_plots) %>%
+  summarise(mean_sp = mean(sp_richness_plot),
+            mean_agb = mean(agb_plot_ha),
+            agb_plot_ha = as.numeric(agb_plot_ha),
+            sp_richness_plot = as.numeric(sp_richness_plot)) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  ggplot(aes(x = agb_plot_ha, y = sp_richness_plot, color = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
+  geom_point(aes(color = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE)), size= 2, alpha = 0.75) +
+  geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
+  theme_classic() +
+  scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  labs(color = "Successional Stage",
+       size = "Average H in successional stage",
+       x = "AGB (Mg/ha)",
+       y = "S")
+
+
+```
+
