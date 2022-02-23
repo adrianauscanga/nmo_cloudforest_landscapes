@@ -15,6 +15,7 @@ library(ggplot2)
 library(ggpubr)
 library(cowplot)
 library(rlang)
+library(ggsignif)
 
 ```
 
@@ -24,7 +25,25 @@ library(rlang)
 
 # Tree size contribution to stem density
 
-p1 <- plots_cf_4p %>%
+# stat_test2 <- plots_cf_4p %>%
+#   select(plot_id, tree_no, str_class_plots) %>%
+#   right_join(stems_class_plot, by = "plot_id") %>%
+#   mutate(stem_prop = stems/tree_no)  %>%
+#   mutate(succ = ifelse(str_class_plots == "1", "VY",
+#                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
+#   mutate(size_class = ifelse(diam_class == "1", "<10",
+#                              ifelse(diam_class == "2", "10-20",
+#                                     ifelse(diam_class == "3", "20-30",
+#                                            ifelse(diam_class == "4", "30-40",
+#                                                   ifelse(diam_class == "5", "40-50", ">50")))))) %>%
+#   group_by(succ) %>%
+#   t_test(stem_prop ~ size_class) %>%
+#   adjust_pvalue(method = "bonferroni") %>%
+#   add_significance("p.adj")
+# stat_test2
+
+
+p1_df <- plots_cf_4p %>%
   select(plot_id, tree_no, str_class_plots) %>%
   right_join(stems_class_plot, by = "plot_id") %>%
   mutate(stem_prop = stems/tree_no)  %>%
@@ -34,20 +53,45 @@ p1 <- plots_cf_4p %>%
                              ifelse(diam_class == "2", "10-20",
                                     ifelse(diam_class == "3", "20-30",
                                            ifelse(diam_class == "4", "30-40",
-                                                  ifelse(diam_class == "5", "40-50", ">50")))))) %>%
-  group_by(str_class_plots, diam_class) %>%
+                                                  ifelse(diam_class == "5", "40-50", ">50"))))))
+
+stat_test <- p1_df %>%
+  group_by(diam_class) %>%
+  t_test(stem_prop ~ str_class_plots) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+stat_test
+stat_test <- stat_test %>%
+  add_xy_position(x= "diam_class", dodge = 0.8, group = "str_class_plots") %>%
+  mutate(y.position = ifelse(diam_class == "1" &
+                               group1 == "1" &
+                               group2 == "2", 0.85, y.position)) %>%
+  mutate(y.position = ifelse(diam_class == "1" &
+                               group1 == "1" &
+                               group2 == "3", 0.95, y.position)) %>%
+  mutate(y.position = ifelse(diam_class == "6" &
+                               group1 == "2" &
+                               group2 == "3", 0.25, y.position))
+
+p1 <- p1_df %>%
+  group_by(succ, diam_class) %>%
   # plot
   ggplot(aes(x = factor(size_class, 
                         levels =c("<10", "10-20", "20-30", "30-40", "40-50", ">50"),
                         ordered = TRUE),
-             y = stem_prop,
-             fill = factor(succ,
+             y = stem_prop)) +
+  geom_boxplot(aes(fill = factor(succ,
                            levels = c("VY","Y", "M"),
-                           ordered = TRUE))) +
-  geom_boxplot(color = "gray25",
+                           ordered = TRUE)),
+             color = "gray25",
                outlier.alpha = 0.5,
                outlier.color = "gray40",
-               outlier.size = 1.2) +
+               outlier.size = 1.5) +
+  stat_pvalue_manual(stat_test,
+                     tip.length = 0.02,
+                     hide.ns = T,
+                     bracket.size = 0.5) +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme_classic() +
   labs(x = "Size class",
@@ -57,6 +101,8 @@ p1 <- plots_cf_4p %>%
   theme(axis.text = element_text(size = 8)) +
   theme(legend.position = "none") +
   theme(plot.margin = margin(b= 10, t= 9))
+p1
+stat_test
 
 # Tree size contribution to AGB
 
@@ -148,6 +194,7 @@ p5 <- plots_cf_4p %>%
   theme(legend.position = "none") +
   theme(plot.margin = margin(t= 5))
 
+comp <- list(c("VY","Y"), c("VY","M"), c("Y","M"))
 p6 <- plots_cf_4p %>%
   mutate(succ = ifelse(str_class_plots == "1", "VY",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
@@ -156,6 +203,8 @@ p6 <- plots_cf_4p %>%
                outlier.alpha = 0.5,
                outlier.color = "gray40",
                outlier.size = 1.2) +
+  stat_compare_means(comparisons = comp,
+                     label = "p.signif") +
   theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
@@ -164,6 +213,7 @@ p6 <- plots_cf_4p %>%
   theme(axis.text = element_text(size = 8)) +
   theme(legend.justification = "bottom") +
   theme(plot.margin = margin(t= 5))
+p6
 
 p6b <- p6 + theme(legend.position = "none") 
 
@@ -343,8 +393,10 @@ plots_cf_4p %>%
             sp_richness_plot = as.numeric(sp_richness_plot)) %>%
   mutate(succ = ifelse(str_class_plots == "1", "VY",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
-  ggplot(aes(x = agb_plot_ha, y = sp_richness_plot, color = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
-  geom_point(aes(color = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE)), size= 2, alpha = 0.75) +
+  ggplot(aes(x = agb_plot_ha,
+             y = sp_richness_plot,
+             color = factor(succ, levels = c("VY","Y", "M"), ordered = TRUE))) +
+  geom_point(aes(color = factor(succ, levels = c("VY","Y", "M"), ordered = TRUE)), size= 2, alpha = 0.75) +
   geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   theme_classic() +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
