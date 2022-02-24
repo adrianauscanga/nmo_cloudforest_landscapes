@@ -325,8 +325,8 @@ p3 <- plots_cf_4p %>%
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
   labs(y = "Stem density (tree/ha)") +
-  theme(axis.title.y = element_text(size = 9)) +
-  theme(axis.text = element_text(size = 8)) +
+  theme(axis.title.y = element_text(size = 10)) +
+  theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
 
 ## Plot 4
@@ -345,8 +345,8 @@ p4 <- plots_cf_4p %>%
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
   labs(y = "Lorey's height (m)") +
-  theme(axis.title.y = element_text(size = 9)) +
-  theme(axis.text = element_text(size = 8)) +
+  theme(axis.title.y = element_text(size = 10)) +
+  theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
 
 ## Plot 5
@@ -365,8 +365,8 @@ p5 <- plots_cf_4p %>%
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
   labs(y = "Basal area (m/ha)") +
-  theme(axis.title.y = element_text(size = 9)) +
-  theme(axis.text = element_text(size = 8)) +
+  theme(axis.title.y = element_text(size = 10)) +
+  theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
 
 ## Plot 6
