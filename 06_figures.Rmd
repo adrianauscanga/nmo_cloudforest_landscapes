@@ -292,12 +292,12 @@ p2 <-  p2_df %>%
 p1
 p2  
    
-figure2 <- plot_grid(p1, p2,
+figure3 <- plot_grid(p1, p2,
                      nrow = 2,
                      ncol = 1,
                      heights = c(1, 1),
                      label_size = 8, labels = c("a)", "b)"))
-figure2
+figure3
 
 # add significance
 # add legend
@@ -326,7 +326,7 @@ p3 <- plots_cf_4p %>%
   theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
-  labs(y = "Stem density (tree/ha)") +
+  labs(y = (bquote('Stem density ('*"tree"~ha^-1*')'))) +
   theme(axis.title.y = element_text(size = 10)) +
   theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
@@ -366,7 +366,7 @@ p5 <- plots_cf_4p %>%
   theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
-  labs(y = "Basal area (m/ha)") +
+  labs(y = (bquote('Basal Area ('*"m"~ha^-1*')'))) +
   theme(axis.title.y = element_text(size = 10)) +
   theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
@@ -386,7 +386,7 @@ p6 <- plots_cf_4p %>%
   theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
-  labs(y = "AGB (Mg/ha)") +
+  labs(y = (bquote('AGB ('*"Mg"~ha^-1*')'))) +
   theme(axis.title.y = element_text(size = 10)) +
   theme(axis.text = element_text(size = 9)) +
   theme(legend.title = element_blank(),
@@ -395,7 +395,7 @@ p6 <- plots_cf_4p %>%
 p6b <- p6 + theme(legend.position = "none")
 l <- get_legend(p6)
 
-figure3 <- ggarrange(p3,p4,p5,p6b,
+figure2 <- ggarrange(p3,p4,p5,p6b,
                   ncol = 2,
                   nrow = 2,
                   labels = c("a)", "b)", "c)", "d)"),
@@ -403,7 +403,7 @@ figure3 <- ggarrange(p3,p4,p5,p6b,
                   common.legend = T,
                   legend.grob = l,
                   legend= "right")
-figure3
+figure2
 ```
 
 
@@ -420,7 +420,7 @@ p1 <- sites_cf_4p %>%
   geom_point(color = "black", size = 2) +
   theme_classic() +
   labs(x = "Landscape composition",
-       y = "AGB (Mg/ha)")
+       y = (bquote('AGB ('*"Mg"~ha^-1*')')))
 
 # Tree diversity ~ landscape composition
 
@@ -453,7 +453,7 @@ p1 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = av_agb_site)) +
   scale_color_gradient(low = "forestgreen", high =  "lightgoldenrod2") +
   theme_classic() +
   labs(x = "Environmental gradient",
-       y = "AGB (Mg/ha)",
+       y = (bquote('AGB ('*"Mg"~ha^-1*')')),
        color = "Landscape \ncomposition   ") +
   theme(legend.position='top', 
         legend.justification='right',
@@ -474,7 +474,7 @@ p2 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = landscape)) +
   theme_classic() +
   labs(x = "Environmental gradient",
        y = "Landscape composition",
-       color = "AGB (Mg/ha)") +
+       color = (bquote('AGB ('*"Mg"~ha^-1*')'))) +
   scale_y_continuous(limits = c(0.0, 1.0), breaks = c(0.0, 0.25, 0.50, 0.75, 1.00)) +
   theme(legend.position='top', 
         legend.justification='right',
@@ -506,7 +506,7 @@ p1 <- sites_cf_4p %>%
   geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   geom_point(size=2) +
   theme_classic() +
-  labs(x = "AGB (Mg/ha)",
+  labs(x = (bquote('AGB ('*"Mg"~ha^-1*')')),
        y = "H")
 
 ## Sp richness
@@ -516,7 +516,7 @@ p2 <- sites_cf_4p %>%
   geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   geom_point(size=2) +
   theme_classic() +
-  labs(x= "AGB (Mg/ha)",
+  labs(x = (bquote('AGB ('*"Mg"~ha^-1*')')),
        y= "S")
 
 # Plots
@@ -540,8 +540,7 @@ p3 <- plots_cf_4p %>%
   geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   theme_classic() +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
-  labs(size = "Average H in successional stage",
-       x = "AGB (Mg/ha)",
+  labs(x = (bquote('AGB ('*"Mg"~ha^-1*')')),
        y = "H") +
   theme(legend.position = "none")
 
@@ -566,7 +565,7 @@ p4 <- plots_cf_4p %>%
   theme_classic() +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   labs(size = "Average H in successional stage",
-       x = "AGB (Mg/ha)",
+       x = (bquote('AGB ('*"Mg"~ha^-1*')')),
        y = "S") +
   theme(legend.title = element_blank(),
         #legend.direction = "horizontal",
