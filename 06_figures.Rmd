@@ -121,7 +121,7 @@ p1 <- p1_df %>%
                outlier.color = "gray40",
                outlier.size = 1.5) +
   stat_pvalue_manual(stat_test,
-                     tip.length = 0.02,
+                     tip.length = 0.01,
                      hide.ns = T,
                      bracket.size = 0.5) +
   geom_text(aes(x= x_groupings,
@@ -265,7 +265,7 @@ p2 <-  p2_df %>%
                outlier.color = "gray40",
                outlier.size = 1.5) +
   stat_pvalue_manual(stat_test_p2,
-                     tip.length = 0.02,
+                     tip.length = 0.01,
                      hide.ns = T,
                      bracket.size = 0.5,
                      step.increase = 0.001,
@@ -302,6 +302,8 @@ figure2
 # add significance
 # add legend
 ```
+
+## Figure 3. 
 
 ```{r}
 # Structural attributes across succesional stages
@@ -405,7 +407,7 @@ figure3
 ```
 
 
-## Figure 3. Relationship between AGB and landscape composition, and diversity and landscape composition
+## Figure 4. Relationship between AGB and landscape composition, and diversity and landscape composition
 
 ```{r}
 
@@ -431,15 +433,15 @@ p2 <- sites_cf_4p %>%
   labs(x = "Landscape composition",
        y = "H")
 
-figure3 <- plot_grid(p1, p2,
+figure4 <- plot_grid(p1, p2,
           labels = c("a)", "b)"),
           label_size = 10,
           hjust = -1)
 
-figure3
+figure4
 ```
 
-## Figure 4.  Regressions between AGB and env_pc1 and landscape composition and env_pc1
+## Figure 5.  Regressions between AGB and env_pc1 and landscape composition and env_pc1
 
 ```{r}
 
@@ -483,15 +485,15 @@ p2 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = landscape)) +
         legend.title = element_text(size = 9),
         legend.title.align = 0)
 
-figure4 <- plot_grid(p1, p2,
+figure5 <- plot_grid(p1, p2,
           labels = c("a)", "b)"),
           label_size = 10,
           hjust = -1)
 
-figure4
+figure5
 ```
 
-# Figure 5. Loess curves of AGB and tree diversity at site and plot levels
+# Figure 6. Loess curves of AGB and tree diversity at site and plot levels
 
 ```{r}
 
@@ -499,7 +501,7 @@ figure4
 
 ## Shannon
 
-sites_cf_4p %>%
+p1 <- sites_cf_4p %>%
   ggplot(aes(x = av_agb_site, y = shannon_av_site)) +
   geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   geom_point(size=2) +
@@ -509,7 +511,7 @@ sites_cf_4p %>%
 
 ## Sp richness
 
-sites_cf_4p %>%
+p2 <- sites_cf_4p %>%
   ggplot(aes(x = av_agb_site, y = sp_richness_site_av)) +
   geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   geom_point(size=2) +
@@ -521,7 +523,7 @@ sites_cf_4p %>%
 
 ## Shannon 
 
-plots_cf_4p %>%
+p3 <- plots_cf_4p %>%
   filter(agb_plot_ha < 600) %>%
   filter(!is.na(shannon)) %>%
   filter(!is.na(agb_plot_ha)) %>%
@@ -538,14 +540,14 @@ plots_cf_4p %>%
   geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   theme_classic() +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
-  labs(color = "Successional Stage",
-       size = "Average H in successional stage",
+  labs(size = "Average H in successional stage",
        x = "AGB (Mg/ha)",
-       y = "H")
+       y = "H") +
+  theme(legend.position = "none")
 
 ## Species richness
 
-plots_cf_4p %>%
+p4 <- plots_cf_4p %>%
   filter(agb_plot_ha < 600) %>%
   filter(!is.na(simpson)) %>%
   filter(!is.na(agb_plot_ha)) %>%
@@ -563,11 +565,20 @@ plots_cf_4p %>%
   geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   theme_classic() +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
-  labs(color = "Successional Stage",
-       size = "Average H in successional stage",
+  labs(size = "Average H in successional stage",
        x = "AGB (Mg/ha)",
-       y = "S")
+       y = "S") +
+  theme(legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        legend.position = c(0.9,0.8),
+        legend.background = element_rect(linetype = "solid", size = 0.01, color = "gray50"),
+        legend.key.size = unit(0.25, "cm"))
 
-
+figure6 <- ggarrange(p1,p2,p3,p4,
+                  ncol = 2,
+                  nrow = 2,
+                  labels = c("a)", "b)", "c)", "d)"),
+                  font.label = list(size= 8))
+figure6
 ```
 
