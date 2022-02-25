@@ -439,6 +439,8 @@ figure4 <- plot_grid(p1, p2,
           hjust = -1)
 
 figure4
+
+summary(lm(shannon_av_site ~ landscape, data = sites_cf_4p))
 ```
 
 ## Figure 5.  Regressions between AGB and env_pc1 and landscape composition and env_pc1
