@@ -107,7 +107,20 @@ plots_cf_4p %>%
   group_by(diam_class) %>%
   ggplot(aes(x = diam_class, y = agb_prop)) +
   geom_boxplot() +
-  theme_classic()
+  theme_classic() +
+  # stat_compare_means(comparisons = list(c("1", "2"), c("1", "3"), c("1", "4"), c("1", "5"), c("1", "6"), c("2", "3"), c("2", "4"), c("2", "5"), c("2", "6"), c("3", "4"), c("3", "5"), c("3", "6"), c("4", "5"), c("4", "6"), c("5", "6")),
+  #                    label = "p.signif") +
+  stat_compare_means(method = "anova",
+                     label.y = 1.1) +
+  geom_text(aes(x= 3.5,
+                y= -0.05,
+                label = "a                       b                       bc                       bc                      c                       d",),
+            size = 4,
+            color = "gray30") +
+  theme_classic() +
+  labs(x = "Size class",
+       y = "Proportion of AGB") +
+  scale_y_continuous(breaks = c(0.0, 0.25, 0.50, 0.75, 1.0))
 
 # Anova
 
@@ -158,14 +171,26 @@ plots_cf_4p %>%
   group_by(diam_class) %>%
   get_summary_stats(stem_prop, type = "mean_sd") 
 
-plots_cf_4p %>%
+bp <- plots_cf_4p %>%
   select(plot_id, tree_no) %>%
   right_join(stems_class_plot, by = "plot_id") %>%
   mutate(stem_prop = stems/tree_no)  %>%
-  group_by(diam_class) %>%
+  group_by(diam_class)
+
+bp %>%
   ggplot(aes(x = diam_class, y = stem_prop)) +
   geom_boxplot() +
-  theme_classic()
+  stat_compare_means(method = "anova",
+                     label.y = 1.1) +
+  geom_text(aes(x= 3.55,
+                y= -0.05,
+                label = "a                       b                       c                        d                       de                       e",),
+            size = 4,
+            color = "gray30") + 
+  theme_classic() +
+  labs(x = "Size class",
+       y = "Proportion of stems") +
+  scale_y_continuous(breaks = c(0.0, 0.25, 0.50, 0.75, 1.0))
 
 # Anova
 

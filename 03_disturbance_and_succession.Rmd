@@ -217,7 +217,7 @@ plots_str <- plots_cf %>%
 plot(plots_str)
 
 # Scale data so that variables in different units can be compared
-plots_str_scaled <- scale(plots_str[,-c(1,2,6)])
+plots_str_scaled <- scale(plots_str[,-c(1,5)])
 row.names(plots_str_scaled) <- plots_str$plot_id
 
 ```
