@@ -299,8 +299,190 @@ figure3 <- plot_grid(p1, p2,
                      label_size = 8, labels = c("a)", "b)"))
 figure3
 
-# add significance
-# add legend
+####################################################################################################
+
+## Make figure with tukey test groups
+
+# AGB
+
+anova3 <- aov(agb_prop ~ diam_class*succ, data = agb_prop_str)
+summary(anova3)
+TukeyHSD(anova3)
+multcompLetters4(anova3, TukeyHSD(anova3), reversed = T)
+
+#### Groupings resulted from tukey test
+
+c1 <- rep(c(1, 2, 3), each = 6)
+c2 <- rep(seq(1, 6), times = 3)
+c3 <- list(c("ab", "ef", "def", "efg", "g", "g",
+       "a", "cde", "cde", "bcd", "bcde", "defg",
+       "a", "ab", "ab", "abc", "bcde", "fg"))
+
+groupings_aov <- data.frame(c1, c2, c3) 
+colnames(groupings_aov) <- c("str_class_plots", "diam_class", "groupings")
+
+groupings_aov <- groupings_aov %>%
+  as_tibble() %>%
+  arrange(diam_class) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  mutate(size_class = ifelse(diam_class == "1", "<10",
+                             ifelse(diam_class == "2", "10-20",
+                                    ifelse(diam_class == "3", "20-30",
+                                           ifelse(diam_class == "4", "30-40",
+                                                  ifelse(diam_class == "5", "40-50", ">50"))))))
+
+groupings_aov <- groupings_aov %>%
+  mutate(x_groupings = c(0.7333333, 1.000000, 1.266667, 1.7333333, 2.000000, 2.266667,
+               2.7333333, 3.000000, 3.266667, 3.7333333, 4.000000, 4.266667,
+               4.7333333, 5.000000, 5.266667, 5.7333333, 6.000000, 6.266667))
+
+groupings_aov <- groupings_aov %>%
+  as_tibble() %>%
+  mutate(str_class_plots = as.character(str_class_plots),
+         diam_class = as.character(diam_class))
+
+p2b_df <- p2_df %>%
+  left_join(groupings_aov, by = c("str_class_plots", "diam_class", "succ", "size_class"))
+
+
+
+
+p2b <-  p2b_df %>%
+  group_by(str_class_plots, diam_class) %>%
+  ggplot(aes(x = factor(size_class, 
+                        levels =c("<10", "10-20", "20-30", "30-40", "40-50", ">50"),
+                        ordered = TRUE),
+             y = agb_prop)) +
+  geom_boxplot(aes(fill = factor(succ,
+                           levels = c("VY","Y", "M"),
+                           ordered = TRUE)),
+             color = "gray25",
+               outlier.alpha = 0.5,
+               outlier.color = "gray40",
+               outlier.size = 1.5) +
+  # stat_pvalue_manual(stat_test_p2,
+  #                    tip.length = 0.01,
+  #                    hide.ns = T,
+  #                    bracket.size = 0.5,
+  #                    step.increase = 0.001,
+  #                    bracket.nudge.y = -0.015,
+  #                    bracket.shorten = -0.05) +
+  geom_text(aes(x= x_groupings,
+                y= -0.05,
+                label = groupings),
+                # color = factor(succ,
+                #            levels = c("VY","Y", "M"),
+                #            ordered = TRUE)),
+                color = "gray40",
+            size = 3.5) +
+  scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  theme_classic() +
+  scale_y_continuous(breaks = c(0.0, 0.25, 0.50, 0.75, 1.0)) +
+  labs(x = "Size class",
+       y = "Proportion of AGB") +
+  theme(axis.title.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 9)) +
+  theme(axis.text = element_text(size = 8)) +
+  theme(legend.position = "none") +
+  theme(plot.margin = margin(b= 10, t= 9))
+p2b
+
+# Stem density
+
+anova4 <- aov(stems_prop ~ diam_class*succ, data = stem_prop_str)
+summary(anova4)
+TukeyHSD(anova4)
+multcompLetters4(anova4, TukeyHSD(anova4))
+
+#### Groupings resulted from tukey test
+
+c1 <- rep(c(1, 2, 3), each = 6)
+c2 <- rep(seq(1, 6), times = 3)
+c3 <- list(c("a", "a", "bc", "bcd", "bcdef", "bcdef",
+       "b", "a", "cde", "f", "f", "ef",
+       "bcd", "a", "cdef", "cdef", "def", "def"))
+
+groupings_aov <- data.frame(c1, c2, c3) 
+colnames(groupings_aov) <- c("str_class_plots", "diam_class", "groupings")
+
+groupings_aov <- groupings_aov %>%
+  as_tibble() %>%
+  arrange(diam_class) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "VY",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  mutate(size_class = ifelse(diam_class == "1", "<10",
+                             ifelse(diam_class == "2", "10-20",
+                                    ifelse(diam_class == "3", "20-30",
+                                           ifelse(diam_class == "4", "30-40",
+                                                  ifelse(diam_class == "5", "40-50", ">50"))))))
+
+groupings_aov <- groupings_aov %>%
+  mutate(x_groupings = c(0.7333333, 1.000000, 1.266667, 1.7333333, 2.000000, 2.266667,
+               2.7333333, 3.000000, 3.266667, 3.7333333, 4.000000, 4.266667,
+               4.7333333, 5.000000, 5.266667, 5.7333333, 6.000000, 6.266667))
+
+groupings_aov <- groupings_aov %>%
+  as_tibble() %>%
+  mutate(str_class_plots = as.character(str_class_plots),
+         diam_class = as.character(diam_class))
+
+p1b_df <- p1_df %>%
+  left_join(groupings_aov, by = c("str_class_plots", "diam_class", "succ", "size_class"))
+
+
+
+
+p1b <-  p1b_df %>%
+  group_by(str_class_plots, diam_class) %>%
+  ggplot(aes(x = factor(size_class, 
+                        levels =c("<10", "10-20", "20-30", "30-40", "40-50", ">50"),
+                        ordered = TRUE),
+             y = stem_prop)) +
+  geom_boxplot(aes(fill = factor(succ,
+                           levels = c("VY","Y", "M"),
+                           ordered = TRUE)),
+             color = "gray25",
+               outlier.alpha = 0.5,
+               outlier.color = "gray40",
+               outlier.size = 1.5) +
+  # stat_pvalue_manual(stat_test_p2,
+  #                    tip.length = 0.01,
+  #                    hide.ns = T,
+  #                    bracket.size = 0.5,
+  #                    step.increase = 0.001,
+  #                    bracket.nudge.y = -0.015,
+  #                    bracket.shorten = -0.05) +
+  geom_text(aes(x= x_groupings,
+                y= -0.05,
+                label = groupings),
+                # color = factor(succ,
+                #            levels = c("VY","Y", "M"),
+                #            ordered = TRUE)),
+                color = "gray40",
+            size = 3.5) +
+  scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  theme_classic() +
+  scale_y_continuous(breaks = c(0.0, 0.25, 0.50, 0.75, 1.0)) +
+  labs(x = "Size class",
+       y = "Proportion of stems") +
+  theme(axis.title.x = element_text(size = 10)) +
+  theme(axis.title.y = element_text(size = 9)) +
+  theme(axis.text = element_text(size = 8)) +
+  theme(legend.position = c(0.9,0.8)) +
+  theme(legend.title = element_blank()) +
+  theme(plot.margin = margin(b= 10, t= 9))
+
+p1b
+
+figure3b <- plot_grid(p1b, p2b,
+                     nrow = 2,
+                     ncol = 1,
+                     heights = c(1, 1),
+                     label_size = 8, labels = c("a)", "b)"))
+figure3b
 ```
 
 ## Figure 3. 
@@ -399,7 +581,7 @@ figure2 <- ggarrange(p3,p4,p5,p6b,
                   ncol = 2,
                   nrow = 2,
                   labels = c("a)", "b)", "c)", "d)"),
-                  font.label = list(size= 8),
+                  font.label = list(size= 10),
                   common.legend = T,
                   legend.grob = l,
                   legend= "right")
@@ -579,7 +761,7 @@ figure6 <- ggarrange(p1,p2,p3,p4,
                   ncol = 2,
                   nrow = 2,
                   labels = c("a)", "b)", "c)", "d)"),
-                  font.label = list(size= 8))
+                  font.label = list(size= 10))
 figure6
 ```
 

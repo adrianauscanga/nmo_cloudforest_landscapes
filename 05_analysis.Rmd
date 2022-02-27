@@ -21,6 +21,8 @@ library(vegan)
 library(leaps)
 library(asbio)
 library(spdep)
+library(ggpubr)
+library(multcompView)
 
 # Files
 
@@ -114,7 +116,7 @@ plots_cf_4p %>%
                      label.y = 1.1) +
   geom_text(aes(x= 3.5,
                 y= -0.05,
-                label = "a                       b                       bc                       bc                      c                       d",),
+                label = "a                       b                       b                       b                       b                        c",),
             size = 4,
             color = "gray30") +
   theme_classic() +
@@ -134,7 +136,9 @@ pairwise.wilcox.test(x= agb_prop$agb_prop, g= agb_prop$diam_class, p.adjust.meth
 
 anova <- aov(agb_prop ~ diam_class, data = agb_prop)
 TukeyHSD(anova)
-  
+
+multcompLetters4(anova, (TukeyHSD(anova)))  
+
 ```
 
 Big trees (size class 6) contributes the most to AGB. Classes 1 and 6 are statistically different from the others.
@@ -182,9 +186,9 @@ bp %>%
   geom_boxplot() +
   stat_compare_means(method = "anova",
                      label.y = 1.1) +
-  geom_text(aes(x= 3.55,
+  geom_text(aes(x= 3.5,
                 y= -0.05,
-                label = "a                       b                       c                        d                       de                       e",),
+                label = "a                       b                       c                        d                       d                      d",),
             size = 4,
             color = "gray30") + 
   theme_classic() +
@@ -203,8 +207,12 @@ stems_prop <- plots_cf_4p %>%
 pairwise.wilcox.test(x= stems_prop$stems_prop, g= stems_prop$diam_class, p.adjust.method = "bonferroni")
 
 anova2 <- aov(stems_prop ~ diam_class, data = stems_prop)
+summary(anova2)
 TukeyHSD(anova2)
-  
+tukey_hsd(anova2) %>%
+  get_test_label()
+
+multcompLetters4(anova2, (TukeyHSD(anova2)))
 ```
 
 Trees of class 2 (10-20 cm of DBH) are the most abundant. All classes are statistically different except for classes 4, 5 and 6.
@@ -239,13 +247,34 @@ agb_prop_str <- plots_cf_4p %>%
   select(plot_id, str_class_plots) %>%
   right_join(agb_prop, by = "plot_id") %>%
   select(-site.x, -site.y) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "s1",
+                       ifelse(str_class_plots == "2", "s2", "s3"))) %>%
   group_by(str_class_plots, diam_class)
 
-anova3 <- aov(agb_prop ~ succ * diam_class, data = agb_prop_str)
+anova3 <- aov(agb_prop ~ diam_class*succ, data = agb_prop_str)
 summary(anova3)
 TukeyHSD(anova3)
+multcompLetters4(anova3, TukeyHSD(anova3), reversed = T)
+
+agb_vy <- agb_prop_str %>%
+  ungroup() %>%
+  filter(succ == "vy") 
+
+# anova5 <- aov(agb_prop ~ diam_class, data = agb_vy)
+# summary(anova5)
+# TukeyHSD(anova5)
+
+# multcompLetters4(anova5, (TukeyHSD(anova5)), reversed = T)
+
+# agb_y <- agb_prop_str %>%
+#   ungroup() %>%
+#   filter(succ == "y") 
+# 
+# anova6 <- aov(agb_prop ~ diam_class, data = agb_y)
+# summary(anova6)
+# TukeyHSD(anova6)
+# 
+# multcompLetters4(anova6, (TukeyHSD(anova6)), reversed = T)
 ```
 
 Contribution to Stem Number
@@ -298,6 +327,7 @@ plots_cf_4p %>%
 
 summary(aov(tree_density ~ str_class_plots, data = plots_cf_4p))
 TukeyHSD(aov(tree_density ~ str_class_plots, data = plots_cf_4p))
+tukey_hsd(aov(tree_density ~ str_class_plots, data = plots_cf_4p))
 
 # Tree height
 
@@ -308,6 +338,7 @@ plots_cf_4p %>%
   get_summary_stats(loreys_height, type = "mean_sd")
 
 summary(aov(loreys_height ~ str_class_plots, data = plots_cf_4p))
+tukey_hsd(aov(loreys_height ~ str_class_plots, data = plots_cf_4p))
 TukeyHSD(aov(loreys_height ~ str_class_plots, data = plots_cf_4p))
 
 # Basal area
@@ -319,6 +350,7 @@ plots_cf_4p %>%
   get_summary_stats(basal_area_ha, type = "mean_sd")
 
 summary(aov(basal_area_ha ~ str_class_plots, data = plots_cf_4p))
+tukey_hsd(aov(basal_area_ha ~ str_class_plots, data = plots_cf_4p))
 TukeyHSD(aov(basal_area_ha ~ str_class_plots, data = plots_cf_4p))
 
 # AGB
@@ -331,6 +363,18 @@ plots_cf_4p %>%
 
 summary(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
 TukeyHSD(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
+tukey_hsd(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
+
+# plots_cf_4p %>%
+#   ungroup() %>%
+#   anova_test(agb_plot_ha ~ str_class_plots, detailed = T, options(contrasts=c('contr.sum','contr.poly')))
+
+plots_cf_4p %>%
+  ungroup() %>%
+  select(agb_plot_ha, str_class_plots) %>%
+  filter(!is.na(agb_plot_ha), !is.na(str_class_plots)) %>%
+  t_test(agb_plot_ha ~ str_class_plots, p.adjust.method = "bonferroni") %>%
+  add_significance("p.adj") 
 ```
 
 
