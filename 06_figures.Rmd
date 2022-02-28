@@ -552,7 +552,7 @@ figure3
 
 anova3 <- aov(agb_prop ~ diam_class*succ, data = agb_prop_str)
 summary(anova3)
-TukeyHSD(anova3)
+t <- TukeyHSD(anova3)
 multcompLetters4(anova3, TukeyHSD(anova3), reversed = T)
 
 #### Groupings resulted from tukey test
