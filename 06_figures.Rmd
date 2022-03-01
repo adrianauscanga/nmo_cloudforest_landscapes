@@ -641,6 +641,8 @@ summary(anova4)
 TukeyHSD(anova4)
 multcompLetters4(anova4, TukeyHSD(anova4))
 
+t_stems <- tukey_hsd(anova4)
+
 #### Groupings resulted from tukey test
 
 c1 <- rep(c(1, 2, 3), each = 6)
@@ -728,6 +730,11 @@ figure3b <- plot_grid(p1b, p2b,
                      heights = c(1, 1),
                      label_size = 8, labels = c("a)", "b)"))
 figure3b
+
+anova3
+summary(anova3)
+t <- tukey_hsd(anova3)
+
 ```
 
 ## Figure 3. 

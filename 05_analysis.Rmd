@@ -135,7 +135,9 @@ agb_prop <- plots_cf_4p %>%
 pairwise.wilcox.test(x= agb_prop$agb_prop, g= agb_prop$diam_class, p.adjust.method = "bonferroni")
 
 anova <- aov(agb_prop ~ diam_class, data = agb_prop)
+summary(anova)
 TukeyHSD(anova)
+tukey_hsd(anova)
 
 multcompLetters4(anova, (TukeyHSD(anova)))  
 
