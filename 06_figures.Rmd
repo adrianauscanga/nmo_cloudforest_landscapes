@@ -849,23 +849,51 @@ figure2
 
 p1 <- sites_cf_4p %>%
   ggplot(aes(x = landscape, y = av_agb_site)) +
-  geom_smooth(method = "lm", color = "gray30", se = F, linetype = "dashed") +
-  geom_smooth(method = "loess", span=1, color = "gray80", se = F, linetype = "dashed") +
-  geom_point(color = "black", size = 2) +
+  geom_errorbar(aes(ymax = av_agb_site + se_agb_site,
+                    ymin = av_agb_site - se_agb_site),
+                width = 0.02,
+                color = "gray60",
+                alpha = 0.8) +
+  geom_point(color = "gray60", size = 3, alpha = 0.8) +
+  geom_smooth(method = "lm", color = "black", se = F, linetype = "solid", size = 0.75) +
+  geom_smooth(method = "loess", span=1, color = "black", se = F, linetype = "dashed", size = 0.75) +
   theme_classic() +
   labs(x = "Landscape composition",
        y = (bquote('AGB ('*"Mg"~ha^-1*')')))
+p1
 
 # Tree diversity ~ landscape composition
 
 p2 <- sites_cf_4p %>%
   ggplot(aes(x = landscape, y = shannon_av_site)) +
-  geom_smooth(method = "lm", color = "gray30", se = F, linetype = "dashed") +
-  geom_smooth(method = "loess", span=1, color = "gray80", se = F, linetype = "dashed") +
-  geom_point(color = "black", size = 2) +
+  geom_errorbar(aes(ymax = shannon_av_site + shannon_se_site,
+                    ymin = shannon_av_site - shannon_se_site),
+                width = 0.02,
+                color = "gray60",
+                alpha = 0.8) +
+  geom_smooth(method = "lm", color = "black", se = F, linetype = "solid", size = 0.75) +
+  geom_smooth(method = "loess", span=1, color = "black", se = F, linetype = "dashed", size = 0.75) +
+  geom_point(color = "gray60", size = 3, alpha = 0.8) +
   theme_classic() +
   labs(x = "Landscape composition",
        y = "H")
+
+# p3 <- sites_cf_4p %>%
+#   ggplot(aes(x = landscape, y = sp_richness_site_av)) +
+#   geom_errorbar(aes(ymax = sp_richness_site_av + sp_richness_site_se,
+#                     ymin = sp_richness_site_av - sp_richness_site_se),
+#                 width = 0.02,
+#                 color = "gray60",
+#                 alpha = 0.8) +
+#   geom_smooth(method = "lm", color = "black", se = F, linetype = "solid", size = 0.75) +
+#   geom_smooth(method = "loess", span=1, color = "gray40", se = F, linetype = "dashed") +
+#   geom_point(color = "gray60", size = 3, alpha = 0.8) +
+#   theme_classic() +
+#   labs(x = "Landscape composition",
+#        y = "S")
+# 
+# p2
+# p3
 
 figure4 <- plot_grid(p1, p2,
           labels = c("a)", "b)"),
@@ -874,7 +902,7 @@ figure4 <- plot_grid(p1, p2,
 
 figure4
 
-summary(lm(shannon_av_site ~ landscape, data = sites_cf_4p))
+#summary(lm(shannon_av_site ~ landscape, data = sites_cf_4p))
 ```
 
 ## Figure 5.  Regressions between AGB and env_pc1 and landscape composition and env_pc1
