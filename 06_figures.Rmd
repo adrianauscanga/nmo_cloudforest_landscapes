@@ -1045,3 +1045,27 @@ figure6 <- ggarrange(p1,p2,p3,p4,
 figure6
 ```
 
+# Extra figure: is the relationship between sp diversity and AGB scale dependent?
+
+```{r}
+
+plots_cf_4p %>%
+  #filter(agb_plot_ha < 600) %>%
+  ggplot(aes(x = shannon, y = log1p(agb_plot_ha))) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  filter(!str_class_plots == "1") %>%
+  ggplot(aes(x = shannon, y = log1p(agb_plot_ha))) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+
+sites_cf_4p %>%
+  ggplot(aes(x = shannon, y = log1p(av_agb_site))) +
+  geom_point() +
+  geom_smooth(method = "lm")
+  
+```
+

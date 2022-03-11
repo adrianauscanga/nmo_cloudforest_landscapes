@@ -729,4 +729,17 @@ plots_cf_4p %>%
   labs(color = "Successional Stage",
        size = "Average")
 
+
+# Total number of spp
+
+head(trees_cf_4p)
+  
+trees_cf_4p %>%
+  group_by(species) %>%
+  summarise(list = unique(species), count = n()) %>%
+  arrange(-count)
+
+trees_cf_4p %>%
+  filter(is.na(species)) %>%
+  filter(status == "Vivo")
 ```
