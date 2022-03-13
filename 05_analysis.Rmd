@@ -740,6 +740,7 @@ trees_cf_4p %>%
   arrange(-count)
 
 trees_cf_4p %>%
-  filter(is.na(species)) %>%
-  filter(status == "Vivo")
+  #filter(is.na(species)) %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(agb_ae))
 ```

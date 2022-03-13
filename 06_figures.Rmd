@@ -31,7 +31,7 @@ p1_df <- plots_cf_4p %>%
   select(plot_id, tree_no, str_class_plots) %>%
   right_join(stems_class_plot, by = "plot_id") %>%
   mutate(stem_prop = stems/tree_no)  %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   mutate(size_class = ifelse(diam_class == "1", "<10",
                              ifelse(diam_class == "2", "10-20",
@@ -84,7 +84,7 @@ p1_df <- plots_cf_4p %>%
 # groupings <- groupings %>%
 #   as_tibble() %>%
 #   arrange(diam_class) %>%
-#   mutate(succ = ifelse(str_class_plots == "1", "VY",
+#   mutate(succ = ifelse(str_class_plots == "1", "F",
 #                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
 #   mutate(size_class = ifelse(diam_class == "1", "<10",
 #                              ifelse(diam_class == "2", "10-20",
@@ -144,16 +144,16 @@ tukey2p1 <- p1_df %>%
   group_by(succ) %>%
   tukey_hsd(stem_prop ~ diam_class)
 
-# Groupings for VY forests
+# Groupings for F forests
 
-tukey2p1_vy <- tukey2p1 %>%
-  filter(succ == "VY") %>%
+tukey2p1_F <- tukey2p1 %>%
+  filter(succ == "F") %>%
   select(group1, group2, p.adj.signif) %>%
   unite("comparisons", group1, group2, sep = "-") %>%
   mutate(dif = ifelse(p.adj.signif == "ns", FALSE, TRUE))
 
-dif <- tukey2p1_vy$dif
-names(dif) <- tukey2p1_vy$comparisons
+dif <- tukey2p1_F$dif
+names(dif) <- tukey2p1_F$comparisons
 difL <- multcompLetters(dif)
 difL
 
@@ -199,7 +199,7 @@ colnames(groupings) <- c("str_class_plots", "diam_class", "groupings")
 groupings <- groupings %>%
   as_tibble() %>%
   arrange(diam_class) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   mutate(size_class = ifelse(diam_class == "1", "<10",
                              ifelse(diam_class == "2", "10-20",
@@ -231,7 +231,7 @@ p1 <- p1_df %>%
                         ordered = TRUE),
              y = stem_prop)) +
   geom_boxplot(aes(fill = factor(succ,
-                           levels = c("VY","Y", "M"),
+                           levels = c("F","Y", "M"),
                            ordered = TRUE)),
              color = "gray25",
                outlier.alpha = 0.5,
@@ -249,7 +249,7 @@ p1 <- p1_df %>%
                 y= -0.05,
                 label = groupings,
                 color = factor(succ,
-                           levels = c("VY","Y", "M"),
+                           levels = c("F","Y", "M"),
                            ordered = TRUE)),
                 size = 3) +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
@@ -274,7 +274,7 @@ p2_df <- plots_cf_4p %>%
   select(plot_id, agb_plot, str_class_plots) %>%
   right_join(agb_class_plots, by = "plot_id") %>%
   mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   mutate(size_class = ifelse(diam_class == "1", "<10",
                              ifelse(diam_class == "2", "10-20",
@@ -349,7 +349,7 @@ p2_df <- plots_cf_4p %>%
 # groupings2 <- groupings2 %>%
 #   as_tibble() %>%
 #   arrange(diam_class) %>%
-#   mutate(succ = ifelse(str_class_plots == "1", "VY",
+#   mutate(succ = ifelse(str_class_plots == "1", "F",
 #                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
 #   mutate(size_class = ifelse(diam_class == "1", "<10",
 #                              ifelse(diam_class == "2", "10-20",
@@ -417,18 +417,18 @@ tukey2p2 <- p2_df %>%
   group_by(succ) %>%
   tukey_hsd(agb_prop ~ diam_class)
 
-# Groupings for VY forests
+# Groupings for F forests
 
-tukey2p2_vy <- tukey2p2 %>%
-  filter(succ == "VY") %>%
+tukey2p2_F <- tukey2p2 %>%
+  filter(succ == "F") %>%
   select(group1, group2, p.adj.signif) %>%
   unite("comparisons", group1, group2, sep = "-") %>%
   mutate(dif = ifelse(p.adj.signif == "ns", FALSE, TRUE))
 
-difp2_vy <- tukey2p2_vy$dif
-names(difp2_vy) <- tukey2p2_vy$comparisons
-difp2_vyL <- multcompLetters(difp2_vy)
-difp2_vyL
+difp2_F <- tukey2p2_F$dif
+names(difp2_F) <- tukey2p2_F$comparisons
+difp2_FL <- multcompLetters(difp2_F)
+difp2_FL
 
 
 # Groupings for Y forests
@@ -472,7 +472,7 @@ colnames(groupings) <- c("str_class_plots", "diam_class", "groupings")
 groupings <- groupings %>%
   as_tibble() %>%
   arrange(diam_class) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   mutate(size_class = ifelse(diam_class == "1", "<10",
                              ifelse(diam_class == "2", "10-20",
@@ -503,7 +503,7 @@ p2 <-  p2_df %>%
                         ordered = TRUE),
              y = agb_prop)) +
   geom_boxplot(aes(fill = factor(succ,
-                           levels = c("VY","Y", "M"),
+                           levels = c("F","Y", "M"),
                            ordered = TRUE)),
              color = "gray25",
                outlier.alpha = 0.5,
@@ -520,7 +520,7 @@ p2 <-  p2_df %>%
                 y= -0.05,
                 label = groupings,
                 color = factor(succ,
-                           levels = c("VY","Y", "M"),
+                           levels = c("F","Y", "M"),
                            ordered = TRUE)),
                 size = 3) +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
@@ -569,7 +569,7 @@ colnames(groupings_aov) <- c("str_class_plots", "diam_class", "groupings")
 groupings_aov <- groupings_aov %>%
   as_tibble() %>%
   arrange(diam_class) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   mutate(size_class = ifelse(diam_class == "1", "<10",
                              ifelse(diam_class == "2", "10-20",
@@ -600,7 +600,7 @@ p2b <-  p2b_df %>%
                         ordered = TRUE),
              y = agb_prop)) +
   geom_boxplot(aes(fill = factor(succ,
-                           levels = c("VY","Y", "M"),
+                           levels = c("F","Y", "M"),
                            ordered = TRUE)),
              color = "gray25",
                outlier.alpha = 0.5,
@@ -617,7 +617,7 @@ p2b <-  p2b_df %>%
                 y= -0.05,
                 label = groupings),
                 # color = factor(succ,
-                #            levels = c("VY","Y", "M"),
+                #            levels = c("F","Y", "M"),
                 #            ordered = TRUE)),
                 color = "gray40",
             size = 3.5) +
@@ -657,7 +657,7 @@ colnames(groupings_aov) <- c("str_class_plots", "diam_class", "groupings")
 groupings_aov <- groupings_aov %>%
   as_tibble() %>%
   arrange(diam_class) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   mutate(size_class = ifelse(diam_class == "1", "<10",
                              ifelse(diam_class == "2", "10-20",
@@ -688,7 +688,7 @@ p1b <-  p1b_df %>%
                         ordered = TRUE),
              y = stem_prop)) +
   geom_boxplot(aes(fill = factor(succ,
-                           levels = c("VY","Y", "M"),
+                           levels = c("F","Y", "M"),
                            ordered = TRUE)),
              color = "gray25",
                outlier.alpha = 0.5,
@@ -705,7 +705,7 @@ p1b <-  p1b_df %>%
                 y= -0.05,
                 label = groupings),
                 # color = factor(succ,
-                #            levels = c("VY","Y", "M"),
+                #            levels = c("F","Y", "M"),
                 #            ordered = TRUE)),
                 color = "gray40",
             size = 3.5) +
@@ -743,14 +743,14 @@ t <- tukey_hsd(anova3)
 # Structural attributes across succesional stages
 
 ## List of comparisons for stats
-comp <- list(c("VY","Y"), c("VY","M"), c("Y","M"))
+comp <- list(c("F","Y"), c("F","M"), c("Y","M"))
 
 ## Plot 3
 
 p3 <- plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
-  ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = tree_density, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
+  ggplot(aes(x= factor(succ, levels = c("F","Y", "M"),ordered = TRUE), y = tree_density, fill = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
   geom_boxplot(color = "gray25",
                outlier.alpha = 0.5,
                outlier.color = "gray40",
@@ -768,9 +768,9 @@ p3 <- plots_cf_4p %>%
 ## Plot 4
 
 p4 <- plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
-  ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = loreys_height, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
+  ggplot(aes(x= factor(succ, levels = c("F","Y", "M"),ordered = TRUE), y = loreys_height, fill = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
   geom_boxplot(color = "gray25",
                outlier.alpha = 0.5,
                outlier.color = "gray40",
@@ -788,9 +788,9 @@ p4 <- plots_cf_4p %>%
 ## Plot 5
 
 p5 <- plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
-  ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = basal_area_ha, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
+  ggplot(aes(x= factor(succ, levels = c("F","Y", "M"),ordered = TRUE), y = basal_area_ha, fill = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
   geom_boxplot(color = "gray25",
                outlier.alpha = 0.5,
                outlier.color = "gray40",
@@ -808,9 +808,9 @@ p5 <- plots_cf_4p %>%
 ## Plot 6
 
 p6 <- plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
-  ggplot(aes(x= factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE))) +
+  ggplot(aes(x= factor(succ, levels = c("F","Y", "M"),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
   geom_boxplot(color = "gray25",
                outlier.alpha = 0.5,
                outlier.color = "gray40",
@@ -996,11 +996,11 @@ p3 <- plots_cf_4p %>%
             mean_agb = mean(agb_plot_ha),
             agb_plot_ha = as.numeric(agb_plot_ha),
             shannon = as.numeric(shannon)) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x = agb_plot_ha, y = shannon)) +
-  #geom_point(aes(x= mean_agb, y = mean_shannon, color = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE), size = 3)) +
-  geom_point(aes(color = factor(succ, levels = c("VY","Y", "M"),ordered = TRUE)), size= 2, alpha = 0.75) +
+  #geom_point(aes(x= mean_agb, y = mean_shannon, color = factor(succ, levels = c("F","Y", "M"),ordered = TRUE), size = 3)) +
+  geom_point(aes(color = factor(succ, levels = c("F","Y", "M"),ordered = TRUE)), size= 2, alpha = 0.75) +
   geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   theme_classic() +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
@@ -1019,12 +1019,12 @@ p4 <- plots_cf_4p %>%
             mean_agb = mean(agb_plot_ha),
             agb_plot_ha = as.numeric(agb_plot_ha),
             sp_richness_plot = as.numeric(sp_richness_plot)) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "VY",
+  mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x = agb_plot_ha,
              y = sp_richness_plot,
-             color = factor(succ, levels = c("VY","Y", "M"), ordered = TRUE))) +
-  geom_point(aes(color = factor(succ, levels = c("VY","Y", "M"), ordered = TRUE)), size= 2, alpha = 0.75) +
+             color = factor(succ, levels = c("F","Y", "M"), ordered = TRUE))) +
+  geom_point(aes(color = factor(succ, levels = c("F","Y", "M"), ordered = TRUE)), size= 2, alpha = 0.75) +
   geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   theme_classic() +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
