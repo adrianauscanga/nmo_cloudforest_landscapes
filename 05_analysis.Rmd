@@ -730,6 +730,9 @@ plots_cf_4p %>%
        size = "Average")
 
 
+
+```
+```{r}
 # Total number of spp
 
 head(trees_cf_4p)
@@ -743,4 +746,36 @@ trees_cf_4p %>%
   #filter(is.na(species)) %>%
   filter(status == "Vivo") %>%
   filter(is.na(agb_ae))
+
+# Wood density at site level
+
+trees_cf_4p %>%
+  filter(!is.na(mean_wd)) %>%
+  group_by(site) %>%
+  summarise(mean_wd_site = mean(mean_wd),
+            se_wd_site = calcSE(mean_wd)) %>%
+  arrange(-mean_wd_site) %>%
+  mutate(average = mean(mean_wd_site),
+         se = calcSE(mean_wd_site))
+
+mean(trees_cf_4p$mean_wd, na.rm = T)
+sd(trees_cf_4p$mean_wd, na.rm = T)
+
+# Wood density at plot level
+
+trees_cf_4p %>%
+  filter(!is.na(mean_wd)) %>%
+  group_by(plot_id) %>%
+  summarise(mean_wd_plot = mean(mean_wd),
+            sd_wd_plot = sd(mean_wd)) %>%
+  right_join(plots_cf_4p) %>%
+  mutate(mean_wd_plot = ifelse(tree_no == 0, 0, mean_wd_plot),
+         sd_wd_plot = ifelse(tree_no == 0, 0, sd_wd_plot)) %>%
+  #group_by(str_class_plots) %>%
+  # summarise(mean_wd_str = mean(mean_wd_plot),
+  #           sd_wd_str = sd(mean_wd_plot)) %>%
+  tukey_hsd(mean_wd_plot ~ str_class_plots)
+
+
 ```
+

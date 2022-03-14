@@ -740,6 +740,93 @@ t <- tukey_hsd(anova3)
 ## Figure 3. 
 
 ```{r}
+
+# Panel a: PCA showing k means results with structural attributes
+
+# Ordination of plots according to their structural attributes
+
+plots_str <- trees_cf_4p %>%
+  filter(!is.na(mean_wd)) %>%
+  group_by(plot_id) %>%
+  summarise(mean_wd_plot = mean(mean_wd),
+            sd_wd_plot = sd(mean_wd)) %>%
+  right_join(plots_cf_4p) %>%
+  mutate(mean_wd_plot = ifelse(tree_no == 0, 0, mean_wd_plot),
+         sd_wd_plot = ifelse(tree_no == 0, 0, sd_wd_plot)) %>%
+  select(plot_id,
+         tree_density,
+         loreys_height,
+         basal_area_ha,
+         mean_wd_plot,
+         agb_plot_ha)
+
+# Scale data so that variables in different units can be compared
+plots_str_scaled <- scale(plots_str[,-c(1,5,6)])
+row.names(plots_str_scaled) <- plots_str$plot_id
+
+#pca with structural data
+
+pca_str_plots <- rda(plots_str_scaled, scale = F)
+summary(pca_str_plots)  
+plot(pca_str_plots)
+
+# save PCA scores to plot them with ggplot:
+pca_scores <- scores(pca_str_plots)
+pca_scores_plots <- as.data.frame(pca_scores$sites)
+pca_scores_plots <- pca_scores_plots %>%
+  as_tibble(rownames = "plot_id") %>%
+  left_join(plots_cf_4p)
+
+pca_scores$species
+#                   PC1        PC2
+# tree_density  -1.963334  1.8030877
+# loreys_height -2.189246 -1.4634938
+# basal_area_ha -2.567017 -0.1309365
+
+pca_scores_plots %>%
+  mutate(succ = ifelse(str_class_plots == "1", "F",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  ggplot(aes(x = PC1, y = PC2, color = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_point() +
+  scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  theme_classic() +
+  scale_x_continuous(limits = c(-2.5,2.5),
+                     breaks = c(-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5)) +
+  scale_y_continuous(limits = c(-2.5,2.5),
+                     breaks = c(-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5)) +
+  theme(legend.position = "none") +
+  geom_segment(aes(x = 0, y = 0, xend = -1.96, yend = 1.80),
+               color = "gray50",
+               arrow = arrow(length = unit(0.2,"cm"))) +
+  geom_text(aes(x= -1.95, y= 1.9, label = "Stem density"),
+            color = "gray75",
+            size = 3) +
+  geom_segment(aes(x = 0, y = 0, xend = -2.1, yend =  -1.4),
+               color = "gray50",
+               arrow = arrow(length = unit(0.2,"cm"))) +
+  geom_text(aes(x= -2.2, y= -1.5, label = "Lorey's height"),
+            color = "gray75",
+            size = 3) +
+  geom_segment(aes(x = 0, y = 0, xend = -2.5, yend = -0.1),
+               color = "gray50",
+               arrow = arrow(length = unit(0.2,"cm"))) +
+  geom_text(aes(x= -2.5, y= -0.2, label = "Basal area"),
+            color = "gray75",
+            size = 3)
+
+
+
+
+
+
+# Panel b: stem density
+# Panel c: lorey's height
+# Panel d: basal area
+# Panel e: wood density
+# Panel f: AGB
+
 # Structural attributes across succesional stages
 
 ## List of comparisons for stats
