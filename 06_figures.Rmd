@@ -587,11 +587,11 @@ groupings_aov <- groupings_aov %>%
   mutate(str_class_plots = as.character(str_class_plots),
          diam_class = as.character(diam_class))
 
+p2_df <- p2_df %>%
+  select(-groupings, -x_groupings)
+
 p2b_df <- p2_df %>%
   left_join(groupings_aov, by = c("str_class_plots", "diam_class", "succ", "size_class"))
-
-
-
 
 p2b <-  p2b_df %>%
   group_by(str_class_plots, diam_class) %>%
@@ -675,11 +675,11 @@ groupings_aov <- groupings_aov %>%
   mutate(str_class_plots = as.character(str_class_plots),
          diam_class = as.character(diam_class))
 
+p1_df <- p1_df %>%
+  select(-groupings, -x_groupings)
+
 p1b_df <- p1_df %>%
   left_join(groupings_aov, by = c("str_class_plots", "diam_class", "succ", "size_class"))
-
-
-
 
 p1b <-  p1b_df %>%
   group_by(str_class_plots, diam_class) %>%
@@ -858,7 +858,7 @@ p1 <- sites_cf_4p %>%
   geom_smooth(method = "lm", color = "black", se = F, linetype = "solid", size = 0.75) +
   geom_smooth(method = "loess", span=1, color = "black", se = F, linetype = "dashed", size = 0.75) +
   theme_classic() +
-  labs(x = "Landscape composition",
+  labs(x = "Land-use intensity",
        y = (bquote('AGB ('*"Mg"~ha^-1*')')))
 p1
 
@@ -875,7 +875,7 @@ p2 <- sites_cf_4p %>%
   geom_smooth(method = "loess", span=1, color = "black", se = F, linetype = "dashed", size = 0.75) +
   geom_point(color = "gray60", size = 3, alpha = 0.8) +
   theme_classic() +
-  labs(x = "Landscape composition",
+  labs(x = "Land-use intensity",
        y = "H")
 
 # p3 <- sites_cf_4p %>%
@@ -905,7 +905,7 @@ figure4
 #summary(lm(shannon_av_site ~ landscape, data = sites_cf_4p))
 ```
 
-## Figure 5.  Regressions between AGB and env_pc1 and landscape composition and env_pc1
+## Figure 5.  Regressions between AGB and env_pc1 and land-use intensity and env_pc1
 
 ```{r}
 
@@ -918,7 +918,7 @@ p1 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = av_agb_site)) +
   theme_classic() +
   labs(x = "Environmental gradient",
        y = (bquote('AGB ('*"Mg"~ha^-1*')')),
-       color = "Landscape \ncomposition   ") +
+       color = "Land-use \nintensity   ") +
   theme(legend.position='top', 
         legend.justification='right',
         legend.direction='horizontal',
@@ -937,7 +937,7 @@ p2 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = landscape)) +
   scale_color_gradient(high = "darkgreen", low = "darkseagreen1") +
   theme_classic() +
   labs(x = "Environmental gradient",
-       y = "Landscape composition",
+       y = "Land-use intensity",
        color = (bquote('AGB ('*"Mg"~ha^-1*')'))) +
   scale_y_continuous(limits = c(0.0, 1.0), breaks = c(0.0, 0.25, 0.50, 0.75, 1.00)) +
   theme(legend.position='top', 
