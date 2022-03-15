@@ -783,58 +783,53 @@ pca_scores$species
 # loreys_height -2.189246 -1.4634938
 # basal_area_ha -2.567017 -0.1309365
 
-pca_scores_plots %>%
+pa <- pca_scores_plots %>%
   mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x = PC1, y = PC2, color = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
   geom_point() +
+  guides(color = guide_legend(override.aes = list(size = 2.5))) +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme_classic() +
-  scale_x_continuous(limits = c(-2.5,2.5),
-                     breaks = c(-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5)) +
-  scale_y_continuous(limits = c(-2.5,2.5),
-                     breaks = c(-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5)) +
-  theme(legend.position = "none") +
+  scale_x_continuous(limits = c(-2.5,2),
+                     breaks = c(-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2)) +
+  scale_y_continuous(limits = c(-2.5,2),
+                     breaks = c(-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2)) +
   geom_segment(aes(x = 0, y = 0, xend = -1.96, yend = 1.80),
-               color = "gray50",
+               color = "gray40",
                arrow = arrow(length = unit(0.2,"cm"))) +
-  geom_text(aes(x= -1.95, y= 1.9, label = "Stem density"),
-            color = "gray75",
+  geom_text(aes(x= -1.95, y= 2, label = "Stem density"),
+            color = "gray25",
             size = 3) +
   geom_segment(aes(x = 0, y = 0, xend = -2.1, yend =  -1.4),
-               color = "gray50",
+               color = "gray40",
                arrow = arrow(length = unit(0.2,"cm"))) +
-  geom_text(aes(x= -2.2, y= -1.5, label = "Lorey's height"),
-            color = "gray75",
+  geom_text(aes(x= -2.2, y= -1.6, label = "Lorey's height"),
+            color = "gray25",
             size = 3) +
   geom_segment(aes(x = 0, y = 0, xend = -2.5, yend = -0.1),
-               color = "gray50",
+               color = "gray40",
                arrow = arrow(length = unit(0.2,"cm"))) +
-  geom_text(aes(x= -2.5, y= -0.2, label = "Basal area"),
-            color = "gray75",
-            size = 3)
+  geom_text(aes(x= -2.3, y= -0.25, label = "Basal area"),
+            color = "gray25",
+            size = 3) +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.9, 0.8),
+        legend.background = element_rect(linetype = "solid", size = 0.01, color = "gray50"))
 
+pa
 
-
-
-
-
-# Panel b: stem density
-# Panel c: lorey's height
-# Panel d: basal area
-# Panel e: wood density
-# Panel f: AGB
 
 # Structural attributes across succesional stages
 
 ## List of comparisons for stats
 comp <- list(c("F","Y"), c("F","M"), c("Y","M"))
 
-## Plot 3
+# Panel b: stem density
 
-p3 <- plots_cf_4p %>%
+pb <- plots_cf_4p %>%
   mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x= factor(succ, levels = c("F","Y", "M"),ordered = TRUE), y = tree_density, fill = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
@@ -847,14 +842,14 @@ p3 <- plots_cf_4p %>%
   theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
-  labs(y = (bquote('Stem density ('*"tree"~ha^-1*')'))) +
+  labs(y = (bquote('Stem density ( '*"tree"~ha^-1*')'))) +
   theme(axis.title.y = element_text(size = 10)) +
   theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
 
-## Plot 4
+# Panel c: lorey's height
 
-p4 <- plots_cf_4p %>%
+pc <- plots_cf_4p %>%
   mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x= factor(succ, levels = c("F","Y", "M"),ordered = TRUE), y = loreys_height, fill = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
@@ -872,9 +867,9 @@ p4 <- plots_cf_4p %>%
   theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
 
-## Plot 5
+# Panel d: basal area
 
-p5 <- plots_cf_4p %>%
+pd <- plots_cf_4p %>%
   mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x= factor(succ, levels = c("F","Y", "M"),ordered = TRUE), y = basal_area_ha, fill = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
@@ -892,9 +887,38 @@ p5 <- plots_cf_4p %>%
   theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
 
-## Plot 6
+# Panel e: wood density
 
-p6 <- plots_cf_4p %>%
+pe <- plots_str <- trees_cf_4p %>%
+  filter(!is.na(mean_wd)) %>%
+  group_by(plot_id) %>%
+  summarise(mean_wd_plot = mean(mean_wd),
+            sd_wd_plot = sd(mean_wd)) %>%
+  right_join(plots_cf_4p) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "F",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  mutate(mean_wd_plot = ifelse(tree_no == 0, 0, mean_wd_plot),
+         sd_wd_plot = ifelse(tree_no == 0, 0, sd_wd_plot)) %>%
+  ggplot(aes(x= factor(succ, levels = c("F","Y", "M"),ordered = TRUE),
+             y = mean_wd_plot,
+             fill = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
+  geom_boxplot(color = "gray25",
+               outlier.alpha = 0.5,
+               outlier.color = "gray40",
+               outlier.size = 1.2) +
+  stat_compare_means(comparisons = comp,
+                     label = "p.signif") +
+  theme_classic() +
+  scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  theme(axis.title.x = element_blank()) +
+  labs(y = (bquote('Wood density ('*"g"~cm^-3*')'))) +
+  theme(axis.title.y = element_text(size = 10)) +
+  theme(axis.text = element_text(size = 9)) +
+  theme(legend.position = "none") 
+
+# Panel f: AGB
+
+pf <- plots_cf_4p %>%
   mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
   ggplot(aes(x= factor(succ, levels = c("F","Y", "M"),ordered = TRUE), y = agb_plot_ha, fill = factor(succ, levels = c("F","Y", "M"),ordered = TRUE))) +
@@ -913,18 +937,22 @@ p6 <- plots_cf_4p %>%
   theme(legend.title = element_blank(),
         legend.box = "horizontal") 
 
-p6b <- p6 + theme(legend.position = "none")
-l <- get_legend(p6)
+pf2 <- pf + theme(legend.position = "none")
+l <- get_legend(pf)
 
-figure2 <- ggarrange(p3,p4,p5,p6b,
+figure2 <- ggarrange(pa, pb, pc, pd, pe, pf2,
                   ncol = 2,
-                  nrow = 2,
-                  labels = c("a)", "b)", "c)", "d)"),
+                  nrow = 3,
+                  labels = c("a)", "b)", "c)", "d)", "e)", "f)"),
                   font.label = list(size= 10),
-                  common.legend = T,
-                  legend.grob = l,
-                  legend= "right")
+                  common.legend = F)
+
+
+                  # common.legend = T,
+                  # legend.grob = l,
+                  # legend= "right")
 figure2
+
 ```
 
 

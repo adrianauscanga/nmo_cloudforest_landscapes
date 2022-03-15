@@ -776,6 +776,53 @@ trees_cf_4p %>%
   #           sd_wd_str = sd(mean_wd_plot)) %>%
   tukey_hsd(mean_wd_plot ~ str_class_plots)
 
+# Ordination of plots according to their structural attributes
+
+plots_str <- trees_cf_4p %>%
+  filter(!is.na(mean_wd)) %>%
+  group_by(plot_id) %>%
+  summarise(mean_wd_plot = mean(mean_wd),
+            sd_wd_plot = sd(mean_wd)) %>%
+  right_join(plots_cf_4p) %>%
+  mutate(mean_wd_plot = ifelse(tree_no == 0, 0, mean_wd_plot),
+         sd_wd_plot = ifelse(tree_no == 0, 0, sd_wd_plot)) %>%
+  select(plot_id,
+         tree_density,
+         loreys_height,
+         basal_area_ha,
+         mean_wd_plot,
+         agb_plot_ha)
+
+
+plot(plots_str)
+
+# Scale data so that variables in different units can be compared
+plots_str_scaled <- scale(plots_str[,-c(1,5,6)])
+row.names(plots_str_scaled) <- plots_str$plot_id
+
+# Save a vector of 3 clusters:
+str_k3_plots <- plots_cf_4p$str_class_plots
+as.numeric(str_k3_plots)
+
+#pca with structural data
+
+pca_str_plots <- rda(plots_str_scaled, scale = F)
+summary(pca_str_plots) # 
+plot(pca_str_plots)
+
+ordiplot(pca_str_plots, display = 'sites', type = 'n')
+points(pca_str_plots, col = plots_cf_4p$str_class_plots)
+biplot(pca_str_plots, display = 'species')
+
+pca_scores <- scores(pca_str_plots)
+pca_scores_plots <- as.data.frame(pca_scores$sites)
+pca_scores_plots %>%
+  as_tibble(rownames = "plot_id") %>%
+  left_join(plots_cf_4p) %>%
+  ggplot(aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = str_class_plots))
+
+pca_scores$species
 
 ```
 
