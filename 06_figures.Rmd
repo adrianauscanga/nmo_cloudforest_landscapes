@@ -1081,7 +1081,7 @@ figure5
 ## Shannon
 
 p1 <- sites_cf_4p %>%
-  ggplot(aes(x = av_agb_site, y = shannon_av_site)) +
+  ggplot(aes(x = av_agb_site, y = shannon)) +
   geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   geom_point(size=2) +
   theme_classic() +
@@ -1091,7 +1091,7 @@ p1 <- sites_cf_4p %>%
 ## Sp richness
 
 p2 <- sites_cf_4p %>%
-  ggplot(aes(x = av_agb_site, y = sp_richness_site_av)) +
+  ggplot(aes(x = av_agb_site, y = sp_richness_site)) +
   geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
   geom_point(size=2) +
   theme_classic() +
@@ -1182,5 +1182,36 @@ sites_cf_4p %>%
   geom_point() +
   geom_smooth(method = "lm")
   
+```
+
+# Another extra figure: relationship between all structural attributes and env gradient
+
+```{r}
+
+ggplot(sites_cf_4p, aes(x = env_pc1, y = av_treedensity_site)) +
+  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "dashed") +
+  geom_point(aes(color = landscape), size = 4) +
+  scale_color_gradient(low = "forestgreen", high =  "lightgoldenrod2") +
+  labs(y = "Stem density")
+
+ggplot(sites_cf_4p, aes(x = env_pc1, y = av_loreys_site)) +
+  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "dashed") +
+  geom_point(aes(color = landscape), size = 4) +
+  scale_color_gradient(low = "forestgreen", high =  "lightgoldenrod2") +
+  labs(y = "Lorey's height")
+
+ggplot(sites_cf_4p, aes(x = env_pc1, y = av_treeheight_site)) +
+  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "dashed") +
+  geom_point(aes(color = landscape), size = 4) +
+  scale_color_gradient(low = "forestgreen", high =  "lightgoldenrod2") +
+  labs(y = "Average tree height")
+
+ggplot(sites_cf_4p, aes(x = env_pc1, y = av_basalarea_site)) +
+  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "dashed") +
+  geom_point(aes(color = landscape), size = 4) +
+  scale_color_gradient(low = "forestgreen", high =  "lightgoldenrod2") +
+  labs(y = "Basal area")
+
+
 ```
 
