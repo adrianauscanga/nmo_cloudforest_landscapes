@@ -1189,7 +1189,7 @@ sites_cf_4p %>%
 ```{r}
 
 ggplot(sites_cf_4p, aes(x = env_pc1, y = av_treedensity_site)) +
-  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "dashed") +
+  geom_smooth(alpha= 0.1, method = "loess", color = "darkgray", linetype = "dashed") +
   geom_point(aes(color = landscape), size = 4) +
   scale_color_gradient(low = "forestgreen", high =  "lightgoldenrod2") +
   labs(y = "Stem density")
