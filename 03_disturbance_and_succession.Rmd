@@ -273,6 +273,7 @@ points(pca_str_plots, col = str_k3_plots)
 biplot(pca_str_plots, display = 'species')
 
 ordiplot(pca_str_plots, display = 'sites', type = 'text')
+biplot(pca_str_plots)
 ```
 
 Add cluster class plots_cf dataset.
