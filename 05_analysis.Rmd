@@ -29,6 +29,13 @@ library(multcompView)
 load("output/sites_cf_4p.RData")
 load("output/plots_cf_4p.RData")
 load("output/trees_cf_4p.RData")
+
+# Functions
+
+calcSE<-function(x){
+  x <- x[is.na(x)==F]
+  sd(x)/sqrt(length(x))
+}
 ```
 
 
@@ -429,14 +436,14 @@ sites_cf_4p <- sites_cf_4p %>%
   
 # Run regression model with env_pc1
 
-lm <- lm(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + landscape + agriculture + grazing, data = sites_cf_4p)
+lm <- lm(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon + sp_richness_site + landscape + agriculture + grazing, data = sites_cf_4p)
 summary(lm)
 ```
 
 ### Stepwise model selection:
 
 ```{r}
-ms <- regsubsets(log(av_agb_site) ~ env_pc1 + slope_gee + shannon_av_site + sp_richness_site_av + landscape + agriculture + grazing, data = sites_cf_4p)
+ms <- regsubsets(log(av_agb_site) ~ env_pc1 + slope_gee + shannon + sp_richness_site + landscape + agriculture + grazing, data = sites_cf_4p)
 
 ms_sum <- summary(ms)
 
@@ -480,11 +487,13 @@ partial.resid.plot(lm2b)
 
 lm2b_res <- lm2b$residuals #save residuals
 
-lm2c <- lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing + shannon_av_site, data = sites_cf_4p)
+lm2c <- lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing + shannon, data = sites_cf_4p)
 summary(lm2c)
 partial.resid.plot(lm2c)
 
 lm2c_res <- lm2c$residuals #save residuals
+
+summary(lm(landscape ~ shannon, data = sites_cf_4p))
 ```
 P value comparisons of all models:
 
@@ -506,10 +515,10 @@ summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1, dat
 summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing, data = sites_cf_4p))
 
 # 6 predictors
-summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing + shannon_av_site, data = sites_cf_4p))
+summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing + shannon, data = sites_cf_4p))
 
 # 7 predictors
-summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing + shannon_av_site + sp_richness_site_av, data = sites_cf_4p))
+summary(lm(log(av_agb_site) ~ slope_gee + landscape + agriculture + env_pc1 + grazing + shannon + sp_richness_site, data = sites_cf_4p))
 ```
 
 
@@ -826,5 +835,23 @@ pca_scores$species
 
 ```
 
+Proportion of AGB by successional stage
+
+```{r}
+
+plots_cf_4p %>%
+  group_by(str_class_plots) %>%
+  summarise(agb_total = sum(agb_plot_ha))
+
+# AGB total:
+#2303.270+9404.818+10291.113 =
+#21999.2
+
+plots_cf_4p %>%
+  group_by(str_class_plots) %>%
+  summarise(agb_total = sum(agb_plot_ha)) %>%
+  mutate(per100 = (agb_total / 21999.2) *100)
+
+```
 
 
