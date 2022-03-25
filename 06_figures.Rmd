@@ -1132,7 +1132,7 @@ p2 <- sites_cf_4p %>%
   #               width = 0.02,
   #               color = "gray60",
   #               alpha = 0.8) +
-  geom_smooth(method = "lm", color = "black", se = F, linetype = "solid", size = 0.75) +
+  geom_smooth(method = "lm", color = "black", se = F, linetype = "dashed", size = 0.75) +
   # geom_smooth(method = "loess", span=1, color = "black", se = F, linetype = "dashed", size = 0.75) +
   geom_point(color = "gray30", size = 3, alpha = 0.8) +
   theme_classic() +
@@ -1172,7 +1172,7 @@ summary(lm(shannon ~ landscape, data = sites_cf_4p))
 # AGB ~ env_pc1
 
 p1 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = av_agb_site)) +
-  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "dashed") +
+  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "solid") +
   geom_point(aes(color = landscape), size = 4) +
   scale_color_gradient(low = "forestgreen", high =  "lightgoldenrod2") +
   theme_classic() +
@@ -1192,7 +1192,7 @@ p1 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = av_agb_site)) +
 # Landscape composition ~ env_pc1
 
 p2 <- ggplot(sites_cf_4p, aes(x = env_pc1, y = landscape)) +
-  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "dashed") +
+  geom_smooth(alpha= 0.1, method = "lm", color = "darkgray", linetype = "solid") +
   geom_point(aes(color = av_agb_site), size = 4) +
   scale_color_gradient(high = "darkgreen", low = "darkseagreen1") +
   theme_classic() +
@@ -1281,8 +1281,8 @@ p4 <- plots_cf_4p %>%
             sp_richness_plot = as.numeric(sp_richness_plot)) %>%
   mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
-  ggplot(aes(x = agb_plot_ha,
-             y = sp_richness_plot,
+  ggplot(aes(y = agb_plot_ha,
+             x = sp_richness_plot,
              color = factor(succ, levels = c("F","Y", "M"), ordered = TRUE))) +
   geom_point(aes(color = factor(succ, levels = c("F","Y", "M"), ordered = TRUE)), size= 2, alpha = 0.75) +
   geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
@@ -1304,6 +1304,107 @@ figure6 <- ggarrange(p1,p2,p3,p4,
                   font.label = list(size= 10))
 figure6
 ```
+
+```{r}
+
+# Sites
+
+## Shannon
+
+p1 <- sites_cf_4p %>%
+  ggplot(aes(y = log1p(av_agb_site), x = shannon)) +
+  geom_smooth(method = "lm", span = 1, color= "black", linetype = "dashed", se= F) +
+  geom_point(color = "gray30", size=2) +
+  theme_classic() +
+  labs(y = (bquote('log AGB ('*"Mg"~ha^-1*')')),
+       x = "H")
+
+## Sp richness
+
+p2 <- sites_cf_4p %>%
+  ggplot(aes(y = log1p(av_agb_site), x = sp_richness_site)) +
+  geom_smooth(method = "lm", span = 1, color= "black", linetype = "dashed", se = F) +
+  geom_point(color = "gray30", size=2) +
+  scale_x_continuous(breaks = c(0, 2, 4, 6, 8, 10, 12, 14, 16, 18)) +
+  theme_classic() +
+  labs(y = (bquote('log AGB ('*"Mg"~ha^-1*')')),
+       x = "S")
+
+# Plots
+
+## Shannon 
+
+p3 <- plots_cf_4p %>%
+  filter(agb_plot_ha < 600) %>%
+  filter(!is.na(shannon)) %>%
+  filter(!is.na(agb_plot_ha)) %>%
+  group_by(str_class_plots) %>%
+  summarise(mean_shannon = mean(shannon),
+            mean_agb = mean(agb_plot_ha),
+            agb_plot_ha = as.numeric(agb_plot_ha),
+            shannon = as.numeric(shannon)) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "F",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  ggplot(aes(y = log1p(agb_plot_ha), x = shannon)) +
+  #geom_point(aes(x= mean_agb, y = mean_shannon, color = factor(succ, levels = c("F","Y", "M"),ordered = TRUE), size = 3)) +
+  geom_point(aes(color = factor(succ, levels = c("F","Y", "M"),ordered = TRUE)), size= 2, alpha = 0.75) +
+  geom_smooth(method = "lm", span = 1, color= "black", linetype = "solid", se = F) +
+  theme_classic() +
+  scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  labs(y = (bquote('log AGB ('*"Mg"~ha^-1*')')),
+       x = "H") +
+  theme(legend.position = "none")
+
+## Species richness
+
+p4 <- plots_cf_4p %>%
+  filter(agb_plot_ha < 600) %>%
+  filter(!is.na(simpson)) %>%
+  filter(!is.na(agb_plot_ha)) %>%
+  group_by(str_class_plots) %>%
+  summarise(mean_sp = mean(sp_richness_plot),
+            mean_agb = mean(agb_plot_ha),
+            agb_plot_ha = as.numeric(agb_plot_ha),
+            sp_richness_plot = as.numeric(sp_richness_plot)) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "F",
+                       ifelse(str_class_plots == "2", "Y", "M"))) %>%
+  ggplot(aes(y = log1p(agb_plot_ha),
+             x = sp_richness_plot,
+             color = factor(succ, levels = c("F","Y", "M"), ordered = TRUE))) +
+  geom_point(aes(color = factor(succ, levels = c("F","Y", "M"), ordered = TRUE)), size= 2, alpha = 0.75) +
+  geom_smooth(method = "lm", span = 1, color= "black", linetype = "solid", se = F) +
+  theme_classic() +
+  scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  scale_x_continuous(breaks = c(0, 2, 4, 6, 8, 10, 12, 14)) +
+  labs(size = "Average H in successional stage",
+       y = (bquote('log AGB ('*"Mg"~ha^-1*')')),
+       x = "S") +
+  theme(legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        legend.position = c(0.9,0.2),
+        legend.background = element_rect(linetype = "solid", size = 0.01, color = "gray50"),
+        legend.key.size = unit(0.25, "cm"))
+
+figure6_2 <- ggarrange(p1,p2,p3,p4,
+                  ncol = 2,
+                  nrow = 2,
+                  labels = c("a)", "b)", "c)", "d)"),
+                  font.label = list(size= 10))
+figure6_2
+
+summary(lm(sites_cf_4p$av_agb_site ~ sites_cf_4p$shannon))
+summary(lm(log1p(sites_cf_4p$av_agb_site) ~ sites_cf_4p$shannon))
+
+summary(lm(sites_cf_4p$av_agb_site ~ sites_cf_4p$sp_richness_site))
+summary(lm(log1p(sites_cf_4p$av_agb_site) ~ sites_cf_4p$sp_richness_site))
+
+summary(lm(plots_cf_4p$agb_plot_ha ~ plots_cf_4p$shannon))
+summary(lm(log1p(plots_cf_4p$agb_plot_ha) ~ plots_cf_4p$shannon))
+
+summary(lm(plots_cf_4p$agb_plot_ha ~ plots_cf_4p$sp_richness_plot))
+summary(lm(log1p(plots_cf_4p$agb_plot_ha) ~ plots_cf_4p$sp_richness_plot))
+```
+
 
 # Extra figure: is the relationship between sp diversity and AGB scale dependent?
 

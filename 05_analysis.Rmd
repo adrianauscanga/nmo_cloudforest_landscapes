@@ -854,4 +854,7 @@ plots_cf_4p %>%
 
 ```
 
+```{r}
+plots_cf_4p %>% filter(str_class_plots == "2") %>% arrange(-agb_plot_ha)
+```
 
