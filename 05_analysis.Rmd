@@ -45,7 +45,7 @@ Summary statistics
 
 ```{r}
 summary(sites_cf_4p)
-
+sd(sites_cf_4p$shannon)
 ```
 
 

@@ -1466,48 +1466,35 @@ ggplot(sites_cf_4p, aes(x = env_pc1, y = av_basalarea_site)) +
 ```{r}
 
 plots_cf_4p %>%
-  ggplot(aes(agb_plot_ha)) +
-  geom_histogram(binwidth = 20)
-
-plots_cf_4p %>%
-  mutate(log_agb = log1p(agb_plot_ha)) %>%
-  ggplot(aes(log_agb)) +
-  geom_histogram(binwidth = .20)
-
-sites_cf_4p %>%
-  ggplot(aes(av_agb_site)) +
-  geom_histogram(binwidth = 10)
-
-sites_cf_4p %>%
-  mutate(log_agb_s = log1p(av_agb_site)) %>%
-  ggplot(aes(log_agb_s)) +
-  geom_histogram(binwidth = 0.10)
-
-plots_cf_4p %>%
-  ggplot(aes(agb_plot_ha)) +
-  geom_density()+
+  ggplot(aes(x= agb_plot_ha)) +
+  geom_histogram(aes(y=..density..), color = "gray70", fill = "gray90") +
+  geom_line(stat = "density", size = 0.8) +
   geom_rug() +
   theme_classic()
 
 plots_cf_4p %>%
   mutate(log_agb = log1p(agb_plot_ha)) %>%
-  ggplot(aes(log_agb)) +
-  geom_density() +
+  ggplot(aes(x= log_agb)) +
+  geom_histogram(aes(y=..density..), color = "gray70", fill = "gray90") +
+  geom_line(stat = "density", size = 0.8) +
   geom_rug() +
   theme_classic()
 
 sites_cf_4p %>%
-  ggplot(aes(av_agb_site)) +
-  geom_density() +
+  ggplot(aes(x = av_agb_site)) +
+  geom_histogram(aes(y=..density..), binwidth = 20, color = "gray70", fill = "gray90") +
+  geom_line(stat = "density", size = 0.8) +
   geom_rug() +
   theme_classic()
 
 sites_cf_4p %>%
   mutate(log_agb_s = log1p(av_agb_site)) %>%
-  ggplot(aes(log_agb_s)) +
-  geom_density() +
+  ggplot(aes(x = log_agb_s)) +
+  geom_histogram(aes(y=..density..), binwidth = 0.15, color = "gray70", fill = "gray90") +
+  geom_line(stat = "density", size = 0.8) +
   geom_rug() +
   theme_classic()
+
 ```
 
 # Scatterplots of log-AGB with table 3 predictors
@@ -1516,7 +1503,17 @@ sites_cf_4p %>%
 sites_cf_4p %>%
   mutate(log_agb = log1p(av_agb_site),
          land_use = as.numeric(landscape)) %>%
-  select(log_agb, land_use, slope_gee, agriculture, grazing, shannon, sp_richness_site) %>%
-  plot()
+  select(log_agb, land_use, slope_gee, agriculture, grazing, env_pc1, shannon, sp_richness_site) %>%
+  na.omit() %>%
+  pivot_longer(cols = c("land_use", "slope_gee", "agriculture", "grazing", "env_pc1", "shannon", "sp_richness_site"),
+               names_to = "variable",
+               values_to = "values") %>%
+  mutate(variable = factor(variable, levels = c("land_use", "agriculture", "slope_gee", "env_pc1", "grazing", "shannon", "sp_richness_site"))) %>%
+  ggplot(aes(y = log_agb, x = values)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "gray60", alpha= 0.3) +
+  labs(x = NULL, y = (bquote('log AGB ('*"Mg"~ha^-1*')'))) +
+  facet_wrap(~variable, scales = "free", nrow = 2)
+  
 ```
 
