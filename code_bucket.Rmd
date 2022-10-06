@@ -1,0 +1,3161 @@
+---
+title: "Code Bucket"
+author: "Adriana Uscanga"
+date: "2022-10-06"
+output: html_document
+---
+
+################################################################################
+#######################     EXTRA CODE BUCKET    ###############################
+################################################################################
+
+## From 02_structure_and_composition
+
+### Rank abundance curves
+
+```{r}
+# Use only sites with 4 plots
+
+sites4p <- sites_cf %>%
+  filter(plot_no > 3) %>%
+  arrange(mosaic) %>%
+  select(site)
+
+sites4p_list <- as.list(sites4p)
+
+sp_site4p <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  right_join(sites4p) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+#Remove spp with abundance = 0 
+sp_site4p <- sp_site4p[, which(colSums(sp_site4p) != 0)]
+
+sp_site4p <- sp_site4p[which(rowSums(sp_site4p) != 0), ]
+
+#Loop to make abundance curves:
+
+racurvex <- NULL
+sitex <- NULL
+site_id <- NULL
+
+for (row in 1:nrow(sp_site4p)) {
+  sitex <- sp_site4p[row, colSums(sp_site4p[row,])>0]
+  site_id <- row.names(sitex)
+  racurvex <- racurve(sitex, nlab = 5, main = paste0("Rank-abundance ",site_id))
+  assign(paste0("rac_",site_id), racurvex)
+}
+
+
+```
+
+
+
+### Detrended Correspondence Analysis (DCA) and Principal Component Analysis (PCA)
+
+To know whether linear or unimodal methods are better in this case, I'll calculate a DCA. According to Lepš & Šmilauer (2003) if the first DCA axis (which is scaled in units of standard deviation, S.D.) > 4 S.D. the dataset is heterogeneous so unimodal methods should be used, while the length < 3 S.D. indicates a homogeneous dataset for which linear methods are suitable.
+
+#### DCA
+
+```{r}
+DCA <- decorana(log1p(sp_site4p_nona))
+DCA
+plot(DCA)
+summary(DCA)
+
+ordiplot(DCA, type = 'n')
+ordiplot(DCA, display = 'sites', type = 'text')
+ordiplot(DCA, type = 'n')
+orditorp(DCA, display = 'species', cex = 0.5)
+
+
+```
+First axis of DCA is 1, so I will use linear methods (i.e. PCA).
+
+#### PCA
+
+```{r}
+
+pca_sp <- rda(log1p(sp_site4p))
+pca_sp
+summary(pca_sp)
+biplot(pca_sp)
+plot(pca_sp)
+
+ordiplot(pca_sp, display = 'sites', type = 'text')
+ordiplot(pca_sp, display = 'species', type = 'text')
+
+```
+
+Some of the plots are different from the others, but the first two PC only explain 16% of the variation. Let's see if climate has an effect on this ordination.
+
+Add info on mosaic and disturbance (with color and shape) to PCA.
+
+Make hclust (dendogram) also showing mosaic and disturbance to see how sites group
+
+```{r}
+dis <- vegdist(log1p(sp_site4p), method = "euclidean")
+clust <- hclust(dis, method = "ward.D")
+plot(clust, hang = -1, cex = 0.6)
+rect.hclust(clust, k = 4)
+```
+I'll filter out sites with NA in agricultural and grazing variables
+
+```{r}
+
+sites_cf_4p_nona <- sites_cf %>%
+  filter(plot_no >3) %>%
+  filter(!is.na(agriculture) | !is.na(grazing))
+
+sites4p_nona <- sites_cf_4p_nona %>%
+  select(site)
+
+sites4p_nona_list <- as.list(sites4p_nona)
+
+sp_site4p_nona <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  right_join(sites4p_nona) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+#Remove spp with abundance = 0 
+sp_site4p_nona <- sp_site4p_nona[, which(colSums(sp_site4p_nona) != 0)]
+
+sp_site4p_nona <- sp_site4p_nona[which(rowSums(sp_site4p_nona) != 0), ]
+```
+
+Repeat analyses
+
+```{r}
+pca_sp2 <- rda(log1p(sp_site4p_nona))
+pca_sp2
+summary(pca_sp2)
+biplot(pca_sp2)
+plot(pca_sp2)
+
+ordiplot(pca_sp2, display = 'sites', type = 'text')
+ordiplot(pca_sp2, display = 'species', type = 'text')
+```
+
+Hierarchical Cluster:
+
+```{r}
+dis2 <- vegdist(log1p(sp_site4p_nona), method = "euclidean")
+clust2 <- hclust(dis2, method = "ward.D")
+plot(clust2, hang = -1, cex = 0.6)
+rect.hclust(clust2, k = 3)
+```
+
+Add relevant info to hclust
+
+```{r}
+dend <- as.dendrogram(clust2)
+dend
+
+# Extract the data (for rectangular lines)
+# Type can be "rectangle" or "triangle"
+dend_data <- dendro_data(dend, type = "rectangle")
+names(dend_data)
+
+head(dend_data$segments)
+head(dend_data$labels)
+
+labels_info <- sites_cf_4p_nona %>%
+  select(mosaic, agriculture, grazing) %>%
+  mutate(disturbance = ifelse(agriculture > 0, 1,
+                              ifelse(grazing > 0, 1, 0)))
+
+dend_labels <- as_tibble(dend_data$labels) %>%
+  mutate(site = as.character(label)) %>%
+  left_join(labels_info, by = 'site')
+
+rect <- data.frame(x1=c(0, 28.6, 34.6), x2 = c(28.4, 34.4, 41), y1= c(-0.5, -0.5, -0.5), y2= c(16,16,16))
+
+# Plot line segments and add labels
+ggplot(dend_data$segments) + 
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
+  geom_text(data = dend_labels, aes(x, y = -0.7, label = label), hjust = 1, angle = 90, size = 3) +
+  ylim(-3, 20) +
+  geom_point(data = dend_labels, aes(x, y, color = mosaic, shape = as.factor(disturbance)), size = 2) +
+  scale_colour_gradient(low = "darkolivegreen1", high = "darkgreen") +
+  geom_rect(data = rect, mapping= aes(xmin = x1, xmax = x2, ymin = y1, ymax = y2), fill = NA, color = "gray70", linetype = 2, size = 0.2) +
+  theme_classic()
+  
+
+```
+
+Add this info to PCA
+
+By plot
+
+```{r}
+sp_plot <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "plot_id")
+
+#Remove spp with abundance = 0 
+sp_plot <- sp_plot[, which(colSums(sp_plot) != 0)]
+sp_plot <- sp_plot[which(rowSums(sp_plot) != 0), ]
+```
+
+PCA and hclust
+
+```{r}
+pca_sp3 <- rda(log1p(sp_plot))
+pca_sp3
+summary(pca_sp3)
+biplot(pca_sp3)
+plot(pca_sp3)
+
+ordiplot(pca_sp3, display = 'sites', type = 'text')
+ordiplot(pca_sp3, display = 'species', type = 'text')
+
+
+ordiplot(pca_sp3, display = 'sites', type = 'n')
+points(pca_sp3, col = plots_cf$str_class_plots)
+
+```
+
+```{r}
+dis3 <- vegdist(log1p(sp_plot), method = "euclidean")
+clust3 <- hclust(dis3, method = "ward.D")
+plot(clust3, hang = -1, cex = 0.6)
+rect.hclust(clust3, k = 3)
+```
+It seems that by plot the pattern is similar but more confusing. Structural classes don't group together
+
+NMDS
+
+```{r}
+nmds <- metaMDS(log1p(sp_site4p_nona), distance = "bray", k= 2, trymax = 1000, autotransform = T)
+stressplot(nmds)
+plot(nmds)
+```
+
+```{r}
+ordiplot(nmds,type="n")
+orditorp(nmds,display="species",col="red",air=0.01)
+orditorp(nmds,display="sites",cex=0.7,air=0.01)
+```
+
+Assess how composition changes with env variables and disturbance and mosaic with RDA or DCA
+
+
+--------------------------------------------------------------------------------------
+### Composition and climate
+
+```{r}
+#RDA with management
+
+sp_rda <- rda(sp_site4p_nona ~ sites_cf_4p_nona$mosaic + sites_cf_4p_nona$agriculture + sites_cf_4p_nona$grazing, data = sites_cf_4p_nona, scale = T)
+sp_rda
+ordiplot(sp_rda)
+summary(sp_rda)
+
+constrained_eig <- sp_rda$CCA$eig/sp_rda$tot.chi*100
+unconstrained_eig <- sp_rda$CA$eig/sp_rda$tot.chi*100
+expl_var <- c(constrained_eig, unconstrained_eig)
+barplot (expl_var[1:20], col = c(rep ('red', length (constrained_eig)), rep ('black', length (unconstrained_eig))),
+         las = 2, ylab = '% variation')
+
+#RDA with env variables
+sp_rda2 <- rda(sp_site4p_nona ~ sites_cf_4p_nona$temp + sites_cf_4p_nona$precip + sites_cf_4p_nona$altitude, data = sites_cf_4p_nona, scale = T)
+sp_rda2
+ordiplot(sp_rda2)
+summary(sp_rda2)
+
+constrained_eig <- sp_rda2$CCA$eig/sp_rda2$tot.chi*100
+unconstrained_eig <- sp_rda2$CA$eig/sp_rda2$tot.chi*100
+expl_var <- c(constrained_eig, unconstrained_eig)
+barplot (expl_var[1:20], col = c(rep ('red', length (constrained_eig)), rep ('black', length (unconstrained_eig))),
+         las = 2, ylab = '% variation')
+```
+Environmental variables (temp, precip, elevation) explain 5% of the variance.
+While species explain the remaining 95%. The first two components explain 17.5 and 11.6% of variation, respectively.
+
+### Betadiversity
+
+For calculating betadiversity, I will use the betapart package wchich considers both turnover and nestedness. Paper: https://besjournals.onlinelibrary.wiley.com/doi/10.1111/j.2041-210X.2012.00224.x
+
+First, I need to compute a presence-absence matrix. 
+Then, I will use beta.multi and beta.pair.
+*beta.multi(x, index.family). This function computes the total dissimilarity across all n sites, along with the turnover and nestedness components of that dissimilarity. 
+*beta.pair(x, index.family). This function computes the same three dissimilarity metrics as for the previous function and can again be set using the argument index.family to use the Sørensen or Jaccard index of total dissimilarity. Rather than returning three single values as in the previous function, beta.pair returns three matrices containing the pairwise between-site values of each component of beta diversity. The dissimilarity matrices yielded by beta.pair are objects of class dist and can be submitted to further analyses as, for example, Mantel tests, non-metric multidimensional scaling, cluster analysis using other R packages as vegan (Oksanen et al. 2011) or cluster (Maechler et al. 2005). 
+
+```{r}
+#Presence-absence matrix
+sp_site_pam <- ifelse(!sp_site == 0, 1, 0)
+
+beta.multi(sp_site_pam, index.family = "sorensen")
+#turnover is high but nestedness is low
+
+beta_sites <- beta.pair(sp_site_pam, index.family = "sorensen")
+turnover <- as.matrix(beta_sites$beta.sim)
+nestedness <- as.matrix(beta_sites$beta.sne)
+dissimilarity <- as.matrix(beta_sites$beta.sor)
+
+```
+
+##################################################################
+
+### Forest structure variation
+
+Now I can analyze how structure varies in different plots and sites, and which variables are related.
+
+Plots:
+
+```{r}
+str_plots_cf <- plots_cf[,c(1,19:22,26)]
+str_plots_cf <- column_to_rownames(str_plots_cf, var = "plot_id")
+
+plot(str_plots_cf)
+
+str_pca <- princomp(str_plots_cf, cor = T)
+summary(str_pca)
+loadings(str_pca)
+
+biplot(str_pca)
+screeplot(str_pca)
+
+#Since tree_no and tree_density are tightly correlated, I will use only tree_density
+
+str_plots_cf <- plots_cf[,c(1,20:22,26)]
+str_plots_cf <- column_to_rownames(str_plots_cf, var = "plot_id")
+
+plot(str_plots_cf)
+
+str_pca <- princomp(str_plots_cf, cor = T)
+summary(str_pca)
+loadings(str_pca)
+
+biplot(str_pca)
+screeplot(str_pca)
+
+#Same data but scaled:
+str_plots_cf_sc <- scale(str_plots_cf)
+str_sc_pca <- princomp(str_plots_cf_sc, cor = T)
+summary(str_sc_pca)
+loadings(str_sc_pca)
+biplot(str_sc_pca)
+
+```
+
+Sites:
+
+```{r}
+
+str_sites_cf <- sites_cf[,c(1,32,34,36,38)]
+str_sites_cf <- column_to_rownames(str_sites_cf, var = "site")
+
+plot(str_sites_cf)
+
+str_pca2 <- princomp(str_sites_cf, cor = T)
+summary(str_pca2)
+loadings(str_pca2)
+
+biplot(str_pca2)
+screeplot(str_pca2)
+
+#Same data but scales:
+str_sites_cf_sc <- scale(str_sites_cf)
+str_pca2_sc <- princomp(str_sites_cf_sc, cor = T)
+summary(str_pca2_sc)
+loadings(str_pca2_sc)
+biplot(str_pca2_sc)
+screeplot(str_pca2_sc)
+```
+
+In both, the analysis by sites and plots, the first two components explain most of the variation (around 90%). 
+In both, the first component is more related to basal area and biomass and the second to tree density.
+
+### Structure ~ climate
+
+To explore the relationship between forest structure and climate (precip and temp), I will use a RDA.
+
+```{r}
+str_rda <- rda(str_plots_cf ~ plots_cf$precip + plots_cf$temp, data = plots_cf)
+str_rda
+ordiplot(str_rda)
+
+str_rda2 <- rda(str_sites_cf ~ sites_cf$precip + sites_cf$temp, data = sites_cf)
+str_rda2
+ordiplot(str_rda2)
+
+constrained_eig <- str_rda2$CCA$eig/str_rda2$tot.chi*100
+unconstrained_eig <- str_rda2$CA$eig/str_rda2$tot.chi*100
+expl_var <- c(constrained_eig, unconstrained_eig)
+barplot (expl_var[1:20], col = c(rep ('red', length (constrained_eig)), rep ('black', length (unconstrained_eig))),
+         las = 2, ylab = '% variation')
+
+#RDA1 explains only 5% of variation
+#PC1 explains 93% of variation
+```
+
+## From 03_disturbance_amd_succession
+
+#################This code below will probably go to the 'extra code bucket' ###############
+
+# Plots :4p
+
+# plots_cf_4p %>%
+#   ggplot(aes(x = tree_density, group = str_class_plots_4p, fill = str_class_plots_4p)) +
+#   geom_density(alpha= 0.5) +
+#   scale_fill_manual(values = c("tomato", "green3", "dodgerblue2")) +
+#   ggtitle("Tree density")
+# 
+# plots_cf_4p %>%
+#   ggplot(aes(x = loreys_height, group = str_class_plots_4p, fill = str_class_plots_4p)) +
+#   geom_density(alpha= 0.5) +
+#   scale_fill_manual(values = c("tomato", "green3", "dodgerblue2")) +
+#   ggtitle("Tree height")
+# 
+# plots_cf_4p %>%
+#   ggplot(aes(x = basal_area_ha, group = str_class_plots_4p, fill = str_class_plots_4p)) +
+#   geom_density(alpha= 0.5) +
+#   scale_fill_manual(values = c("tomato", "green3", "dodgerblue2")) +
+#   ggtitle("Basal area")
+
+#################This code below will probably go to the 'extra code bucket' ###############
+
+# Mosaic sites with 4p
+
+# mosaic_4p <- plots_cf_4p %>%
+#   mutate(str_class_plots_4p = as.numeric(str_class_plots_4p),
+#          site = as.character(site)) %>%
+#   group_by(site) %>%
+#   # normalized mosaic = value - min value / max value - min value
+#   # mosaic goes from 1 (all mature forest) to 0 (all agriculture/very young forest)
+#   summarize(mosaic4 = ifelse(n()==4, (sum(str_class_plots_4p)-4)/(12-4), NA),
+#             mosaic3 = ifelse(n()==3, (sum(str_class_plots_4p)-3)/(9-3), NA),
+#             mosaic2 = ifelse(n()==2, (sum(str_class_plots_4p)-2)/(6-2), NA),
+#             mosaic1 = ifelse(n()==1, (sum(str_class_plots_4p)-1)/(3-1), NA),
+#             mosaic_4p = ifelse(n()==4, mosaic4,
+#                             ifelse(n()==3, mosaic3,
+#                                    ifelse(n()==2, mosaic2, mosaic1)))) %>%
+#   arrange(mosaic_4p)
+# 
+# sites_cf_4p <- sites_cf_4p %>%
+#   left_join(mosaic_4p, by = "site") %>%
+#   select(-c(mosaic1, mosaic2, mosaic3, mosaic4))
+# 
+# plot(sites_cf_4p$mosaic, sites_cf_4p$mosaic_4p)
+# 
+# plot(sites_cf_4p$mosaic_4p,sites_cf_4p$av_agb_site)
+# plot(sites_cf_4p$mosaic_4p, sites_cf_4p$simpson_av_site)
+
+################################################################################
+#######################     EXTRA CODE BUCKET    ###############################
+################################################################################
+
+### Species composition and diversity across classes
+
+First, add classes info to trees_cf dataset
+
+```{r}
+
+load("output/sites_cf3.RData")
+load("output/plots_cf3.RData")
+load("output/trees_cf3.RData")
+
+
+# Make site column in tree_cf dataset
+
+trees_cf <- trees_cf %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = FALSE)
+
+# Join datasets (sites)
+
+trees_cf <- sites_cf %>%
+  select(site, mosaic) %>%
+  right_join(trees_cf, by = "site")
+
+# Join datasets (plots)
+
+trees_cf <- plots_cf %>%
+  select(plot_id, str_class_plots) %>%
+  right_join(trees_cf, by = "plot_id")
+```
+
+There are two possible paths now:
+1. Make a RDA (linear data) or CCA (unimodal data) with structure attributes and sp composition--didn't work too good. Spp composition adds too much variation. Many species are in very few plots. It's difficult to get general patterns.
+
+2. Classify data using the 3 structural classes (from kmeans analysis) and assess sp abundance and richness to see if there's a logical relationship.
+
+
+First, make a matrix of sp abundace
+
+```{r}
+
+# Sites
+
+sp_site <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+#save(sp_site, file = "output/sp_site.RData") #Sites by Species Matrix
+
+sp_site2 <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species))
+
+# Plots
+
+sp_site_plots <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "plot_id")
+
+#save(sp_site, file = "output/sp_site.RData") #Sites by Species Matrix
+
+sp_site2_plots <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species))
+```
+
+Now let's analyze the abundance of species in the three classes (site and plot levels).
+
+```{r}
+
+# Sites
+
+community_matureforest_4p <- sites_cf %>%
+  filter(plot_no == 4) %>%
+  filter(mosaic > 0.75) %>%
+  select(site) %>%
+  left_join(as_tibble(sp_site, rownames = "site"), by = "site") 
+
+community_matureforest_4p <- as.data.frame(community_matureforest_4p)
+row.names(community_matureforest_4p) <- community_matureforest_4p$site
+community_matureforest_4p <- community_matureforest_4p[,-1]
+
+community_secandmature_4p <- sites_cf %>%
+  filter(plot_no == 4) %>%
+  filter(mosaic > 0.5, mosaic < 0.76) %>%
+  select(site) %>%
+  left_join(as_tibble(sp_site, rownames = "site"), by = "site") 
+
+community_secandmature_4p <- as.data.frame(community_secandmature_4p)
+row.names(community_secandmature_4p) <- community_secandmature_4p$site
+community_secandmature_4p <- community_secandmature_4p[,-1]
+
+
+community_class2 <- sites_cf %>%
+  filter(plot_no > 1) %>%
+  filter(str_class == "2") %>%
+  select(site) %>%
+  left_join(as_tibble(sp_site, rownames = "site"), by = "site")
+
+community_class2 <- as.data.frame(community_class2)
+row.names(community_class2) <- community_class2$site
+community_class2 <- community_class2[,-1]
+
+community_class3 <- sites_cf %>%
+  filter(plot_no > 1) %>%
+  filter(str_class == "3") %>%
+  select(site) %>%
+  left_join(as_tibble(sp_site, rownames = "site"), by = "site")
+
+community_class3 <- as.data.frame(community_class3)
+row.names(community_class3) <- community_class3$site
+community_class3 <- community_class3[,-1]
+
+# Plots
+
+community_class1_plots <- plots_cf %>%
+  filter(str_class_plots == "1") %>%
+  select(plot_id) %>%
+  left_join(as_tibble(sp_site_plots, rownames = "plot_id"), by = "plot_id") 
+
+community_class1_plots <- as.data.frame(community_class1_plots)
+row.names(community_class1_plots) <- community_class1_plots$plot_id
+community_class1_plots <- community_class1_plots[,-1]
+  
+community_class2_plots <- plots_cf %>%
+  filter(str_class_plots == "2") %>%
+  select(plot_id) %>%
+  left_join(as_tibble(sp_site_plots, rownames = "plot_id"), by = "plot_id")
+
+community_class2_plots <- as.data.frame(community_class2_plots)
+row.names(community_class2_plots) <- community_class2_plots$plot_id
+community_class2_plots <- community_class2_plots[,-1]
+
+community_class3_plots <- plots_cf %>%
+  filter(str_class_plots == "3") %>%
+  select(plot_id) %>%
+  left_join(as_tibble(sp_site_plots, rownames = "plot_id"), by = "plot_id")
+
+community_class3_plots <- as.data.frame(community_class3_plots)
+row.names(community_class3_plots) <- community_class3_plots$plot_id
+community_class3_plots <- community_class3_plots[,-1]
+```
+
+Remove spp with abundance = 0 in each class
+
+```{r}
+
+# Sites
+
+community_matureforest_4p <- community_matureforest_4p[, which(colSums(community_matureforest_4p) != 0)]
+community_secandmature_4p <- community_secandmature_4p[, which(colSums(community_secandmature_4p) != 0)]
+community_class2 <- community_class2[, which(colSums(community_class2) != 0)]
+community_class3 <- community_class3[, which(colSums(community_class3) != 0)]
+
+# Plots
+
+community_class1_plots <- na.omit(community_class1_plots)
+community_class1_plots <- community_class1_plots[, which(colSums(community_class1_plots) != 0)]
+
+community_class2_plots <- na.omit(community_class2_plots)
+community_class2_plots <- community_class2_plots[, which(colSums(community_class2_plots) != 0)]
+
+community_class3_plots <- na.omit(community_class3_plots)
+community_class3_plots <- community_class3_plots[,which(colSums(community_class3_plots) != 0)]
+
+```
+
+Use racurve function to plot rank-abundance curves
+
+```{r}
+racurve1 <- racurve(community_matureforest_4p, main = "Mature Forest", nlab = 8)
+racurve2 <- racurve(community_secandmature_4p, main = "Secondary and Mature Forest", nlab = 8)
+racurve2 <- racurve(community_class2, main = "Class 2", nlab = 5)
+racurve3 <- racurve(community_class3, main = "Class 3", nlab = 5)
+
+racurve(community_class2[1,], nlab = 5)
+racurve(community_class2[2,], nlab = 5)
+racurve(community_class2[3,], nlab = 5)
+racurve(community_class2[4,], nlab = 5)
+racurve(community_class2[5,], nlab = 5)
+racurve(community_class2[6,], nlab = 5)
+racurve(community_class2[7,], nlab = 5)
+
+racurve(community_class3["70980",], nlab = 5)
+
+# Plots
+racurve1_plots <- racurve(community_class1_plots, main = "Class 1", nlab = 6)
+racurve2_plots <- racurve(community_class2_plots, main = "Class 2", nlab = 6)
+racurve3_plots <- racurve(community_class3_plots, main = "Class 3", nlab = 6)
+
+```
+
+```{r}
+racurve3_plots
+```
+
+Relative abundance:
+
+```{r}
+racurve1$rel.abund
+racurve2$rel.abund
+racurve3$rel.abund
+
+racurve1_plots$rel.abund
+racurve2_plots$rel.abund
+racurve3_plots$rel.abund
+```
+
+Let's take a closer look at each class
+```{r}
+sites_cf %>%
+  filter(!is.na(str_class)) %>%
+  filter(str_class == "1")
+
+sites_cf %>%
+  filter(!is.na(str_class)) %>%
+  ggplot(aes(x = str_class, y = altitude)) +
+  geom_point()
+
+structure_forest <- sites_cf %>%
+  filter(str_class == "2" | str_class == "3") %>%
+  select(site,
+         av_basalarea_site,
+         av_loreys_site,
+         av_treedensity_site)
+
+# Scale data so that variables in different units can be compared
+structure_forest_scaled <- scale(structure_forest[,-c(1)])
+row.names(structure_forest_scaled) <- structure_forest$site
+
+k2_structure_forest <- kmeans(structure_forest_scaled, centers = 2, nstart = 25)
+k3_structure_forest <- kmeans(structure_forest_scaled, centers = 3, nstart = 25)
+k4_structure_forest <- kmeans(structure_forest_scaled, centers = 4, nstart = 25)
+k5_structure_forest <- kmeans(structure_forest_scaled, centers = 5, nstart = 25)
+
+# Compare plots:
+p1_str_f <- fviz_cluster(k2_structure_forest, geom = "point", data = structure_forest_scaled) + ggtitle("k = 2")
+p2_str_f <- fviz_cluster(k3_structure_forest, geom = "point",  data = structure_forest_scaled) + ggtitle("k = 3")
+p3_str_f <- fviz_cluster(k4_structure_forest, geom = "point",  data = structure_forest_scaled) + ggtitle("k = 4")
+p4_str_f <- fviz_cluster(k5_structure_forest, geom = "point",  data = structure_forest_scaled) + ggtitle("k = 5")
+grid.arrange(p1_str, p2_str, p3_str, p4_str, nrow = 2)
+
+
+str_clusters_f <- NbClust((structure_forest_scaled^2), distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D2", index = "all")
+
+# Save a vector of 3 clusters:
+str_k3_forest <- k3_structure_forest$cluster
+as.numeric(str_k3_forest)
+
+#pca with structural data
+
+pca_str_f <- rda(structure_forest_scaled, scale = F)
+summary(pca_str_f) 
+plot(pca_str_f)
+
+ordiplot(pca_str_f, display = 'sites', type = 'n')
+points(pca_str_f, col = str_k3_forest)
+biplot(pca_str_f, display = 'species')
+
+
+```
+
+Let's see if community data follows a similar classification than structural data
+
+```{r}
+# Calculate a distance matrix
+
+log_sp_site <- log1p(sp_site)
+dm_euclidean <- vegdist(log_sp_site, method = "euclidean")
+cluster_ward <- hclust(dm_euclidean, method = "ward.D")
+plot(cluster_ward)
+
+library(dendextend)
+dend_cluster_ward <- as.dendrogram(cluster_ward)
+labels_colors(dend_cluster_ward)
+labels_colors(dend_cluster_ward) <- as.numeric(sites_cf$str_class)
+dend_cluster_ward <- set(dend_cluster_ward, "labels_cex", 0.5)
+get_leaves_nodePar(dend_cluster_ward)[[1]]
+plot(dend_cluster_ward)
+
+```
+
+## Old version of Analysis
+
+---
+title: "04_analysis"
+author: "Adriana Uscanga"
+date: "2/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load packages and data
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(sf)
+library(spdep)
+library(leaps)
+library(MASS)
+library(car)
+library(ggpubr)
+library(rstatix)
+library(corrplot)
+library(lme4)
+library(fitdistrplus)
+library(asbio)
+library(RColorBrewer)
+library(mgcv)
+
+load("output/sites_cf3.RData")
+load("output/plots_cf3.RData")
+load("output/trees_cf3.RData")
+```
+
+Add slope and aspect to the data set.
+
+```{r}
+#Aspect and Slope from GEE 
+aspect <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/aspect_plots.csv", col_names = F)
+
+slope <- read_csv("C:/Users/adriana/Documents/OregonPhD/Tesis/ch1/aspect_and_slope/slope_plots.csv", col_names = F)
+
+head(aspect)
+
+aspect <- aspect %>%
+  transmute(plot_id = as.character(X5),
+            lon = as.numeric(X3),
+            lat = as.numeric(X4),
+            aspect = as.numeric(X2))
+
+head(aspect)
+
+slope <- slope %>%
+  transmute(plot_id = as.character(X5),
+            lon = as.numeric(X3),
+            lat = as.numeric(X4),
+            slope = as.numeric(X2))
+head(slope)
+
+aspect_slope <- aspect %>%
+  left_join(slope, by = c("plot_id", "lon", "lat"))
+
+plots_cf <- plots_cf %>%
+  left_join(aspect_slope, by = c("plot_id")) %>%
+  select(-lon, -lat) %>%
+  relocate(c(aspect, slope), .after = altitude)
+
+plots_cf %>%
+  filter(duplicated(longitude), duplicated(latitude)) %>%
+  group_by(site) %>%
+  summarize(sites = unique(site), plots = unique(plot_id))
+
+plots_cf <- plots_cf %>%
+  group_by(site) %>%
+  summarize(plot_id = plot_id,
+            aspect_first = first(aspect),
+            dup = ifelse(duplicated(longitude) & duplicated(latitude), "duplicated", NA),
+            aspectdups = ifelse(dup == "duplicated", aspect_first, NA),
+            slope_first = first(slope),
+            dup_s = ifelse(duplicated(longitude) & duplicated(latitude), "duplicated", NA),
+            slopedups = ifelse(dup_s == "duplicated", slope_first, NA)) %>%
+  filter(!is.na(dup)) %>%
+  select(plot_id, aspectdups, slopedups) %>%
+  right_join(plots_cf) %>%
+  mutate(aspect = ifelse(is.na(aspect), aspectdups, aspect),
+         slope = ifelse(is.na(slope), slopedups, slope)) %>%
+  select(-aspectdups, -slopedups)
+
+plots_cf %>%
+  filter(is.na(aspect))
+#Weird, plot 67878_2 doesn't have aspect and slope, it must have been missing from the GEE feature collection. I'll extract data for this plot and add it.
+# aspect = 334.7877502441406
+# slope= 34.21200942993164
+
+plots_cf <- plots_cf %>%
+  mutate(aspect = ifelse(plot_id == "67878_2", 334.787750, aspect),
+         slope = ifelse(plot_id == "67878_2", 34.212009, slope))
+
+# Average aspect and slope by site
+
+calcSE<-function(x){
+  x <- x[is.na(x)==F]
+  sd(x)/sqrt(length(x))
+}
+
+aspect_slope_sites <- plots_cf %>%
+  select(site, plot_id, aspect, slope) %>%
+  group_by(site) %>%
+  summarize(aspect_gee = mean(aspect),
+            aspect_se_gee = calcSE(aspect),
+            slope_gee = mean(slope),
+            slope_se_gee = calcSE(slope)) %>%
+  mutate(site = as.character(site))
+
+sites_cf <- sites_cf %>%
+  left_join(aspect_slope_sites, by = "site") %>%
+  relocate(c("aspect_gee", "aspect_se_gee", "slope_gee", "slope_se_gee"), .after = aspect)
+```
+Change aspect_gee to categories and compare aspect and slope in dataset
+
+```{r}
+
+sites_cf <- sites_cf %>%
+  dplyr::mutate(aspect_gee_c = ifelse(aspect_gee < 45 | aspect_gee > 315, "N",
+                                       ifelse(aspect_gee > 135 | aspect < 225, "S",
+                                              ifelse(aspect_gee > 225 | aspect_gee < 315, "W",
+                                                     ifelse(aspect_gee > 45 | aspect_gee < 135, "E", NA))))) %>%
+  relocate(aspect_gee_c, .after = aspect_gee)
+
+
+```
+
+Site 71213 in sites_cf data set lacks geographic coordinates.
+Which are: 17.50506, -96.30769
+
+```{r}
+sites_cf <- sites_cf %>%
+  mutate(longitude = ifelse(site == "71213", -96.30769, longitude),
+         latitude = ifelse(site == "71213", 17.50506, latitude))
+```
+
+Add a column with subregions to the data frame.
+
+```{r}
+sites_huautla <- read.csv("input/sites_huautla.csv", header = T)
+sites_ixtlan <- read.csv("input/sites_ixtlan.csv", header = T)
+sites_mixe <- read.csv("input/sites_mixe.csv", header = T)
+sites_guevea <- read.csv("input/sites_guevea.csv", header = T)
+```
+
+Bind all subregions data sets in one and join to main data set
+
+```{r}
+subregions <- rbind(sites_huautla, sites_ixtlan, sites_mixe, sites_guevea)
+subregions <- mutate(subregions, subregion = as.character(SUBREGIONE))
+subregions <- select(subregions, -SUBREGIONE)
+subregions <- subregions %>%
+  mutate(site = as.character(site))
+
+sites_cf <- sites_cf %>%
+  left_join(subregions, by = "site") %>%
+  relocate(subregion, .after = site)
+
+```
+
+Change direction of Mosaic values (so that 0-forest and 1-ag)
+
+```{r}
+sites_cf <- sites_cf %>%
+ mutate(mosaic_inv = 1- mosaic)
+  
+```
+
+
+# Exploration model: effect of disturbance, succession, and environmental factors
+
+Linear model
+or adding random effects:
+Generalized Linear Mixed Model (GLMM; when data is not normal)
+Linear Mixed Effects Model (when data is normal)
+Examples: 
+http://mfviz.com/hierarchical-models/
+https://ase.tufts.edu/bugs/guide/assets/mixed_model_guide.html
+https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecy.3336
+https://pjbartlein.github.io/GeogDataAnalysis/lec15.html
+https://nlp.stanford.edu/manning/courses/ling289/GLMM.pdf
+https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html
+https://www.sciencedirect.com/science/article/pii/S0169534709000196
+https://ourcodingclub.github.io/tutorials/mixed-models/
+https://m-clark.github.io/mixed-models-with-R/random_intercepts.html
+https://m-clark.github.io/generalized-additive-models/introduction.html
+
+GLMM book: https://education.illinois.edu/docs/default-source/carolyn-anderson/edpsy587/GLM_GLMM_LMM.pdf
+
+First, know your data. Is it normal? Can it be easily transformed?
+
+https://www.davidzeleny.net/anadat-r/doku.php/en:data_preparation
+https://www.datanovia.com/en/lessons/normality-test-in-r/
+http://www.css.cornell.edu/faculty/dgr2/_static/files/R_html/Transformations.html
+
+
+Visual inspection 
+
+```{r}
+# First, remove sites with less than 3 plots because they're noisy
+
+sites_cf2 <- sites_cf %>%
+  filter(plot_no > 2)
+
+#density plot
+ggdensity(sites_cf2$av_agb_site)
+ggdensity(sites_cf2$simpson_av_site)
+
+#qqplot
+ggqqplot(sites_cf2$av_agb_site)
+ggqqplot(sites_cf2$simpson_av_site)
+```
+
+Shapiro-Wilk's normality test:
+
+```{r}
+shapiro.test(sites_cf2$av_agb_site)
+shapiro.test(sites_cf2$simpson_av_site)
+shapiro.test(sites_cf2$temp)
+shapiro.test(sites_cf2$precip)
+shapiro.test(sites_cf2$aspect_gee) # normal p = 0.42
+shapiro.test(sites_cf2$slope_gee) # marginally normal p = 0.02
+shapiro.test(sites_cf2$mosaic)
+shapiro.test(sites_cf2$agriculture)
+shapiro.test(sites_cf2$grazing)
+shapiro.test(sites_cf2$sp_richness_site_av) # normal p=0.15
+shapiro.test(sites_cf2$shannon_av_site) # normal p = 0.60
+shapiro.test(sites_cf2$simpson_av_site)
+
+ggdensity(sites_cf2$temp)
+ggdensity(sites_cf2$precip)
+ggdensity(sites_cf2$aspect_gee)
+ggdensity(sites_cf2$slope_gee)
+ggdensity(sites_cf2$mosaic)
+ggdensity(sites_cf2$agriculture)
+ggdensity(sites_cf2$grazing)
+ggdensity(sites_cf2$sp_richness_site_av)
+ggdensity(sites_cf2$shannon_av_site)
+ggdensity(sites_cf2$simpson_av_site)
+ggdensity(sites_cf2$av_treedensity_site)
+ggdensity(sites_cf2$av_loreys_site)
+```
+In general, data is not normal (p<0.05). 
+Data transformation may solve the problem.
+
+## Multiple regression
+
+```{r}
+lm1 <- lm(av_agb_site ~ temp, data = sites_cf2)
+summary(lm1)
+plot(av_agb_site ~ temp, data = sites_cf2)
+abline(lm1)
+oldpar <- par(mfrow = c(2, 2))
+plot(lm1, which=c(1,2,4,5))
+
+bc1 <- boxcox(lm1)
+bc1_power <- bc1$x[which.max(bc1$y)] # 0.1414
+
+# Log Transformation:
+lm2 <- lm(log(av_agb_site) ~ temp, data = sites_cf2)
+summary(lm2)
+plot(log(av_agb_site) ~ temp, data = sites_cf2)
+abline(lm2)
+oldpar <- par(mfrow = c(2, 2))
+plot(lm2, which=c(1,2,4,5))
+
+
+```
+
+Looking good. Let's add variables to the model
+
+```{r}
+
+lm3 <- lm(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm3)
+
+# Only mosaic and simpson are significant, slope and ag marginally significant
+partial.resid.plot(lm3)
+
+numeric_variables <- sites_cf_4p %>%
+  select(temp, precip, altitude, aspect_gee, slope_gee, sp_richness_site_av, shannon_av_site, simpson_av_site, av_agb_site, mosaic, agriculture, grazing) %>%
+  mutate(log_agb = log(av_agb_site))
+
+corr <- cor(drop_na(numeric_variables[,-1]))
+corrplot(corr, method = 'ellipse')
+corrplot(corr, method = 'number')
+plot(numeric_variables)
+
+plot(numeric_variables$slope_gee, numeric_variables$log_agb)
+plot(numeric_variables$agriculture, numeric_variables$log_agb)
+plot(numeric_variables$grazing, numeric_variables$log_agb)
+plot(numeric_variables$mosaic, numeric_variables$log_agb)
+
+
+```
+
+```{r}
+lm3_residuals <- lm3$residuals
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = longitude, y = latitude, shape = subregion)) +
+  geom_point(aes(color = lm3$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+
+```
+
+Test for spatial autocorrelation of residuals:
+
+```{r}
+
+sites_coords <- sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  dplyr::select(longitude, latitude)
+
+#distance neighbors
+loc_subs <- cbind(sites_coords$longitude, sites_coords$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(neighbors_dist)
+plot(neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm3_residuals, zero.policy=T, 
+     nb2listw(neighbors_dist, zero.policy=T, style="W"))
+
+# p = 0.6696 with d= 10
+#p = 0.7727 with d= 25
+# No spatial autocorrelation!
+```
+
+Eliminate some variables from the model using regsubsets function:
+
+```{r}
+# regsubsets function
+
+lm4 <- regsubsets(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm4)
+
+lm4b <- regsubsets(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing + aspect_gee_c, data = sites_cf2)
+summary(lm4b)
+
+summary(lm4)
+data.frame(
+  Adj.R2 = which.max(res.sum$adjr2),
+  CP = which.min(res.sum$cp),
+  BIC = which.min(res.sum$bic)
+)
+```
+Run again the model, selecting one of the best subsets regression:
+
+```{r}
+lm5 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + mosaic_inv + agriculture, data = sites_cf2)
+summary(lm5)
+```
+
+lm5 plots
+
+```{r}
+partial.resid.plot(lm5)
+```
+
+Test for spatial autocorrelation:
+
+```{r}
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = longitude, y = latitude, shape = subregion)) +
+  geom_point(aes(color = lm5$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm5$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+partial.resid.plot(lm5)
+
+oldpar <- par(mfrow = c(2, 2))
+plot(lm5, which=c(1,2,4,5))
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm5$residuals, zero.policy=T, 
+     nb2listw(neighbors_dist, zero.policy=T, style="W"))
+# p = 0.66 with d=10. No spatial autocorrelation detected!
+# p = 0.6339 with d=25. No spatial autocorrelation detected!
+
+```
+
+Is there a relationship with some of the categorical variables?
+
+```{r}
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = subregion, y = log(av_agb_site))) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = subregion, y = lm5$residuals)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = land_tenure, y = lm5$residuals)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = landform, y = lm5$residuals)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = aspect_gee_c, y = log(av_agb_site))) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = aspect_gee_c, y = lm5$residuals)) +
+  geom_boxplot()
+
+```
+
+```{r}
+# Doesn't look like subregion has a strong effect but I'll run the model with subregion as a random effect just in case
+
+lm6 <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + sp_richness_site_av + mosaic + agriculture + subregion, data = sites_cf2)
+summary(lm6)
+```
+Subregion is not significant.
+Now I'll test aspect:
+
+```{r}
+lm6b <- lm(log(av_agb_site) ~ temp + precip + slope_gee + simpson_av_site + sp_richness_site_av + mosaic + agriculture + aspect_gee_c, data = sites_cf2)
+summary(lm6b)
+```
+Aspect doesn't seem to be relevant either.
+
+From these results, it's very obvious that disturbance and succession/patchiness drive the distribution of biomass.
+
+### Repeat analysis with only 40 sites
+
+```{r}
+
+sites_cf_4p <- sites_cf %>%
+  filter(plot_no == 4) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing))
+
+lm_agb_4p <- regsubsets(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic + agriculture + grazing + aspect_gee_c, data = sites_cf_4p)
+
+
+
+lm_agb_4p_summ <- summary(lm_agb_4p)
+
+lm_agb_4p_summ
+data.frame(
+  Adj.R2 = which.max(lm_agb_4p_summ$adjr2),
+  CP = which.min(lm_agb_4p_summ$cp),
+  BIC = which.min(lm_agb_4p_summ$bic)
+)
+
+
+```
+
+
+```{r}
+data.frame(
+  Adj.R2 = (lm_agb_4p_summ$adjr2),
+  CP = (lm_agb_4p_summ$cp),
+  BIC = (lm_agb_4p_summ$bic)
+)
+
+```
+
+Compare best two models:
+
+```{r}
+# 6 variables
+lm2_agb_4p <- lm(log(av_agb_site) ~ altitude + slope_gee + simpson_av_site + mosaic_inv + agriculture + grazing , data = sites_cf_4p)
+summary(lm2_agb_4p)
+
+lm2_agb_4p_residuals <- lm2_agb_4p$residuals
+```
+
+3 variables:
+```{r}
+
+# 3 variables
+
+lm3_agb_4p <- lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p)
+summary(lm3_agb_4p)
+```
+
+The one with 6 variables looks better (greater R2 and lower RSE).
+```{r}
+partial.resid.plot(lm2_agb_4p)
+```
+
+Let's test for spatial autocorrelation:
+
+```{r}
+
+sites_coords_4p <- sites_cf_4p %>%
+  dplyr::select(longitude, latitude)
+
+#distance neighbors
+loc_subs <- cbind(sites_coords_4p$longitude, sites_coords_4p$latitude)
+d_subs <- 25 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(neighbors_dist)
+plot(neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm2_agb_4p_residuals, zero.policy=T, 
+     nb2listw(neighbors_dist, zero.policy=T, style="W"))
+
+# p-value = 0.558 with d= 10 Moran I= -0.0726
+# p-value = 0.5982 with d= 25 Moran I= -0.0490
+# p-value = 0.1479 with d= 50 Moran I= 0.0289
+# No spatial autocorrelation!
+```
+
+There's no spatial autocorrelation.
+
+Map of residuals:
+
+```{r}
+sites_coords_4p %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm2_agb_4p_residuals), size = 4) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+```
+
+Relationship between subregion and land tenure
+
+```{r}
+sites_cf_4p %>%
+  ggplot(aes(x = subregion, y = lm2_agb_4p_residuals)) +
+  geom_boxplot()
+
+sites_cf_4p %>%
+  ggplot(aes(x = subregion, y = av_agb_site)) +
+  geom_boxplot()
+
+sites_cf_4p %>%
+  ggplot(aes(x = land_tenure, y = lm2_agb_4p_residuals)) +
+  geom_boxplot()
+
+sites_cf_4p %>%
+  ggplot(aes(x = land_tenure, y = av_agb_site)) +
+  geom_boxplot()
+```
+
+Again, but scaling variables:
+
+```{r}
+#Make data frame with variables
+
+df <- sites_cf_4p %>%
+  select(av_agb_site, temp, precip, altitude, slope_gee, shannon_av_site, simpson_av_site, sp_richness_site, mosaic_inv, agriculture, grazing) %>%
+  as.data.frame()
+df$site -> row.names(df)
+df <- df[,-1]
+df
+
+df_s <- as.data.frame(scale(df))
+head(df_s)
+class(df_s)
+
+
+lm_df <- regsubsets(av_agb_site ~ temp + precip + altitude + slope_gee +  shannon_av_site + simpson_av_site + sp_richness_site + mosaic_inv + agriculture + grazing, data = df_s)
+lm_df_su <- summary(lm_df)
+```
+
+Best model:
+```{r}
+data.frame(
+  Adj.R2 = (lm_df_su$adjr2),
+  CP = (lm_df_su$cp),
+  BIC = (lm_df_su$bic)
+)
+
+data.frame(
+  Adj.R2 = which.max(lm_df_su$adjr2),
+  CP = which.min(lm_df_su$cp),
+  BIC = which.min(lm_df_su$bic)
+)
+```
+
+Best model with 3 predictors:
+
+```{r}
+lm_df1 <- lm(av_agb_site ~ temp + sp_richness_site + mosaic_inv, data = df_s)
+summary(lm_df1)
+
+partial.resid.plot(lm_df1)
+```
+
+## PCA with environmental variables to reduce predictors 
+
+```{r}
+env <- sites_cf_4p %>%
+  select(temp, precip, altitude, slope_gee)
+env <- as.data.frame(env)
+env$site -> row.names(env)
+env <- env[,-1]
+
+pca_env <- rda(env, scale = T)
+summary(pca_env)
+plot(pca_env)
+biplot(pca_env)
+
+```
+
+```{r}
+pc1 <- as.data.frame(pca_env$CA$u[,1])
+colnames(pc1) <- "env_pc1"
+pc1
+
+plot(pc1[,1], sites_cf_4p$precip)
+plot(pc1[,1], sites_cf_4p$temp)
+plot(pc1[,1], sites_cf_4p$altitude)
+
+summary(lm(pc1[,1] ~ sites_cf_4p$altitude))
+```
+
+### Multiple linear regression with env PC1
+
+```{r}
+# Add PC1 to data set
+
+class(pc1)
+
+env_pc1 <- as_tibble(pc1, .name_repair = "minimal", rownames = "site")
+
+
+sites_cf_4p <- sites_cf_4p %>%
+  left_join(env_pc1, by = "site")
+  
+# Run regression model with env_pc1
+
+ms <- regsubsets(log(av_agb_site) ~ env_pc1 + slope_gee + aspect_gee_c + shannon_av_site + simpson_av_site + sp_richness_site_av + mosaic_inv + agriculture + grazing, data = sites_cf_4p)
+
+ms_sum <- summary(ms)
+
+# Best model:
+
+data.frame(
+  Adj.R2 = (ms_sum$adjr2),
+  CP = (ms_sum$cp),
+  BIC = (ms_sum$bic)
+)
+
+data.frame(
+  Adj.R2 = which.max(ms_sum$adjr2),
+  CP = which.min(ms_sum$cp),
+  BIC = which.min(ms_sum$bic)
+)
+
+ms_sum
+
+# Best model has 3 predictors: 
+#  slope_gee
+#  mosaic_inv
+#  agriculture
+
+
+```
+
+Multiple regression model with 3 predictors:
+```{r}
+
+summary(lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p))
+AIC(lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p))
+partial.resid.plot(lm(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p))
+```
+
+## GAM
+
+```{r}
+gam1 <- gam(log(av_agb_site) ~ s(env_pc1) + s(mosaic_inv, k = 9), family = Gamma(link=log), data = sites_cf_4p)
+gam1
+summary(gam1)
+plot(gam1, residuals = T, cex=3)
+AIC(gam1)
+
+gam2 <- gam(log(av_agb_site) ~ s(slope_gee) + s(env_pc1) + s(mosaic_inv, k = 9), family = Gamma(link=log), data = sites_cf_4p)
+gam2
+summary(gam2)
+plot(gam2, residuals = T, cex=3)
+AIC(gam2)
+
+gam3 <- gam(log(av_agb_site) ~ s(slope_gee) + s(env_pc1) + s(mosaic_inv, k = 9) + s(agriculture, k=3), family = Gamma(link=log), data = sites_cf_4p)
+gam3
+summary(gam3)
+plot(gam3, residuals = T, cex=3)
+AIC(gam3)
+
+gam4 <- gam(log(av_agb_site) ~ s(slope_gee) + s(mosaic_inv, k = 9) + s(agriculture, k=3), family = Gamma(link=log), data = sites_cf_4p)
+gam4
+summary(gam4)
+plot(gam4, residuals = T, cex=3)
+AIC(gam4)
+
+gamlm <- gam(log(av_agb_site) ~ slope_gee + mosaic_inv + agriculture, data = sites_cf_4p)
+summary(gamlm)
+AIC(gamlm)
+
+gamlm2 <- gam(log(av_agb_site) ~ env_pc1 + slope_gee + mosaic_inv + agriculture, data = sites_cf_4p)
+summary(gamlm2)
+AIC(gamlm2)
+
+anova(gam3, gam4, gamlm, gamlm2, test="Chisq")
+
+ggplot(sites_cf_4p, aes(x = env_pc1, y = mosaic_inv, color = av_agb_site)) +
+  geom_point(size = 4) +
+  scale_color_gradient(high = "darkgreen", low = "yellow") +
+  geom_smooth(method = "lm", color = "darkgray")
+
+```
+
+
+## Multiple regression analysis: tree diversity
+
+Let's test the relationship between these same variables and tree diversity.
+
+```{r}
+
+lm7 <- lm(shannon_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm7)
+
+lm8 <- lm(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm8)
+
+lm8b <- lm((simpson_av_site)^2 ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm8b)
+ggqqplot((sites_cf2$simpson_av_site)^2)
+
+lm9 <- lm(sp_richness_site_av ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site + mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm9)
+```
+The trend is a bit different when it comes to diversity. Here, grazing seems to be more important than in past models.
+Let's look for the best model
+
+```{r}
+# regsubsets function
+
+lm10 <- regsubsets(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm10)
+
+lm10b <- regsubsets((simpson_av_site)^2 ~ temp + precip + altitude + slope_gee  + aspect_gee_c + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm10b)
+```
+```{r}
+lm11 <- lm(simpson_av_site ~ altitude + slope_gee + av_agb_site +  mosaic + agriculture + grazing, data = sites_cf2)
+summary(lm11)
+
+partial.resid.plot(lm11)
+
+lm11b <- lm((simpson_av_site)^2 ~ altitude + aspect_gee_c + av_agb_site +  mosaic_inv + agriculture + grazing, data = sites_cf2)
+summary(lm11b)
+
+partial.resid.plot(lm11b)
+
+plot((simpson_av_site)^2 ~ aspect_gee, data = sites_cf2)
+abline(lm((sites_cf2$simpson_av_site)^2 ~ sites_cf2$aspect_gee))
+```
+
+QQplots 
+
+```{r}
+oldpar <- par(mfrow = c(2, 2))
+plot(lm11, which=c(1,2,4,5))
+
+oldpar <- par(mfrow = c(2, 2))
+plot(lm11b, which=c(1,2,4,5))
+```
+
+Relationship with categorical variables
+
+```{r}
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = subregion, y = simpson_av_site)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = subregion, y = lm11$residuals)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = land_tenure, y = simpson_av_site)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = land_tenure, y = lm11$residuals)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = aspect_gee_c, y = simpson_av_site)) +
+  geom_boxplot()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = aspect_gee_c, y = lm11$residuals)) +
+  geom_boxplot()
+```
+
+```{r}
+
+lm12 <- lm(simpson_av_site ~ altitude + slope_gee + av_agb_site +  mosaic + agriculture + grazing + subregion, data = sites_cf2)
+summary(lm12)
+```
+Map residuals of best model
+```{r}
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm11$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm11$residuals, zero.policy=T, 
+     nb2listw(neighbors_dist, zero.policy=T, style="W"))
+#no spatial autocorrelation
+#p = 0.8025
+
+```
+
+### Repeat diversity regressions with sites with 4p
+
+```{r}
+lm_div_4p <- regsubsets(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee_c + mosaic_inv + agriculture + grazing + log(av_agb_site), data = sites_cf_4p)
+
+lm_div_4p_summ <- summary(lm_div_4p)
+
+lm_div_4p_summ
+data.frame(
+  Adj.R2 = which.max(lm_div_4p_summ$adjr2),
+  CP = which.min(lm_div_4p_summ$cp),
+  BIC = which.min(lm_div_4p_summ$bic)
+)
+
+
+```
+
+Models: 
+
+```{r}
+data.frame(
+  Adj.R2 = (lm_div_4p_summ$adjr2),
+  CP = (lm_div_4p_summ$cp),
+  BIC = (lm_div_4p_summ$bic)
+)
+
+```
+
+The best model has only two variables, agriculture and grazing:
+
+```{r}
+lm2_div_4p <- lm((simpson_av_site)^2 ~ mosaic_inv + grazing, data = sites_cf_4p)
+summary(lm2_div_4p)
+```
+
+However, the r2 is low
+
+```{r}
+partial.resid.plot(lm2_div_4p)
+```
+
+QQplots
+
+```{r}
+oldpar <- par(mfrow = c(2, 2))
+plot(lm2_div_4p, which=c(1,2,4,5))
+```
+
+
+### Let's take a look at individual relations
+
+```{r}
+# biomass ~ mosaic
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = log(av_agb_site))) +
+  geom_point()
+
+
+# diversity ~ mosaic
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = simpson_av_site)) +
+  geom_point()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = sp_richness_site_av)) +
+  geom_point()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = shannon_av_site)) +
+  geom_point()
+
+sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(!is.na(agriculture)) %>%
+  filter(!is.na(grazing)) %>%
+  ggplot(aes(x = mosaic, y = altitude)) +
+  geom_point()
+
+```
+
+# Environment and AGB
+
+Now let's remove the effect of management filtering out sites with very young forests and disturbance
+
+```{r}
+
+forest <- sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(agriculture == 0) %>%
+  filter(grazing == 0) %>%
+  filter(mosaic > 0.49)
+
+lm13 <- lm(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee + simpson_av_site, data = forest)
+summary(lm13)
+
+lm14 <- lm(log(av_agb_site) ~ temp + precip + altitude + slope_gee + aspect_gee, data = forest)
+summary(lm14)
+
+#lm13 looks better
+
+forest %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm13$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+#distance neighbors
+loc_subs2 <- cbind(forest$longitude, forest$latitude)
+d_subs <- 25 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+forest_neighbors_dist <- dnearneigh(loc_subs2, 0, d_subs, longlat = T)
+str(forest_neighbors_dist)
+plot(forest_neighbors_dist, loc_subs2)
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm13$residuals, zero.policy=T, 
+     nb2listw(forest_neighbors_dist, zero.policy=T, style="W"))
+
+# Didn't find spatial autocorrelation in the residuals. I tested d =10, 25, and 50
+```
+
+Boxplots:
+
+```{r}
+forest %>%
+  ggplot(aes(x = subregion, y = log(av_agb_site))) +
+  geom_boxplot()
+
+forest %>%
+  ggplot(aes(x = subregion, y = lm13$residuals)) +
+  geom_boxplot()
+
+forest %>%
+  ggplot(aes(x = aspect_gee_c, y = log(av_agb_site))) +
+  geom_boxplot()
+
+forest %>%
+  ggplot(aes(x = aspect_gee_c, y = lm13$residuals)) +
+  geom_boxplot()
+
+lm15 <- lm(log(av_agb_site) ~ temp + precip + altitude + slope_gee + simpson_av_site + aspect_gee_c, data = forest)
+summary(lm15)
+
+oldpar <- par(mfrow = c(2, 2))
+plot(lm15, which=c(1,2,4,5))
+
+partial.resid.plot(lm15)
+```
+How is biomass related to these environmental variables
+
+```{r}
+
+forest %>%
+  ggplot(aes(x = temp, y = av_agb_site)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+
+forest %>%
+  ggplot(aes(x = precip, y = av_agb_site)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+
+forest %>%
+  ggplot(aes(x = altitude, y = av_agb_site)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+
+forest %>%
+  filter(plot_no > 3) %>%
+  ggplot(aes(x = simpson, y = av_agb_site)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+
+forest %>%
+  filter(plot_no > 3) %>%
+  ggplot(aes(x = sp_richness_site, y = av_agb_site)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+
+forest %>%
+  ggplot(aes(x = longitude, y = latitude, shape = aspect_gee_c)) +
+  geom_point(aes(color = av_agb_site), size = 3) +
+  scale_colour_gradient(low = "#f5f5f5", high = "darkgreen") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = lm15$residuals), size = 3) +
+  scale_colour_gradient2(low = "#d8b365", mid= "#f5f5f5", high = "#5ab4ac") +
+  theme_classic()
+
+#Moran test
+# spatial autocorrelation of lm3 residuals
+moran.test(lm15$residuals, zero.policy=T, 
+     nb2listw(forest_neighbors_dist, zero.policy=T, style="W"))
+
+# No spatial autocorrelation when d= 50 nor when d=25
+
+```
+Let's explore the relationship between temp, precip and biomass
+
+```{r}
+forest %>%
+  ggplot(aes(x = temp, y = precip, color = av_agb_site, shape = aspect_gee_c)) +
+  geom_point(size = 4) +
+  scale_colour_gradient(low = "#f5f5f5", high = "darkgreen") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = precip, y = log(av_agb_site))) +
+  geom_point(size = 4) +
+  geom_smooth(method= "lm") +
+  #scale_colour_gradient(low = "#f5f5f5", high = "darkblue") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = precip, y = av_agb_site, color = temp, shape = aspect_gee_c)) +
+  geom_point(size = 4) +
+  scale_colour_gradient(low = "#f5f5f5", high = "red") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = precip, y = altitude, color = av_agb_site, shape = aspect_gee_c)) +
+  geom_point(size = 4) +
+  scale_colour_gradient(low = "#f5f5f5", high = "darkgreen") +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = av_agb_site, y = altitude, color = precip, shape = aspect_gee_c)) +
+  geom_point(size = 4) +
+  scale_colour_gradient(low = "#f5f5f5", high = "darkblue") +
+  theme_classic()
+```
+
+```{r}
+
+forest %>%
+  ggplot(aes(x = av_loreys_site, y = av_agb_site)) +
+  geom_point(size = 4) +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = av_treeheight_site, y = av_agb_site)) +
+  geom_point(size = 4) +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = av_basalarea_site, y = av_agb_site)) +
+  geom_point(size = 4) +
+  theme_classic()
+
+forest %>%
+  ggplot(aes(x = tree_no_ave, y = av_agb_site)) +
+  geom_point(size = 4) +
+  theme_classic()
+```
+
+# Environment and diversity
+
+```{r}
+
+forest4p <- forest %>%
+  filter(plot_no == 4)
+
+lm16 <- lm((simpson_av_site)^2 ~ temp + precip + altitude + slope_gee + aspect_gee_c, data = forest)
+summary(lm16)
+
+lm16b <- lm((shannon_av_site) ~ temp + precip + altitude + slope_gee + aspect_gee_c, data = forest)
+summary(lm16b)
+
+lm16c <- lm((sp_richness_site_av) ~ temp + precip + altitude + slope_gee + aspect_gee_c, data = forest)
+summary(lm16c)
+
+summary(regsubsets(simpson_av_site ~ temp + precip + altitude + slope_gee + aspect_gee_c, data = forest))
+
+lm16d <- lm(sp_richness_site_av ~ precip, data = forest)
+summary(lm16d)
+```
+Diversity didn't show a relationship with these environmental variables.
+
+# RDA
+
+```{r}
+sites_cf_4p_nona <- sites_cf %>%
+  filter(plot_no >3) %>%
+  filter(!is.na(agriculture) | !is.na(grazing))
+
+sites4p_nona <- sites_cf_4p_nona %>%
+  select(site)
+
+sites4p_nona_list <- as.list(sites4p_nona)
+
+sp_site4p_nona <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  right_join(sites4p_nona) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+#Remove spp with abundance = 0 
+sp_site4p_nona <- sp_site4p_nona[, which(colSums(sp_site4p_nona) != 0)]
+
+sp_site4p_nona <- sp_site4p_nona[which(rowSums(sp_site4p_nona) != 0), ]
+
+rda1 <- rda(log1p(sp_site4p_nona) ~ sites_cf_4p_nona$mosaic + sites_cf_4p_nona$agriculture + sites_cf_4p_nona$grazing, scale = T)
+rda1
+summary(rda1)
+```
+The three variables explain 8.56% of the variance ((5.042+4.050+3.583)/148) = 0.08564189).
+PC1 and PC2 together explain 13.455% of the variance.
+
+```{r}
+plot(rda1)
+ordiplot(rda1, display = 'sites', type = 'text')
+ordiplot(rda1, display = 'species', type = 'text')
+
+ordiplot (rda1, display = 'species', choices = c(4,5), type = 'n')
+orditorp (rda1, display = 'species', choices = c(4,5), pcol = 'grey', pch = '+')
+
+```
+It seems that these three variables are not enough for explaining variation in sp composition.
+Let's add temp and precip.
+
+```{r}
+rda2 <- rda(log1p(sp_site4p_nona) ~ sites_cf_4p_nona$mosaic + sites_cf_4p_nona$agriculture + sites_cf_4p_nona$grazing + sites_cf_4p_nona$temp + sites_cf_4p_nona$precip, scale = T)
+rda2
+summary(rda2)
+```
+
+Plots
+
+```{r}
+plot(rda2)
+ordiplot(rda2, display = 'sites', type = 'text')
+ordiplot(rda2, display = 'species', type = 'text')
+
+ordiplot (rda2, display = 'species', choices = c(6,7), type = 'n')
+orditorp (rda2, display = 'species', choices = c(6,7), pcol = 'grey', pch = '+')
+
+ordiplot (rda2, display = 'species', choices = c(1,2), type = 'n')
+orditorp (rda2, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+```
+Although this rda explains a bit more of variation, the pattern is not clear.
+
+# Forest ~ environment
+
+```{r}
+
+sites_forest4p <- forest4p %>%
+  select(site)
+
+sp_site4p_forest <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  right_join(sites_forest4p) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+#Remove spp with abundance = 0 
+sp_site4p_forest <- sp_site4p_forest[, which(colSums(sp_site4p_forest) != 0)]
+
+sp_site4p_forest <- sp_site4p_forest[which(rowSums(sp_site4p_forest) != 0), ]
+
+# RDA
+
+rda3 <- rda(log1p(sp_site4p_forest) ~ forest4p$temp + forest4p$precip + forest4p$altitude + forest4p$slope_gee + forest4p$aspect_gee_c, scale = T)
+rda3
+summary(rda3)
+plot(rda3)
+
+
+rda3b <- rda(log1p(sp_site4p_forest) ~ forest4p$temp + forest4p$precip + forest4p$altitude, scale = T)
+rda3b
+summary(rda3b)
+plot(rda3b)
+
+rda3c <- rda(log1p(sp_site4p_forest) ~ forest4p$aspect_gee_c, scale = T)
+rda3c
+summary(rda3c)
+```
+
+Plots
+
+```{r}
+plot(rda3)
+ordiplot(rda3, display = 'sites', type = 'text')
+ordiplot(rda3, display = 'species', type = 'text')
+
+ordiplot (rda3, display = 'species', choices = c(7,8), type = 'n')
+orditorp (rda3, display = 'species', choices = c(7,8), pcol = 'grey', pch = '+')
+ordiplot(rda3, display = 'sites', choices = c(7,8), type = 'text')
+
+ordiplot (rda3, display = 'species', choices = c(1,2), type = 'n')
+orditorp (rda3, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+
+plot(rda3b)
+ordiplot(rda3b, display = 'sites', type = 'text')
+ordiplot(rda3b, display = 'species', type = 'text')
+ordiplot (rda3b, display = 'species', choices = c(1,2), type = 'n')
+orditorp (rda3b, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+ordiplot (rda3b, display = 'species', choices = c(4,5), type = 'n')
+orditorp (rda3b, display = 'species', choices = c(4,5), pcol = 'grey', pch = '+')
+
+plot(rda3c)
+ordiplot(rda3c, display = 'sites', type = 'text')
+ordiplot(rda3c, display = 'species', type = 'text')
+ordiplot(rda3c, display = 'species', choices = c(1,2), type = 'n')
+orditorp(rda3c, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+ordiplot(rda3c, display = 'species', choices = c(3,4), type = 'n')
+orditorp(rda3c, display = 'species', choices = c(3,4), pcol = 'grey', pch = '+')
+
+```
+
+# Composition of only forest
+
+```{r}
+pca_forest <- rda(log1p(sp_site4p_forest))
+summary(pca_forest)
+
+plot(pca_forest)
+
+ordiplot(pca_forest, display = 'sites', type = 'text')
+ordiplot (pca_forest, display = 'species', choices = c(1,2), type = 'n')
+orditorp (pca_forest, display = 'species', choices = c(1,2), pcol = 'grey', pch = '+')
+ordiplot (pca_forest, display = 'species', choices = c(3,4), type = 'n')
+orditorp (pca_forest, display = 'species', choices = c(3,4), pcol = 'grey', pch = '+')
+
+```
+
+Hierarchical cluster with forest sites
+
+```{r}
+dis_forest <- vegdist(log1p(sp_site4p_forest), method = "euclidean")
+clust_forest <- hclust(dis_forest, method = "ward.D")
+plot(clust_forest, cex = 1)
+rect.hclust(clust_forest, k = 4)
+```
+Add relevant info to cluster
+
+```{r}
+dend_forest <- as.dendrogram(clust_forest)
+dend_forest
+
+# Extract the data (for rectangular lines)
+# Type can be "rectangle" or "triangle"
+dend_data_f <- dendro_data(dend_forest, type = "rectangle")
+names(dend_data_f)
+
+head(dend_data_f$segments)
+head(dend_data_f$labels)
+
+labels_info_f <- forest4p %>%
+  select(altitude, temp, precip, land_tenure, landform, slope_gee, aspect_gee_c) 
+
+dend_labels_f <- as_tibble(dend_data_f$labels) %>%
+  mutate(site = as.character(label)) %>%
+  left_join(labels_info_f, by = 'site')
+
+#rect_f <- data.frame(x1=c(0, 28.6, 34.6), x2 = c(28.4, 34.4, 41), y1= c(-0.5, -0.5, -0.5), y2= c(16,16,16))
+
+# Plot line segments and add labels
+ggplot(dend_data_f$segments) + 
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
+  geom_text(data = dend_labels_f, aes(x, y = -0.7, label = label), hjust = 1, angle = 90, size = 3) +
+  ylim(-3, 20) +
+  geom_point(data = dend_labels_f, aes(x, y, color = as.factor(aspect_gee_c)), size = 3) +
+  #scale_colour_gradient(low = "lightblue", high = "darkblue") +
+  #geom_rect(data = rect, mapping= aes(xmin = x1, xmax = x2, ymin = y1, ymax = y2), fill = NA, color = "gray70", linetype = 2, size = 0.2) +
+  theme_classic()
+```
+
+# Tree size contribution to total AGB
+
+```{r}
+trees_cf %>%
+  ggplot(aes(x= diam_bh)) +
+  geom_histogram()
+
+sites <- sites_cf2 %>%
+  select(site)
+
+agb_class_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(agb_class_site = sum(agb))
+
+agb_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(agb_site = sum(agb))  
+
+head(agb_site)
+head(agb_class_site)
+
+agb_class_site %>%
+  left_join(agb_site, by = "site") %>%
+  mutate(agb_prop = agb_class_site/agb_site) %>%
+  ggplot(aes(x = diam_class, y = agb_prop)) +
+  geom_boxplot()
+```
+
+```{r}
+
+stems_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(stems = n())
+
+stems_class_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(stems_class = n())
+
+head(stems_site)
+head(stems_class_site)
+
+stems_class_site %>%
+  left_join(stems_site, by = "site") %>%
+  mutate(prop_stems = stems_class/stems) %>%
+  ggplot(aes(x = diam_class, y = prop_stems)) +
+  geom_boxplot()
+```
+
+Repeat with only forest
+
+```{r}
+
+forest_sites <- select(forest, site)
+
+agb_class_forest <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(agb_class_forest = sum(agb))
+
+agb_forest <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(agb_forest = sum(agb))  
+
+head(agb_forest)
+head(agb_class_forest)
+
+agb_class_forest %>%
+  left_join(agb_forest, by = "site") %>%
+  mutate(agb_prop_f = agb_class_forest/agb_forest) %>%
+  ggplot(aes(x = diam_class, y = agb_prop_f)) +
+  geom_boxplot()
+```
+
+```{r}
+
+stems_forest <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(stems_f = n())
+
+stems_class_forest <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(stems_class_f = n())
+
+head(stems_forest)
+head(stems_class_forest)
+
+stems_class_forest %>%
+  left_join(stems_forest, by = "site") %>%
+  mutate(prop_stems_f = stems_class_f/stems_f) %>%
+  ggplot(aes(x = diam_class, y = prop_stems_f)) +
+  geom_boxplot()
+
+```
+
+Density of trees > 50cm
+
+```{r}
+
+sd6 <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(sd = n()/0.16) %>% # not exact because some sites have only three plots
+  filter(diam_class == "6")
+
+sites_cf2 %>%
+  right_join(sd6) %>%
+  ggplot(aes(x = mosaic, y = sd)) +
+  geom_point()
+
+trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  filter(diam_class == "6") %>%
+  group_by(species) %>%
+  summarise(sp = n(), agb_total = sum(agb)) %>%
+  arrange(-sp)
+```
+
+Forest-agriculture mosaics patterns removing forest sites
+
+```{r}
+mosaic <- sites_cf %>%
+  filter(plot_no > 2) %>%
+  filter(mosaic < 0.49)
+
+mosaic_sites <- mosaic %>%
+  select(site)
+
+agb_class_m <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(agb_class_m = sum(agb))
+
+agb_site_m <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(agb_m = sum(agb))  
+
+head(agb_site_m)
+head(agb_class_m)
+
+agb_class_m %>%
+  left_join(agb_site_m, by = "site") %>%
+  mutate(agb_prop = agb_class_m/agb_m) %>%
+  ggplot(aes(x = diam_class, y = agb_prop)) +
+  geom_boxplot()
+
+```
+Stem density in mosaics
+
+```{r}
+stems_m <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(stems_m = n())
+
+stems_class_m <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(stems_class_m = n())
+
+head(stems_m)
+head(stems_class_m)
+
+stems_class_m %>%
+  left_join(stems_m, by = "site") %>%
+  mutate(prop_stems = stems_class_m/stems_m) %>%
+  ggplot(aes(x = diam_class, y = prop_stems)) +
+  geom_boxplot()
+```
+
+Species contribution to AGB
+
+```{r}
+
+agb_sp_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, species) %>%
+  summarise(agb_sp_site = sum(agb))
+
+agb_sp_site %>%
+  left_join(agb_site, by = "site") %>%
+  #mutate(agb_prop_sp = agb_sp_site/agb_site) %>%
+  group_by(species) %>%
+  summarise(agb_sp_total = sum(agb_sp_site)) %>%
+  arrange(-agb_sp_total)
+
+
+  filter(agb_sp_total > 50) %>%
+  ggplot(aes(x = species, y = agb_sp_total)) +
+  geom_boxplot()
+
+```
+Species by diam class
+
+```{r}
+
+# All sites:
+trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(diam_class, species) %>%
+  summarise(class_species = n(), agb_class_sp = sum(agb)) %>%
+  arrange(diam_class, -agb_class_sp, - class_species) #%>%
+#  filter(diam_class == "6") # Change this to see the contribution of each class
+
+# Forest sites
+trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(forest_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(diam_class, species) %>%
+  summarise(class_species = n(), agb_class_sp = sum(agb)) %>%
+  arrange(diam_class, -agb_class_sp, - class_species) #%>%
+#  filter(diam_class == "6") # Change this to see the contribution of each class
+
+# Mosaic sites
+trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(mosaic_sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(diam_class, species) %>%
+  summarise(class_species = n(), agb_class_sp = sum(agb)) %>%
+  arrange(diam_class, -agb_class_sp, - class_species) #%>%
+#  filter(diam_class == "6") # Change this to see the contribution of each class
+```
+# Relationship between stem density and sp richness
+
+```{r}
+sites_cf2 %>%
+  ggplot(aes(x = av_treedensity_site, y = sp_richness_site_av)) +
+  geom_point() +
+  geom_smooth(span = 1, se= T) +
+  #geom_smooth(method= "lm", color="tomato", se= F) +
+  scale_x_continuous(limits = c(0,1500))
+
+```
+
+# Relationship between basal area, stem density and lorey's height
+
+```{r}
+
+sites_cf2 %>%
+  ggplot(aes(y = av_basalarea_site, x = av_treedensity_site)) +
+  geom_point() +
+  geom_smooth(span = 1, se= T)
+
+sites_cf2 %>%
+  ggplot(aes(y = av_loreys_site, x = av_treedensity_site)) +
+  geom_point() +
+  geom_smooth(span = 1, se= T)
+```
+
+---------------------------------------------------------------------
+Data distribution
+What probability distribution best fits my data?
+
+'the distribution for a response variable can be
+any member of the natural exponential dispersion family. Members of the natural
+exponential family for continuous response variables include the normal, gamma,
+and inverse Gaussian distributions, and for discrete outcome variables the Poisson, Bernoulli, and binomial distributions.'
+'A natural exponential dispersion distribution has two parameters, a natural parameter θ and a dispersion parameter φ . The parameter θ conveys information about the location of the distribution (i.e., mean). When the distribution is expressed in its most basic or canonical form, the natural parameter θ is a function of the mean μ of the distribution. This function is known as the canonical link.'
+https://education.illinois.edu/docs/default-source/carolyn-anderson/edpsy587/GLM_GLMM_LMM.pdf
+
+```{r}
+
+agb_test <- sites_cf2$av_agb_site
+
+agb_test_log <- log(sites_cf2$av_agb_site)
+agb_test_sr <- sqrt(sites_cf2$av_agb_site)
+
+qqp(agb_test, "norm")
+qqp(agb_test_log, "norm")
+qqp(agb_test_sr, "norm")
+
+qqp(agb_test, "lnorm")
+
+gamma <- fitdistr(agb_test, "gamma")
+qqp(agb_test, "gamma", shape = gamma$estimate[[1]], rate = gamma$estimate[[2]])
+
+inv <- fitdist(agb_test, "invgauss", start = list(mean = 2, shape = 1))
+qqp(agb_test, "invgauss", mean = inv$estimate[[1]], shape = inv$estimate[[2]])
+
+```
+
+Diversity
+
+```{r}
+
+simpson_test <- sites_cf2$simpson_av_site
+simpson_test_p <- (sites_cf2$simpson_av_site)^2
+
+shapiro.test(simpson_test)
+
+qqp(simpson_test, "norm")
+qqp(simpson_test_p, "norm")
+
+```
+
+Let's take a look at the data
+
+```{r}
+numeric_variables <- sites_cf %>%
+  filter(plot_no > 2) %>%
+  select(temp, precip, altitude, aspect_gee, slope_gee, sp_richness_site_av, shannon_av_site, simpson_av_site, av_agb_site, mosaic, agriculture, grazing) 
+
+corr <- cor(drop_na(numeric_variables[,-1]))
+corrplot(corr, method = 'ellipse')
+corrplot(corr, method = 'number')
+plot(numeric_variables)
+
+aspect_agb <- lm(numeric_variables$aspect_gee ~ numeric_variables$av_agb_site, data = numeric_variables)
+
+summary(aspect_agb)
+plot(numeric_variables$aspect_gee, numeric_variables$av_agb_site)
+abline(aspect_agb)
+
+slope_agb <- lm(numeric_variables$slope_gee ~ numeric_variables$av_agb_site, data = numeric_variables)
+
+summary(slope_agb)
+plot(numeric_variables$slope_gee, numeric_variables$av_agb_site)
+abline(slope_agb)
+```
+
+It seems like aspect and slope are not correlated with the rest of the variables (although empirical data at local scales have shown a correlation between these variables and biomass)
+
+Model
+
+```{r}
+
+lm1 <- lm(numeric_variables$av_agb_site ~ numeric_variables$mosaic)
+plot(numeric_variables$av_agb_site ~ numeric_variables$mosaic)
+abline(lm1)
+summary(lm1)
+
+lm2 <- lm(numeric_variables$av_agb_site ~ numeric_variables$agriculture)
+plot(numeric_variables$av_agb_site ~ numeric_variables$agriculture)
+abline(lm2)
+summary(lm2)
+
+lm3 <- lm(numeric_variables$av_agb_site ~ numeric_variables$grazing)
+plot(numeric_variables$av_agb_site ~ numeric_variables$grazing)
+abline(lm3)
+summary(lm3)
+
+lm4 <- lm(numeric_variables$av_agb_site ~ numeric_variables$sp_richness_site_av)
+plot(numeric_variables$av_agb_site ~ numeric_variables$sp_richness_site_av)
+abline(lm4)
+summary(lm4)
+
+lm5 <- lm(numeric_variables$av_agb_site ~ numeric_variables$shannon_av_site)
+plot(numeric_variables$av_agb_site ~ numeric_variables$shannon_av_site)
+abline(lm5)
+summary(lm5)
+
+lm6 <- lm(numeric_variables$av_agb_site ~ numeric_variables$simpson_av_site)
+plot(numeric_variables$av_agb_site ~ numeric_variables$simpson_av_site)
+abline(lm6)
+summary(lm6)
+
+lm7 <- lm(numeric_variables$av_agb_site ~ numeric_variables$precip)
+plot(numeric_variables$av_agb_site ~ numeric_variables$precip)
+abline(lm7)
+summary(lm7)
+
+lm8 <- lm(numeric_variables$av_agb_site ~ numeric_variables$temp)
+plot(numeric_variables$av_agb_site ~ numeric_variables$temp)
+abline(lm8)
+summary(lm8)
+```
+
+# Spatial autocorrelation
+
+Examples: 
+- https://www.spatialanalysisonline.com/An%20Introduction%20to%20Spatial%20Data%20Analysis%20in%20R.pdf
+- https://gwenantell.com/exploring-spatial-autocorrelation-in-r/
+- https://rpubs.com/quarcs-lab/spatial-autocorrelation
+- Bart's class: https://pjbartlein.github.io/GeogDataAnalysis/lec13.html
+
+Get distance-neighbor matrix  and plot network of sites.
+
+```{r}
+
+#distance neighbors
+loc <- cbind(sites_cf$longitude, sites_cf$latitude)
+d <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_neighbors_dist <- dnearneigh(loc, 0, d, longlat = T)
+str(sites_neighbors_dist)
+plot(sites_neighbors_dist, loc)
+
+plot(loc)
+
+```
+
+
+
+Moran test
+
+```{r}
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_cf$av_agb_site, zero.policy=T, 
+     nb2listw(sites_neighbors_dist, zero.policy=T, style="W"))
+
+
+```
+*25km apart*:
+	Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")    
+
+Moran I statistic standard deviate = 3.2834, p-value =
+0.0005128
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.106909344      -0.009433962       0.001255547
+      
+
+*20 km apart:*
+Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")    
+
+Moran I statistic standard deviate = 2.7158, p-value =
+0.003305
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.105901804      -0.009433962       0.001803527 
+
+*15 km apart:*
+Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")  n reduced by no-neighbour observations
+  
+
+Moran I statistic standard deviate = 1.9438, p-value =
+0.02596
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.098077538      -0.009523810       0.003064303 
+
+*10 km apart:*
+Moran I test under randomisation
+
+data:  sites_cf$av_agb_site  
+weights: nb2listw(sites_neighbors_dist, zero.policy = T, style = "W")  n reduced by no-neighbour observations
+  
+
+Moran I statistic standard deviate = 1.1365, p-value =
+0.1279
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.084236860      -0.010000000       0.006875416 
+
+      
+Run the analysis with sites that have at least 3 plots, to reduce some noise
+
+```{r}
+sites_subset <- sites_cf %>%
+  filter(plot_no > 2)
+
+#plot variables
+plot(sites_subset[,c(10:14,18,20,34)]) 
+plot(sites_subset[,c(12,13,18,20,34,40,48)])
+
+#distance neighbors
+loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(sites_subset_neighbors_dist)
+plot(sites_subset_neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
+
+# Moran test with distance = 10
+#Moran I statistic standard deviate = 2.9615, p-value = 0.001531
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.38509221       -0.01754386        0.01848425 
+
+## Distance = 20
+d_subs2 <- 20 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist2 <- dnearneigh(loc_subs, 0, d_subs2, longlat = T)
+
+plot(sites_subset_neighbors_dist2, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist2, zero.policy=T, style="W"))
+
+#Moran I statistic standard deviate = 4.5796, p-value = 2.329e-06
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#      0.317644918      -0.015151515       0.005280796 
+
+
+## Distance = 5
+
+d_subs3 <- 5 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist3 <- dnearneigh(loc_subs, 0, d_subs3, longlat = T)
+
+plot(sites_subset_neighbors_dist3, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist3, zero.policy=T, style="W"))
+
+#Moran I statistic standard deviate = 0.47578, p-value = 0.3171
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.07981275       -0.03703704        0.06031799 
+```
+
+Let's explore distances between 5 and 10:
+
+```{r}
+#distance neighbors
+loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
+d_subs <- 5 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(sites_subset_neighbors_dist)
+plot(sites_subset_neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$av_agb_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
+
+#10
+#Moran I statistic standard deviate = 2.9615, p-value =0.001531
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.38509221       -0.01754386        0.01848425 
+
+#9
+#Moran I statistic standard deviate = 2.5088, p-value = 0.006056
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.34235874       -0.01923077        0.02077221 
+
+#8
+#Moran I statistic standard deviate = 2.5088, p-value =
+#0.006056
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.34235874       -0.01923077        0.02077221
+
+#7
+#Moran I statistic standard deviate = 2.032, p-value =0.02108
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.33073160       -0.02325581        0.03034737
+
+#6
+#Moran I statistic standard deviate = 0.79832, p-value =0.2123
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.12408276       -0.02500000        0.03487432
+
+#5
+#Moran I statistic standard deviate = 0.47578, p-value =0.3171
+#alternative hypothesis: greater
+#sample estimates:
+#Moran I statistic       Expectation          Variance 
+#       0.07981275       -0.03703704        0.06031799
+```
+
+
+Moran test shows that there's spatial autocorrelation among sites that are at least 7 km apart when only sites with more than 2 plots are considered (closer than that, the neighborhoods are too small). When all sites are considered, Moran test is not significant at 10 km.
+To account for this spatial autocorrelation, I'll cluster the data in subregions.
+Fortunately, Toledo-Aceves et al (2011) already divided the NMO region in smaller subregions, which fit pretty well with the network of neighbors using d=10km.
+
+First, let's conduct a Moran's I test with a diversity index.
+
+```{r}
+#distance neighbors
+loc_subs <- cbind(sites_subset$longitude, sites_subset$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+sites_subset_neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
+str(sites_subset_neighbors_dist)
+plot(sites_subset_neighbors_dist, loc_subs)
+
+#Moran test
+# spatial autocorrelation of dependent variable (AGB and Simpson)
+moran.test(sites_subset$simpson_av_site, zero.policy=T, 
+     nb2listw(sites_subset_neighbors_dist, zero.policy=T, style="W"))
+```
+It's not significant in neighborhoods of 10 km.
+
+```{r}
+sites_cf_4p %>%
+  select(mosaic_inv) %>%
+  arrange(mosaic_inv)
+```
+
+## Old version of Figures
+
+---
+title: "05_figures"
+author: "Adriana Uscanga"
+date: "2/2/2022"
+output: html_document
+---
+
+# Figure 3: DBH class contribution to AGB and stem density
+
+```{r}
+# Make a list of sites
+
+sites <- sites_cf2 %>%
+  select(site, mosaic_inv)
+
+#Estimate total agb per class and site
+
+agb_class_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(agb_class_site = sum(agb))
+
+# Estimate total AGB per site
+
+agb_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb, mosaic_inv) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(agb_site = sum(agb), mosaic_inv = as.numeric(mosaic_inv))  
+
+head(agb_site)
+head(agb_class_site)
+
+agb_class_site %>%
+  left_join(agb_site, by = "site") %>%
+  mutate(agb_prop = agb_class_site/agb_site,
+         mosaic_class = ifelse(mosaic_inv <= 0.5, "mature forest", "forest-agriculture"))  %>%
+  ggplot(aes(x = diam_class, y = agb_prop, fill = mosaic_class)) +
+  geom_boxplot() +
+  theme_classic() +
+  scale_fill_brewer(palette = "Accent")
+
+class1 <- agb_class_site %>%
+  left_join(agb_site, by = "site") %>%
+  mutate(agb_prop = agb_class_site/agb_site,
+         mosaic_class = ifelse(mosaic_inv <= 0.5, "mature forest", "forest-agriculture")) %>%
+  filter(diam_class == "1")
+
+class1
+
+agb_class_site %>%
+  left_join(agb_site, by = "site") %>%
+  mutate(agb_prop = agb_class_site/agb_site,
+         mosaic_class = ifelse(mosaic_inv <= 0.5, "mature forest", "forest-agriculture")) %>%
+  group_by(diam_class) %>%
+  t_test(data= ., agb_prop ~ mosaic_class, paired = T)
+```
+```{r}
+stems_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site) %>%
+  summarise(stems = n())
+
+stems_class_site <- trees_cf %>%
+  separate(tree_id, c("site", "plot"), sep = "_", remove = F) %>%
+  right_join(sites, by = "site") %>%
+  filter(status == "Vivo") %>%
+  filter(is.na(life_form) | life_form == "Arbol") %>%
+  select(site, species, genus, sp, family, diam_bh, agb, mosaic_inv) %>%
+  mutate(diam_class = ifelse(diam_bh <= 10, "1",
+                             ifelse(diam_bh > 10 & diam_bh <= 20, "2",
+                                    ifelse(diam_bh > 20 & diam_bh<= 30, "3", 
+                                           ifelse(diam_bh > 30 & diam_bh <= 40, "4",
+                                                  ifelse(diam_bh > 40 & diam_bh <= 50, "5", "6")))))) %>%
+  filter(!is.na(agb)) %>%
+  group_by(site, diam_class) %>%
+  summarise(stems_class = n(), mosaic_inv = as.numeric(mosaic_inv))
+
+head(stems_site)
+head(stems_class_site)
+
+stems_class_site %>%
+  left_join(stems_site, by = "site") %>%
+  mutate(prop_stems = stems_class/stems,
+         mosaic_class = ifelse(mosaic_inv <= 0.5, "mature forest", "forest-agriculture"))  %>%
+  ggplot(aes(x = diam_class, y = prop_stems, fill = mosaic_class)) +
+  geom_boxplot() +
+  theme_classic() +
+  scale_fill_brewer(palette = "Accent")
+```
+
+
+
+
+# Figure 6: AGB, D, and Mosaic
+
+
+```{r}
+
+calcSE<-function(x){
+  x <- x[is.na(x)==F]
+  sd(x)/sqrt(length(x))
+}
+
+sites_cf_4p %>%
+  group_by(mosaic_inv) %>%
+  summarize(agb_mosaic = mean(log(av_agb_site)),
+            av_agb_site = as.numeric(av_agb_site),
+            se = calcSE(log(av_agb_site)),
+            log_se = log(se)) %>%
+  ggplot(aes(x = mosaic_inv, y = log(av_agb_site))) +
+  geom_point(color = "gray") +
+  geom_smooth(method = "loess", span = 1, color = "darkgray", alfa = 0.5, se = F, linetype = "dashed") +
+  geom_point(aes(x= mosaic_inv, y = agb_mosaic), color = "black", size = 3) +
+  #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
+  theme_classic()
+
+sites_cf_4p %>%
+  group_by(mosaic_inv) %>%
+  summarize(agb_mosaic = mean(av_agb_site),
+            av_agb_site = as.numeric(av_agb_site),
+            se = calcSE(av_agb_site)) %>%
+  ggplot(aes(x = mosaic_inv, y = av_agb_site)) +
+  geom_point(color = "gray") +
+  geom_smooth(method = "loess", span = 1, color = "darkgray", alfa = 0.5, se = F, linetype = "dashed") +
+  geom_point(aes(x= mosaic_inv, y = agb_mosaic), color = "black", size = 3) +
+  #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
+  theme_classic()
+
+sites_cf_4p %>%
+  group_by(mosaic_inv) %>%
+  summarize(d = as.numeric(simpson_av_site),
+            d_mosaic = mean(d)) %>%
+  ggplot(aes(x = mosaic_inv, y = d)) +
+  geom_point(color = "gray") +
+  geom_smooth(method = "loess", span = 1, color = "darkgray", alfa = 0.5, se = F, linetype = "dashed") +
+  geom_point(aes(x= mosaic_inv, y = d_mosaic), color = "black", size = 3) +
+  #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
+  theme_classic()
+
+sites_cf_4p %>%
+  group_by(mosaic_inv) %>%
+  summarize(spr = as.numeric(sp_richness_site),
+            spr_mosaic = mean(spr)) %>%
+  ggplot(aes(x = mosaic_inv, y = spr)) +
+  geom_point(color = "gray") +
+  geom_smooth(method = "loess", span = 1, color = "darkgray", alfa = 0.5, se = F, linetype = "dashed") +
+  geom_point(aes(x= mosaic_inv, y = spr_mosaic), color = "black", size = 3) +
+  #geom_errorbar(aes(ymin = agb_mosaic - log_se, ymax = agb_mosaic + log_se), color = "black", alpha = 0.5) +
+  theme_classic()
+```
+
+# Figure 7: hierarchical cluster analysis, disturbance and mosaic
+
+```{r}
+
+library(ggdendro)
+
+dend <- as.dendrogram(clust2)
+dend
+
+# Extract the data (for rectangular lines)
+# Type can be "rectangle" or "triangle"
+dend_data <- dendro_data(dend, type = "rectangle")
+names(dend_data)
+
+head(dend_data$segments)
+head(dend_data$labels)
+
+labels_info <- sites_cf_4p_nona %>%
+  select(mosaic_inv, agriculture, grazing) %>%
+  mutate(disturbance = ifelse(agriculture > 0, 1,
+                              ifelse(grazing > 0, 1, 0)))
+
+dend_labels <- as_tibble(dend_data$labels) %>%
+  mutate(site = as.character(label)) %>%
+  left_join(labels_info, by = 'site')
+
+rect <- data.frame(x1=c(0, 28.6, 34.6), x2 = c(28.4, 34.4, 41), y1= c(-0.5, -0.5, -0.5), y2= c(16,16,16))
+
+# Plot line segments and add labels
+ggplot(dend_data$segments) + 
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
+  geom_text(data = dend_labels, aes(x, y = -0.7, label = label), hjust = 1, angle = 90, size = 3) +
+  ylim(-3, 20) +
+  geom_point(data = dend_labels, aes(x, y, color = mosaic_inv, shape = as.factor(disturbance)), size = 2) +
+  #scale_color_brewer(palette = "PRGn") +
+  scale_colour_gradient(high = "darkolivegreen1", low = "darkgreen") +
+  geom_rect(data = rect, mapping= aes(xmin = x1, xmax = x2, ymin = y1, ymax = y2), fill = NA, color = "gray70", linetype = 2, size = 0.2) +
+  theme_classic()
+```
+
+
