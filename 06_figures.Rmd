@@ -239,7 +239,7 @@ figure2
 ```
 
 
-## Figure 3. Structural attributes and tree size contribution to AGB and stem density at plot level
+## Figure 4. Structural attributes and tree size contribution to AGB and stem density at plot level
 
 ```{r}
 
@@ -957,7 +957,7 @@ t <- tukey_hsd(anova3)
 
 ```
 
-## Figure 4. 
+## Figure 3. 
 
 ```{r}
 
@@ -983,12 +983,12 @@ f4a <- fig4_df %>%
                            ordered = TRUE)),
              size = 2, alpha = 0.75) +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
-  #geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
+  geom_smooth(method = "loess", span= 0.9, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   #scale_y_continuous(limits = c(0,650)) +
   scale_x_continuous(limits = c(0, 2000)) +
   theme_classic() +
   theme(legend.position = "none") +
-  labs(x = (bquote('Stem density ('*"tree"~ha^-1*')')),
+  labs(x = (bquote('Tree density ('*"tree"~ha^-1*')')),
        y = (bquote('log AGB ('*"Mg "~ha^-1*')'))) +
   #theme(legend.position = "none") 
   theme(legend.title = element_blank(),
@@ -1000,12 +1000,12 @@ summary(lm(fig4_df$agb_plot_ha ~ fig4_df$tree_density))
 
 f4b <- fig4_df %>%
   ggplot(aes(x = basal_area_ha, y = log1p(agb_plot_ha)))  +
-  #geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   geom_point(aes(color = factor(succ,
                            levels = c("F","Y", "M"),
                            ordered = TRUE)),
              size = 2, alpha = 0.75) +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   #geom_smooth(method = "lm", span=1, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
   #scale_y_continuous(limits = c(0,650)) +
   #scale_x_continuous(limits = c(0, 60)) +
@@ -1018,7 +1018,6 @@ summary(lm(fig4_df$agb_plot_ha ~ fig4_df$basal_area_ha))
 
 f4c <- fig4_df %>%
   ggplot(aes(x = loreys_height, y = log1p(agb_plot_ha)))  +
-  #geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   geom_point(aes(color = factor(succ,
                            levels = c("F","Y", "M"),
                            ordered = TRUE)),
@@ -1027,6 +1026,7 @@ f4c <- fig4_df %>%
   #geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
   #scale_y_continuous(limits = c(0,650)) +
   #scale_x_continuous(limits = c(0, 40)) +
+  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   theme_classic() +
   theme(legend.position = "none") +
   labs(x = "Lorey's height (m)",
@@ -1036,12 +1036,12 @@ summary(lm(fig4_df$agb_plot_ha ~ fig4_df$loreys_height))
 
 f4d <- fig4_df %>%
   ggplot(aes(x = mean_height, y = log1p(agb_plot_ha)))  +
-  #geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   geom_point(aes(color = factor(succ,
                            levels = c("F","Y", "M"),
                            ordered = TRUE)),
              size = 2, alpha = 0.75) +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   #geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
   #scale_y_continuous(limits = c(0,650)) +
   #scale_x_continuous(limits = c(0, 30)) +
@@ -1054,12 +1054,12 @@ summary(lm(fig4_df$agb_plot_ha ~ fig4_df$mean_height))
 
 f4e <- fig4_df %>%
   ggplot(aes(x = max_height, y = log1p(agb_plot_ha)))  +
-  #geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   geom_point(aes(color = factor(succ,
                            levels = c("F","Y", "M"),
                            ordered = TRUE)),
              size = 2, alpha = 0.75) +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   #geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
   #scale_y_continuous(limits = c(0,650)) +
   #scale_x_continuous(limits = c(0, 40)) +
@@ -1072,7 +1072,6 @@ summary(lm(fig4_df$agb_plot_ha ~ fig4_df$max_height))
 
 f4f <- fig4_df %>%
   ggplot(aes(x = ave_wd, y = log1p(agb_plot_ha)))  +
-  #geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   #geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
   geom_point(aes(color = factor(succ,
                            levels = c("F","Y", "M"),
@@ -1081,6 +1080,7 @@ f4f <- fig4_df %>%
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   #scale_y_continuous(limits = c(0,650)) +
   #scale_x_continuous(limits = c(0, 1)) +
+  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
   theme_classic() +
   theme(legend.position = "none") +
   labs(x = (bquote('Wood density ('*"g"~cm^-3*')')),
@@ -1227,7 +1227,7 @@ figure5
 
 p1 <- sites_cf_4p %>%
   ggplot(aes(y = av_agb_site, x = shannon)) +
-  geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
+  geom_smooth(alpha = 0.1, method = "lm", span = 1, color= "black", linetype = "dashed", se = F) +
   geom_point(size=2) +
   theme_classic() +
   labs(y = (bquote('AGB ('*"Mg"~ha^-1*')')),
@@ -1237,11 +1237,16 @@ p1 <- sites_cf_4p %>%
 
 p2 <- sites_cf_4p %>%
   ggplot(aes(y = av_agb_site, x = sp_richness_site)) +
-  geom_smooth(alpha = 0.1, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
+  geom_smooth(alpha = 0.1, method = "lm", span = 1, color= "black", linetype = "dashed", se = F) +
   geom_point(size=2) +
   theme_classic() +
   labs(y = (bquote('AGB ('*"Mg"~ha^-1*')')),
-       x = "S")
+       x = "S") +
+  theme(legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        legend.position = c(0.9,0.8),
+        legend.background = element_rect(linetype = "solid", size = 0.01, color = "gray50"),
+        legend.key.size = unit(0.25, "cm"))
 
 # Plots
 
@@ -1261,7 +1266,7 @@ p3 <- plots_cf_4p %>%
   ggplot(aes(y = agb_plot_ha, x = shannon)) +
   #geom_point(aes(x= mean_agb, y = mean_shannon, color = factor(succ, levels = c("F","Y", "M"),ordered = TRUE), size = 3)) +
   geom_point(aes(color = factor(succ, levels = c("F","Y", "M"),ordered = TRUE)), size= 2, alpha = 0.75) +
-  geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
+  geom_smooth(alpha = 0.15, method = "lm", span = 1, color= "black", linetype = "solid", se= F) +
   theme_classic() +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   labs(y = (bquote('AGB ('*"Mg"~ha^-1*')')),
@@ -1285,7 +1290,7 @@ p4 <- plots_cf_4p %>%
              x = sp_richness_plot,
              color = factor(succ, levels = c("F","Y", "M"), ordered = TRUE))) +
   geom_point(aes(color = factor(succ, levels = c("F","Y", "M"), ordered = TRUE)), size= 2, alpha = 0.75) +
-  geom_smooth(alpha = 0.15, method = "loess", span = 1, color= "gray75", linetype = "dashed") +
+  geom_smooth(alpha = 0.15, method = "lm", span = 1, color= "black", linetype = "solid", se=F) +
   theme_classic() +
   scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   labs(size = "Average H in successional stage",
@@ -1297,7 +1302,7 @@ p4 <- plots_cf_4p %>%
         legend.background = element_rect(linetype = "solid", size = 0.01, color = "gray50"),
         legend.key.size = unit(0.25, "cm"))
 
-figure6 <- ggarrange(p1,p2,p3,p4,
+figure6 <- ggarrange(p3,p4,p1,p2,
                   ncol = 2,
                   nrow = 2,
                   labels = c("a)", "b)", "c)", "d)"),
@@ -1328,7 +1333,9 @@ p2 <- sites_cf_4p %>%
   scale_x_continuous(breaks = c(0, 2, 4, 6, 8, 10, 12, 14, 16, 18)) +
   theme_classic() +
   labs(y = (bquote('log AGB ('*"Mg"~ha^-1*')')),
-       x = "S")
+       x = "S") +
+  geom_point(aes(x = 16.3, y = 1.5), color = "gray30", size = 2) +
+  geom_text(x = 17.5, y = 1.5, label = "Sites", size = 3.3)
 
 # Plots
 
@@ -1385,7 +1392,7 @@ p4 <- plots_cf_4p %>%
         legend.background = element_rect(linetype = "solid", size = 0.01, color = "gray50"),
         legend.key.size = unit(0.25, "cm"))
 
-figure6_2 <- ggarrange(p1,p2,p3,p4,
+figure6_2 <- ggarrange(p3,p4,p1,p2,
                   ncol = 2,
                   nrow = 2,
                   labels = c("a)", "b)", "c)", "d)"),
