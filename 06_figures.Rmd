@@ -990,11 +990,8 @@ f4a <- fig4_df %>%
   theme(legend.position = "none") +
   labs(x = (bquote('Tree density ('*"tree"~ha^-1*')')),
        y = (bquote('log AGB ('*"Mg "~ha^-1*')'))) +
-  #theme(legend.position = "none") 
-  theme(legend.title = element_blank(),
-        legend.position = c(0.9, 0.8),
-        legend.background = element_rect(linetype = "solid", size = 0.01, color = "gray50"),
-        legend.margin = margin(0.1,5,0.1,0.1))
+  theme(legend.position = "none") 
+
 
 summary(lm(fig4_df$agb_plot_ha ~ fig4_df$tree_density))
 
@@ -1010,9 +1007,13 @@ f4b <- fig4_df %>%
   #scale_y_continuous(limits = c(0,650)) +
   #scale_x_continuous(limits = c(0, 60)) +
   theme_classic() +
-  theme(legend.position = "none") +
+  #theme(legend.position = "none") +
   labs(x = (bquote('Basal area ('*"m"~ha^-1*')')),
-       y = (bquote('log AGB ('*"Mg "~ha^-1*')')))
+       y = (bquote('log AGB ('*"Mg "~ha^-1*')'))) +
+  theme(legend.title = element_blank(),
+      legend.position = c(0.9, 0.2),
+      legend.background = element_rect(linetype = "solid", size = 0.01, color = "gray50"),
+      legend.margin = margin(0.1,5,0.1,0.1))
 
 summary(lm(fig4_df$agb_plot_ha ~ fig4_df$basal_area_ha))
 
