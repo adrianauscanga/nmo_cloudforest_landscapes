@@ -203,7 +203,8 @@ ggdensity(sites_cf2$av_treedensity_site)
 ggdensity(sites_cf2$av_loreys_site)
 ```
 
-In general, data is not normal (p<0.05). 
+In general, data is not normal (p<0.05).
+Although more important is to see if the residuals of OLS are normal or not.
 Data transformation may solve the problem.
 
 ```{r}
