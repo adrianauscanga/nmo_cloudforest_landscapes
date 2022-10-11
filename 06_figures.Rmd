@@ -125,7 +125,7 @@ pb <- plots_cf_4p %>%
   theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
-  labs(y = (bquote('Stem density ( '*"tree"~ha^-1*')'))) +
+  labs(y = (bquote('Tree density ( '*"tree"~ha^-1*')'))) +
   theme(axis.title.y = element_text(size = 10)) +
   theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
