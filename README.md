@@ -9,3 +9,4 @@ Code for analyzing aboveground biomass (AGB) patterns in forest-agriculture mosa
 * code for analyzing data stored in the output directory
 * list of allometric equations used in the study
 * code for reproducing figures in the manuscript
+* figures
