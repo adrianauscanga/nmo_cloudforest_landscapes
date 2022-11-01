@@ -7,4 +7,5 @@ Code for analyzing aboveground biomass (AGB) patterns in forest-agriculture mosa
 * data obtained from Mexican Forest Inventory stored in input directory
 * code for organizing raw data from the input directory and saved in the output directory
 * code for analyzing data stored in the output directory
+* list of allometric equations used in the study
 * code for reproducing figures in the manuscript
