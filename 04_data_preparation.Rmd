@@ -275,5 +275,7 @@ save(sites_cf_4p, file = "output/sites_cf_4p.RData")
 save(plots_cf_4p, file = "output/plots_cf_4p.RData")
 save(trees_cf_4p, file = "output/trees_cf_4p.RData")
 
+write.csv2(sites_cf_4p, file = "output/sites_cf_4p.csv")
+write.csv2(plots_cf_4p, file = "output/plots_cf_4p.csv")
 ```
 
