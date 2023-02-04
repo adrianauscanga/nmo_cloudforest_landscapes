@@ -82,6 +82,16 @@ plots_cf <- plots_cf %>%
   mutate(aspect = ifelse(plot_id == "67878_2", 334.787750, aspect),
          slope = ifelse(plot_id == "67878_2", 34.212009, slope))
 
+plots_cf <- plots_cf %>%
+  mutate(northness = cos(aspect),
+         eastness = sin(aspect)) %>%
+  relocate(c("northness", "eastness"), .after = aspect)
+
+```
+
+Average sites
+
+```{r}
 # Average aspect and slope by site
 
 calcSE<-function(x){
@@ -90,18 +100,32 @@ calcSE<-function(x){
 }
 
 aspect_slope_sites <- plots_cf %>%
-  select(site, plot_id, aspect, slope) %>%
+  select(site, plot_id, aspect, northness, eastness, slope) %>%
   group_by(site) %>%
   summarize(aspect_gee = mean(aspect),
             aspect_se_gee = calcSE(aspect),
+            northness_gee = mean(northness),
+            northness_se_gee = calcSE(northness),
+            eastness_gee = mean(eastness),
+            eastness_se_gee = calcSE(eastness),
             slope_gee = mean(slope),
             slope_se_gee = calcSE(slope)) %>%
   mutate(site = as.character(site))
 
 sites_cf <- sites_cf %>%
   left_join(aspect_slope_sites, by = "site") %>%
-  relocate(c("aspect_gee", "aspect_se_gee", "slope_gee", "slope_se_gee"), .after = aspect)
+  relocate(c("aspect_gee",
+             "aspect_se_gee",
+             "northness_gee",
+             "northness_se_gee",
+             "eastness_gee",
+             "eastness_se_gee",
+             "slope_gee",
+             "slope_se_gee"), .after = aspect)
+
 ```
+
+
 Change aspect_gee to categories and compare aspect and slope in dataset
 
 ```{r}
