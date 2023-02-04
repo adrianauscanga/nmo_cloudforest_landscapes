@@ -258,9 +258,8 @@ trees_cf %>%
 #         status == "Vivo",
 #         life_form == "Arbol" | is.na(life_form)) #unless I find a generic allometric equation for shrubs...but I haven't
 
-#Final tree_cf dataset has 6,231 rows
+#Final tree_cf dataset has 7096 rows out of which 6,231 are trees, the rest are of unknown life form (probably trees judging by their genus) 
 
-#NOTE: 07/10/2021 Not sure if these code (commented above) should be removed or not
 ```
 
 #### Estimate aboveground biomass (agb)
@@ -543,6 +542,7 @@ sites_cf <- plots_cf %>%
   summarize(plot_no = sum(n()),
             precip = mean(precip),
             temp = mean(temp),
+            ai = mean(ai),
             tree_no_site = (sum(tree_no)/plot_no),
             tree_no_ave = mean(tree_no),
             av_basalarea_site = mean(basal_area_ha),
@@ -555,13 +555,13 @@ sites_cf <- plots_cf %>%
             se_treedensity_site = calcSE(tree_density)) %>%
   right_join(sites_cf, by = "site") %>%
   relocate(plot_no, .before = longitude) %>%
-  relocate(c(precip, temp, tree_no_site, tree_no_ave, av_basalarea_site, se_basalarea_site, av_treeheight_site, se_treeheight_site, av_loreys_site, se_loreys_site, av_treedensity_site, se_treedensity_site), .after = latitude)
+  relocate(c(precip, temp, ai, tree_no_site, tree_no_ave, av_basalarea_site, se_basalarea_site, av_treeheight_site, se_treeheight_site, av_loreys_site, se_loreys_site, av_treedensity_site, se_treedensity_site), .after = latitude)
 
 #Final cleaning
 
 sites_cf <- sites_cf %>%
   select(-c(plots_by_site, plot1, plot2, plot3, plot4, site_type, monitoring, sampled, vegetation_cover, tree_no_site)) %>%
-  relocate(c(longitude, latitude, temp, precip), .after = land_tenure) %>%
+  relocate(c(longitude, latitude, temp, precip, ai), .after = land_tenure) %>%
   relocate(c(municipality, mun_id), .after = state_id) %>%
   relocate((state_id), .after = state)
 
@@ -600,18 +600,25 @@ shannon <- diversity(sp_site, index = "shannon") %>%
 colnames(shannon) <- "shannon"
 shannon <- rownames_to_column(shannon, var = "site")
 
+# True diversity
+#Transform diversity indices to true diversity
+#(for example: https://onlinelibrary.wiley.com/doi/full/10.1111/oik.07202)
+
+shannon <- shannon %>%
+  mutate(t_shannon = exp(shannon))
+
 sites_cf <- sites_cf %>%
   left_join(shannon, by = "site")
 
 # Simpson's diversity index
 
-simpson <- diversity(sp_site, index = "simpson") %>%
-  as.data.frame()
-colnames(simpson) <- "simpson"
-simpson <- rownames_to_column(simpson, var = "site")
+#simpson <- diversity(sp_site, index = "simpson") %>%
+#  as.data.frame()
+#colnames(simpson) <- "simpson"
+#simpson <- rownames_to_column(simpson, var = "site")
 
-sites_cf <- sites_cf %>%
-  left_join(simpson, by = "site")
+#sites_cf <- sites_cf %>%
+#  left_join(simpson, by = "site")
 
 # By plot
 
@@ -640,30 +647,33 @@ shannon_plot <- diversity(sp_plot, index = "shannon") %>%
 colnames(shannon_plot) <- "shannon"
 shannon_plot <- rownames_to_column(shannon_plot, var = "plot_id")
 
+shannon_plot <- shannon_plot %>%
+  mutate(t_shannon = exp(shannon))
+
 plots_cf <- plots_cf %>%
   left_join(shannon_plot, by = "plot_id")
 
 # Simpson's diversity index
 
-simpson_plot <- diversity(sp_plot, index = "simpson") %>%
-  as.data.frame()
-colnames(simpson_plot) <- "simpson"
-simpson_plot <- rownames_to_column(simpson_plot, var = "plot_id")
+#simpson_plot <- diversity(sp_plot, index = "simpson") %>%
+#  as.data.frame()
+#colnames(simpson_plot) <- "simpson"
+#simpson_plot <- rownames_to_column(simpson_plot, var = "plot_id")
 
-plots_cf <- plots_cf %>%
-  left_join(simpson_plot, by = "plot_id")
+#plots_cf <- plots_cf %>%
+#  left_join(simpson_plot, by = "plot_id")
 
 # Average Shannon and Simpson indices by site
 
 diversity_sites <- plots_cf %>%
-  mutate(shannon = ifelse((is.na(shannon)), 0, shannon),
-         simpson = ifelse((is.na(simpson)), 0, simpson),
+  mutate(t_shannon = ifelse((is.na(t_shannon)), 0, t_shannon),
+         #simpson = ifelse((is.na(simpson)), 0, simpson),
          site = as.character(site)) %>%
   group_by(site) %>%
   summarize(shannon_av_site = mean(shannon),
             shannon_se_site = calcSE(shannon),
-            simpson_av_site = mean(simpson),
-            simpson_se_site = calcSE(simpson))
+            t_shannon_av_site = mean(t_shannon),
+            t_shannon_se_site = calcSE(t_shannon))
 
 sites_cf <- sites_cf %>%
   left_join(diversity_sites, by = "site")
@@ -704,15 +714,6 @@ sp_richness_site_av <- plots_cf %>%
 
 sites_cf <- sites_cf %>%
   left_join(sp_richness_site_av, by = "site")
-
-```
-
-True diversity
-
-Transform diversity indices to true diversity
-(for example: https://onlinelibrary.wiley.com/doi/full/10.1111/oik.07202)
-
-```{r}
 
 ```
 
