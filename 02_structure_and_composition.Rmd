@@ -124,7 +124,7 @@ taxo %>% # shows correct name
   filter(nameModified == "TRUE")
 
 # There is one sp that must be corrected:
-# **Cleyera theoides -- Cleyera theaeoides**
+# **Cleyera theoides -- Cleyera theaeoides** 
 # Note: this result might change if Taxonomic Name Resolution Service updates
 
 # Correct sp names in trees_cf and sp_list datasets
@@ -707,6 +707,14 @@ sites_cf <- sites_cf %>%
 
 ```
 
+True diversity
+
+Transform diversity indices to true diversity
+(for example: https://onlinelibrary.wiley.com/doi/full/10.1111/oik.07202)
+
+```{r}
+
+```
 
 Save these datasets to use them in following analyses:
 

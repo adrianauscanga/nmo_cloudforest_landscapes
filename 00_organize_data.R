@@ -947,18 +947,19 @@ disturbance_sno <- sites_sno %>%
 #### 9. Save final datasets ####
 
 # Save trees_sno dataset in output directory
-# save(trees_sno, file = "output/trees_sno.RData")
+save(trees_sno, file = "output/trees_sno.RData")
 
 # Save sites_sno dataset in output directory
-# save(sites_sno, file = "output/sites_sno.RData")
+save(sites_sno, file = "output/sites_sno.RData")
 
 # Save plots_sno dataset in output directory
-# save(plots_sno, file = "output/plots_sno.RData")
+save(plots_sno, file = "output/plots_sno.RData")
 
 # Save epiphytes_sno dataset in output directory
 
-# save(epiphytes_sno, file = "output/epiphytes_sno.RData")
+save(epiphytes_sno, file = "output/epiphytes_sno.RData")
 
 #Save disturbance dataset
 
-# save(disturbance_sno, file = "output/disturbance_sno.RData")
+save(disturbance_sno, file = "output/disturbance_sno.RData")
+

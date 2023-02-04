@@ -180,6 +180,17 @@ sites_cf <- sites_cf %>%
  mutate(landscape = 1- mosaic)
 ```
 
+Add 'sites' data on land-use to the 'plot_cf' dataset
+
+```{r}
+sites_cf %>%
+  select(site, subregion, agriculture, grazing) %>%
+  mutate(site = as.numeric(site)) %>%
+  right_join(plots_cf, by = "site") %>%
+  relocate(c("agriculture", "grazing"), .after = str_class_plots) -> plots_cf
+
+```
+
 Visual inspection of data
 
 ```{r}
@@ -280,9 +291,8 @@ trees_cf_4p %>%
   # 4,106 trees
   filter(is.na(species)) #out of which 12 do not have sp name
 
-
-  
 ```
+
 
 ## Save data
 
