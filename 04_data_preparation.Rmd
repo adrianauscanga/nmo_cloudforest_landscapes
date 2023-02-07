@@ -126,20 +126,6 @@ sites_cf <- sites_cf %>%
 ```
 
 
-Change aspect_gee to categories and compare aspect and slope in dataset
-
-```{r}
-
-sites_cf <- sites_cf %>%
-  dplyr::mutate(aspect_gee_c = ifelse(aspect_gee < 45 | aspect_gee > 315, "N",
-                                       ifelse(aspect_gee > 135 | aspect < 225, "S",
-                                              ifelse(aspect_gee > 225 | aspect_gee < 315, "W",
-                                                     ifelse(aspect_gee > 45 | aspect_gee < 135, "E", NA))))) %>%
-  relocate(aspect_gee_c, .after = aspect_gee)
-
-
-```
-
 Site 71213 in sites_cf data set lacks geographic coordinates.
 Which are: 17.50506, -96.30769
 
@@ -171,6 +157,10 @@ sites_cf <- sites_cf %>%
   left_join(subregions, by = "site") %>%
   relocate(subregion, .after = site)
 
+plots_cf <- sites_cf %>%
+  select(site, subregion) %>%
+  right_join(plots_cf)
+
 ```
 
 Change direction of mosaic values (so that 0-forest and 1-ag) and rename variable
@@ -178,17 +168,6 @@ Change direction of mosaic values (so that 0-forest and 1-ag) and rename variabl
 ```{r}
 sites_cf <- sites_cf %>%
  mutate(landscape = 1- mosaic)
-```
-
-Add 'sites' data on land-use to the 'plot_cf' dataset
-
-```{r}
-sites_cf %>%
-  select(site, subregion, agriculture, grazing) %>%
-  mutate(site = as.numeric(site)) %>%
-  right_join(plots_cf, by = "site") %>%
-  relocate(c("agriculture", "grazing"), .after = str_class_plots) -> plots_cf
-
 ```
 
 Visual inspection of data
@@ -201,18 +180,17 @@ sites_cf2 <- sites_cf %>%
 
 #density plot
 ggdensity(sites_cf2$av_agb_site)
-ggdensity(sites_cf2$simpson_av_site)
+ggdensity(sites_cf2$t_shannon_av_site)
 
 #qqplot
 ggqqplot(sites_cf2$av_agb_site)
-ggqqplot(sites_cf2$simpson_av_site)
+ggqqplot(sites_cf2$t_shannon_av_site)
 ```
 
 Shapiro-Wilk's normality test:
 
 ```{r}
 shapiro.test(sites_cf2$av_agb_site)
-shapiro.test(sites_cf2$simpson_av_site)
 shapiro.test(sites_cf2$temp)
 shapiro.test(sites_cf2$precip)
 shapiro.test(sites_cf2$aspect_gee) # normal p = 0.42
@@ -221,8 +199,8 @@ shapiro.test(sites_cf2$mosaic)
 shapiro.test(sites_cf2$agriculture)
 shapiro.test(sites_cf2$grazing)
 shapiro.test(sites_cf2$sp_richness_site_av) # normal p=0.15
-shapiro.test(sites_cf2$shannon_av_site) # normal p = 0.60
-shapiro.test(sites_cf2$simpson_av_site)
+shapiro.test(sites_cf2$t_shannon_av_site) # normal p = 0.60
+
 
 ggdensity(sites_cf2$temp)
 ggdensity(sites_cf2$precip)
@@ -232,8 +210,7 @@ ggdensity(sites_cf2$mosaic)
 ggdensity(sites_cf2$agriculture)
 ggdensity(sites_cf2$grazing)
 ggdensity(sites_cf2$sp_richness_site_av)
-ggdensity(sites_cf2$shannon_av_site)
-ggdensity(sites_cf2$simpson_av_site)
+ggdensity(sites_cf2$t_shannon_av_site)
 ggdensity(sites_cf2$av_treedensity_site)
 ggdensity(sites_cf2$av_loreys_site)
 ```
@@ -290,6 +267,19 @@ trees_cf_4p %>%
   filter(status == "Vivo") %>%
   # 4,106 trees
   filter(is.na(species)) #out of which 12 do not have sp name
+
+```
+Replace NAs by 0 when needed
+
+```{r}
+
+plots_cf <- plots_cf %>%
+  mutate(t_shannon = ifelse(is.na(t_shannon), 0, t_shannon),
+         sp_richness_plot = ifelse(is.na(sp_richness_plot), 0, sp_richness_plot))
+
+plots_cf_4p <- plots_cf_4p %>%
+  mutate(t_shannon = ifelse(is.na(t_shannon), 0, t_shannon),
+         sp_richness_plot = ifelse(is.na(sp_richness_plot), 0, sp_richness_plot))
 
 ```
 
