@@ -1,0 +1,72 @@
+---
+title: "05b_analysis"
+author: "Adriana Uscanga"
+date: "2023-02-07"
+output: html_document
+---
+
+# Analysis: second round
+
+Load packages and files
+
+```{r}
+# Files
+
+load("output/sites_cf_4p.RData")
+load("output/plots_cf_4p.RData")
+load("output/trees_cf_4p.RData")
+
+# Libraries
+
+library(tidyverse)
+library(ggplot2)
+library(lme4)
+library(corrplot)
+
+#library(rstatix)
+#library(corrplot)
+#library(vegan)
+#library(leaps)
+#library(asbio)
+#library(spdep)
+#library(ggpubr)
+#library(multcompView)
+```
+
+## 1. Summary statistics and data exploration
+
+```{r}
+
+summary(plots_cf_4p)
+summary(sites_cf_4p)
+
+plots_cf_4p %>%
+  ggplot(aes(x= agb_plot_ha)) +
+  geom_histogram(bins = 20)
+
+plots_cf_4p %>%
+  ggplot(aes(x= log1p(agb_plot_ha))) +
+  geom_histogram(bins = 20)
+
+plots_cf_4p %>%
+  ggplot(aes(x= t_shannon)) +
+  geom_histogram(bins = 20)
+
+plots_cf_4p %>%
+  ggplot(aes(x= sp_richness_plot)) +
+  geom_histogram(bins = 10)
+
+```
+
+```{r}
+numeric_variables <- plots_cf_4p %>%
+  select(temp, precip, ai, altitude, latitude, longitude, northness, eastness, slope, t_shannon, sp_richness_plot, agb_plot_ha, agriculture, grazing) %>%
+  mutate(log_agb = log1p(agb_plot_ha)) %>%
+  select(-agb_plot_ha)
+
+corr <- cor(drop_na(numeric_variables[,-1]))
+corrplot(corr, method = 'ellipse')
+corrplot(corr, method = 'number')
+plot(numeric_variables)
+```
+
