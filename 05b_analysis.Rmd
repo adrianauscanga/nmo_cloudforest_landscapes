@@ -205,12 +205,54 @@ plot_model(lmm6, show.values = T)
 ```{r}
 
 plots_cf_4p %>%
-  ggplot(aes(x = t_shannon, y = log1p(agb_plot_ha), color = str_class_plots)) +
-  geom_point()
+  ggplot(aes(x = t_shannon, y = log1p(agb_plot_ha))) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
 
-sites_cf_4p %>%
-  ggplot(aes(x = t_shannon_av_site, y = log(av_agb_site))) +
-  geom_point()
+plots_cf_4p %>%
+  ggplot(aes(y = t_shannon, x = agriculture)) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(y = t_shannon, x = grazing)) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(x = agriculture, y = log1p(agb_plot_ha))) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(x = slope, y = log1p(agb_plot_ha))) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(x = grazing, y = log1p(agb_plot_ha))) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(x = env_pc1, y = agriculture)) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(x = env_pc1, y = grazing)) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(x = env_pc1, y = t_shannon)) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(x = env_pc1, y = log1p(agb_plot_ha))) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
 
 ```
 
