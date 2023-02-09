@@ -23,6 +23,8 @@ library(ggplot2)
 library(lme4)
 library(corrplot)
 library(vegan)
+library(stargazer)
+library(sjPlot)
 
 #library(rstatix)
 #library(corrplot)
@@ -85,7 +87,7 @@ plot(pca_env)
 biplot(pca_env, display = 'species')
 
 # PC1 (0.38) and PC2 (0.23) together explain 0.61 when lat and lon included
-# PC1 (0.48) and PC2 (0.16) together explain 0.79 when lat and lon included
+# PC1 (0.48) and PC2 (0.16) together explain 0.64 when lat and lon excluded
 
 ```
 
@@ -141,10 +143,10 @@ plots_cf_4p <- plots_cf_4p %>%
 
 Linear mixed model
 
-LMM with all variables and both subregion and site as nested random effects
+LMM with all variables and site as random effect
 
 ```{r}
-lmm <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + northness + eastness + t_shannon + agriculture + grazing + (1|subregion/site), data = plots_cf_4p)
+lmm <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + northness + eastness + t_shannon + agriculture + grazing + (1| site), data = plots_cf_4p)
 
 summary(lmm)
 plot(lmm)
@@ -155,10 +157,10 @@ plot_model(lmm, show.values = T)
 stargazer(lmm, type = "text")
 ```
 
-LMM with all variables and sites as random effect
+LMM with all variables, interactions among them, and sites as random effect
 
 ```{r}
-lmm2 <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + northness + eastness + t_shannon + agriculture + grazing + env_pc1*grazing + env_pc1*agriculture + env_pc1*t_shannon + t_shannon*grazing + t_shannon*agriculture + grazing*agriculture + (1|site), data = plots_cf_4p)
+lmm2 <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + northness + eastness + t_shannon + agriculture + grazing + env_pc1*slope + slope*agriculture + slope*t_shannon + slope*grazing + env_pc1*grazing + env_pc1*agriculture + env_pc1*t_shannon + t_shannon*grazing + t_shannon*agriculture + grazing*agriculture + (1|site), data = plots_cf_4p)
 
 summary(lmm2)
 plot(lmm2)
@@ -169,8 +171,8 @@ plot_model(lmm2, show.values = T)
 
 stargazer(lmm2, type = "text")
 ```
-
-Removing non-relevant variables
+Lower AIC. 
+I'll remove non-relevant variables first, and then non-relevant interactions:
 
 ```{r}
 lmm3 <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + t_shannon + agriculture + grazing + (1|site), data = plots_cf_4p)
@@ -184,23 +186,27 @@ plot_model(lmm3, show.values = T)
 
 stargazer(lmm3, type = "text")
 ```
-
-Interactions
+This is the best model so far, although grazing is non-significant.
+Let's add the relevant interactions:
 
 ```{r}
-lmm4 <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + t_shannon + agriculture + env_pc1*agriculture + (1|site), data = plots_cf_4p)
+lmm4 <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + t_shannon + agriculture + t_shannon*agriculture + slope*t_shannon + env_pc1*grazing + (1|site), data = plots_cf_4p)
+
+summary(lmm4)
 stargazer(lmm4, type = "text")
-
-
-lmm5 <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + t_shannon + agriculture + env_pc1*agriculture + t_shannon*agriculture + (1|site), data = plots_cf_4p)
-stargazer(lmm5, type = "text")
-
-lmm6 <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + t_shannon + agriculture +  env_pc1*grazing + t_shannon*agriculture + (1|site), data = plots_cf_4p)
-summary(lmm6)
-stargazer(lmm6, type = "text")
-plot_model(lmm6, show.values = T)
+plot_model(lmm4, show.values = T)
 
 ```
+I'll remove the only interaction that wasn't statistically significant:
+
+```{r}
+lmm5 <- lmer(log1p(agb_plot_ha) ~ env_pc1 + slope + t_shannon + agriculture + t_shannon*agriculture + env_pc1*grazing + (1|site), data = plots_cf_4p)
+
+summary(lmm5)
+stargazer(lmm5, type = "text")
+plot_model(lmm5, show.values = T)
+```
+Best model thus far.
 
 ```{r}
 
@@ -236,6 +242,16 @@ plots_cf_4p %>%
 
 plots_cf_4p %>%
   ggplot(aes(x = env_pc1, y = agriculture)) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(x = altitude, y = agriculture)) +
+  geom_point(aes(color = str_class_plots)) +
+  geom_smooth(method = "lm")
+
+plots_cf_4p %>%
+  ggplot(aes(x = altitude, y = grazing)) +
   geom_point(aes(color = str_class_plots)) +
   geom_smooth(method = "lm")
 
