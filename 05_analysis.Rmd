@@ -406,7 +406,7 @@ biplot(pca_env)
 
 ```
 
-PC1 explains 68.23% of variation and is correlated to temp, altitude an precip.
+PC1 explains 68.23% of variation and is correlated to temp, altitude and precip.
 
 ```{r}
 pc1 <- as.data.frame(pca_env$CA$u[,1])
