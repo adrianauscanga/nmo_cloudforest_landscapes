@@ -45,7 +45,7 @@ summary(sites_cf_4p)
 
 plots_cf_4p %>%
   ggplot(aes(x= agb_plot_ha)) +
-  geom_histogram(bins = 20)
+  geom_histogram(bins = 25)
 
 plots_cf_4p %>%
   ggplot(aes(x= log1p(agb_plot_ha))) +
@@ -270,5 +270,34 @@ plots_cf_4p %>%
   geom_point(aes(color = str_class_plots)) +
   geom_smooth(method = "lm")
 
+```
+
+GLMM
+
+Name | Link Function | Distribution
+General linear model | Identity | Normal
+Logistic regression | Logit | Binomial
+Poisson | Log | Poisson
+Gamma | Inverse | Gamma
+
+```{r}
+
+glmm1 <- glmer((agb_plot_ha+1) ~ t_shannon + (1|site), Gamma(link = "inverse"), data = plots_cf_4p, nAGQ = 2, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm1)
+
+glmm2 <- glmer((agb_plot_ha+1) ~ scale(sp_richness_plot) + (1|site), Gamma(link = "inverse"), data = plots_cf_4p, nAGQ = 2)
+summary(glmm2)
+
+glmm3 <- glmer((scale(agb_plot_ha)+1) ~ env_pc1 + slope + t_shannon + agriculture + grazing + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm3)
+
+
+```
+
+With interactions:
+
+```{r}
+glmm4 <- glmer((scale(agb_plot_ha)+1) ~ agriculture + env_pc1*grazing +  t_shannon*agriculture + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm4)
 ```
 
