@@ -272,7 +272,7 @@ plots_cf_4p %>%
 
 ```
 
-GLMM
+GLMM: agb ~ diversity
 
 Name | Link Function | Distribution
 General linear model | Identity | Normal
@@ -282,22 +282,135 @@ Gamma | Inverse | Gamma
 
 ```{r}
 
-glmm1 <- glmer((agb_plot_ha+1) ~ t_shannon + (1|site), Gamma(link = "inverse"), data = plots_cf_4p, nAGQ = 2, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+glmm1 <- glmer((scale(agb_plot_ha)+1) ~ t_shannon + (1|site), Gamma(link = "inverse"), data = plots_cf_4p, nAGQ = 2, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
 summary(glmm1)
 
-glmm2 <- glmer((agb_plot_ha+1) ~ scale(sp_richness_plot) + (1|site), Gamma(link = "inverse"), data = plots_cf_4p, nAGQ = 2)
+glmm1b <- glmer((scale(agb_plot_ha)+1) ~ sp_richness_plot + (1|site), Gamma(link = "inverse"), data = plots_cf_4p, nAGQ = 2, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm1b)
+
+lmer1 <- lmer(log1p(agb_plot_ha) ~ t_shannon + (1|site), data = plots_cf_4p)
+summary(lmer1)
+plot(lmer1)
+stargazer(lmer1, type = "text")
+
+lmer1b <- lmer(agb_plot_ha ~ t_shannon + (1|site), data = plots_cf_4p)
+summary(lmer1b)
+plot(lmer1b)
+stargazer(lmer1b, type = "text")
+
+glmm1c <- glmer((log1p(agb_plot_ha+1)) ~ t_shannon + (1|site), Gamma(link = "inverse"), data = plots_cf_4p, nAGQ = 2, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm1c)
+plot(glmm1c)
+```
+
+GMM: agb ~ all variables
+
+```{r}
+
+glmm2 <- glmer((scale(agb_plot_ha)+1) ~ env_pc1 + slope + t_shannon + agriculture + grazing + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
 summary(glmm2)
 
-glmm3 <- glmer((scale(agb_plot_ha)+1) ~ env_pc1 + slope + t_shannon + agriculture + grazing + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
-summary(glmm3)
-
-
 ```
+
 
 With interactions:
 
 ```{r}
-glmm4 <- glmer((scale(agb_plot_ha)+1) ~ agriculture + env_pc1*grazing +  t_shannon*agriculture + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
-summary(glmm4)
+
+glmm3 <- glmer((scale(agb_plot_ha)+1) ~ agriculture + env_pc1*grazing +  t_shannon*agriculture + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm3)
+
 ```
 
+Plots classification
+
+Option 1: k-means including PC1
+```{r}
+plots_str2 <- plots_cf_4p %>%
+  select(plot_id,
+         tree_density,
+         loreys_height,
+         basal_area_ha,
+         agb_plot_ha,
+         env_pc1)
+
+plot(plots_str2)
+
+# Scale data so that variables in different units can be compared
+plots_str_scaled2 <- scale(plots_str2[,-c(1,2,5)])
+row.names(plots_str_scaled2) <- plots_str2$plot_id
+
+k2_structure_plots2 <- kmeans(plots_str_scaled2, centers = 2, nstart = 25)
+k3_structure_plots2 <- kmeans(plots_str_scaled2, centers = 3, nstart = 25)
+k4_structure_plots2 <- kmeans(plots_str_scaled2, centers = 4, nstart = 25)
+k5_structure_plots2 <- kmeans(plots_str_scaled2, centers = 5, nstart = 25)
+
+p1_str_plots2 <- fviz_cluster(k2_structure_plots2, geom = "point", data = plots_str_scaled2) + ggtitle("k = 2")
+p2_str_plots2 <- fviz_cluster(k3_structure_plots2, geom = "point",  data = plots_str_scaled2) + ggtitle("k = 3")
+p3_str_plots2 <- fviz_cluster(k4_structure_plots2, geom = "point",  data = plots_str_scaled2) + ggtitle("k = 4")
+p4_str_plots2 <- fviz_cluster(k5_structure_plots2, geom = "point",  data = plots_str_scaled2) + ggtitle("k = 5")
+grid.arrange(p1_str_plots2, p2_str_plots2, p3_str_plots2, p4_str_plots2, nrow = 2)
+
+str_clusters_plots2 <- NbClust((plots_str_scaled2^2), distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D2", index = "all")
+
+# Save a vector of 2 clusters:
+str_k2_plots2 <- k2_structure_plots2$cluster
+as.numeric(str_k2_plots2)
+
+#pca with structural data
+
+pca_str_plots2 <- rda(plots_str_scaled2, scale = F)
+summary(pca_str_plots2) # 
+plot(pca_str_plots2)
+
+ordiplot(pca_str_plots2, display = 'sites', type = 'n')
+points(pca_str_plots2, col = str_k2_plots2)
+biplot(pca_str_plots2, display = 'species')
+
+ordiplot(pca_str_plots, display = 'sites', type = 'text')
+biplot(pca_str_plots)
+
+ordiplot(pca_str_plots2, display = 'sites', type = 'n')
+points(pca_str_plots, col = str_k3_plots)
+biplot(pca_str_plots, display = 'species')
+
+ordiplot(pca_str_plots, display = 'sites', type = 'text')
+biplot(pca_str_plots)
+
+plots_cf_4p %>%
+  ggplot(aes(x= str_class_plots, y = agriculture, color = basal_area_ha)) +
+  geom_jitter()
+
+plots_cf_4p %>%
+  ggplot(aes(x= str_class_plots, y = grazing)) +
+  geom_jitter(color = 'blue')
+
+plots_cf_4p %>%
+  filter(str_class_plots == 1) %>%
+  ggplot(aes(x = env_pc1, y = loreys_height, color = as.factor(agriculture))) +
+  geom_point()
+
+plots_cf_4p %>%
+  filter(str_class_plots == 2) %>%
+  ggplot(aes(x = altitude, y = agb_plot_ha, color = as.factor(agriculture))) +
+  geom_point()
+
+plots_cf_4p %>%
+  filter(str_class_plots == 3) %>%
+  ggplot(aes(x = altitude, y = agb_plot_ha, color = as.factor(agriculture))) +
+  geom_point()
+
+
+plots_cf_4p %>%
+  filter(str_class_plots == 1) %>%
+  arrange(agriculture, -altitude)
+
+plots_cf_4p %>%
+  mutate(land_use = agriculture + grazing) %>%
+  ggplot(aes(x = str_class_plots, y = land_use)) +
+  geom_jitter()
+  
+```
+
+
+Option 1: PCA?
