@@ -72,7 +72,7 @@ corrplot(corr, method = 'ellipse')
 corrplot(corr, method = 'number')
 plot(numeric_variables)
 ```
-Environmental data is highly correlated, so I'm going to get rid of some of that collinearity with a PCA
+Environmental data is highly correlated, so I'm going to get rid of some of that colinearity with a PCA
 
 ```{r}
 env <- plots_cf_4p %>%
@@ -301,15 +301,112 @@ stargazer(lmer1b, type = "text")
 glmm1c <- glmer((log1p(agb_plot_ha+1)) ~ t_shannon + (1|site), Gamma(link = "inverse"), data = plots_cf_4p, nAGQ = 2, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
 summary(glmm1c)
 plot(glmm1c)
+
 ```
 
 GMM: agb ~ all variables
 
 ```{r}
 
-glmm2 <- glmer((scale(agb_plot_ha)+1) ~ env_pc1 + slope + t_shannon + agriculture + grazing + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+glmm2 <- glmer((scale(agb_plot_ha)+1) ~ env_pc1 + scale(slope) + t_shannon + agriculture + grazing + env_pc1*scale(slope) + scale(slope)*agriculture + scale(slope)*t_shannon + scale(slope)*grazing + env_pc1*grazing + env_pc1*agriculture + env_pc1*t_shannon + t_shannon*grazing + t_shannon*agriculture + grazing*agriculture + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
 summary(glmm2)
 
+# dropping variables that are not significant in 'all variables and all interactions model'
+glmm2b <- glmer((scale(agb_plot_ha)+1) ~ env_pc1 + scale(slope) + agriculture + scale(slope)*agriculture + scale(slope)*grazing + env_pc1*grazing + t_shannon*agriculture + grazing*agriculture + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm2b)
+
+# Agriculture ~ environmental gradient
+g <- glmer.nb(agriculture ~ env_pc1 + (1|site), data = plots_cf_4p, verbose = T)
+getME(g, "glmer.nb.theta")
+
+glmm3 <- glmer(agriculture ~ env_pc1 + (1|site), negative.binomial(theta= 87730.47, link="log"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm3)
+
+## *Significant interaction!*
+
+# Agriculture ~ slope
+
+gb <- glmer.nb(agriculture ~ scale(slope) + (1|site), data = plots_cf_4p, verbose = T)
+getME(gb, "glmer.nb.theta")
+
+glmm3b <- glmer(agriculture ~ scale(slope) + (1|site), negative.binomial(theta= 88474.5, link="log"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm3b)
+
+## Non-significant
+
+# Grazing ~ environmental gradient
+
+# Grazing only has two values so I'm making it binomial 
+ds <- plots_cf_4p %>%
+  mutate(graz_bi = ifelse(grazing == 2, 1, grazing)) 
+glmm4 <- glmer(graz_bi ~ env_pc1 + (1|site), binomial(link="logit"), data = ds, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm4) #as binomial variable
+
+g2 <- glmer.nb(grazing ~ env_pc1 + (1|site), data = plots_cf_4p, verbose = T)
+getME(g2, "glmer.nb.theta")
+
+glmm4b <- glmer(grazing ~ env_pc1 + (1|site), negative.binomial(theta= 75716.24, link="log"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm4b) #as discrete variable
+
+## Non-significant
+
+# Grazing ~ slope
+
+glmm4c <- glmer(graz_bi ~ scale(slope) + (1|site), binomial(link="logit"), data = ds, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm4c) #as binomial variable
+
+## Non-significant
+
+# Tree diversity (t_shannon) ~ environmental gradient
+
+lmer_tshannon1 <- lmer(sqrt(t_shannon) ~ env_pc1 + (1|site), data = plots_cf_4p)
+summary(lmer_tshannon1)
+stargazer(lmer_tshannon1, type = "text")
+plot_model(lmer_tshannon1, show.values = T)
+qqnorm(resid(lmer_tshannon1))
+qqline(resid(lmer_tshannon1))
+
+## Non-significant
+
+# Tree diversity ~ agriculture
+
+glmm5b <- glmer((t_shannon+0.1) ~ agriculture + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm5b)
+
+lmer_tshannon <- lmer(t_shannon ~ agriculture + (1|site), data = plots_cf_4p)
+summary(lmer_tshannon)
+stargazer(lmer_tshannon, type = "text")
+plot_model(lmer_tshannon, show.values = T)
+qqnorm(resid(lmer_tshannon))
+qqline(resid(lmer_tshannon))
+
+# sqrt transformation for slightly right-skewed data
+lmer_tshannon2 <- lmer(sqrt(t_shannon) ~ agriculture + (1|site), data = plots_cf_4p)
+summary(lmer_tshannon2)
+stargazer(lmer_tshannon2, type = "text")
+plot_model(lmer_tshannon2, show.values = T)
+qqnorm(resid(lmer_tshannon2))
+qqline(resid(lmer_tshannon2))
+
+## *Significant!*
+
+# Tree diversity ~ grazing
+
+lmer_tshannon3 <- lmer(sqrt(t_shannon) ~ grazing + (1|site), data = plots_cf_4p)
+summary(lmer_tshannon3)
+stargazer(lmer_tshannon3, type = "text")
+plot_model(lmer_tshannon3, show.values = T)
+qqnorm(resid(lmer_tshannon3))
+qqline(resid(lmer_tshannon3))
+
+## *Significant!*
+
+# Tree diversity ~ slope 
+lmer_tshannon_slope <- lmer(sqrt(t_shannon) ~ scale(slope) + (1|site), data = plots_cf_4p)
+summary(lmer_tshannon_slope)
+stargazer(lmer_tshannon_slope, type = "text")
+
+## Non-significant
 ```
 
 
@@ -317,10 +414,67 @@ With interactions:
 
 ```{r}
 
-glmm3 <- glmer((scale(agb_plot_ha)+1) ~ agriculture + env_pc1*grazing +  t_shannon*agriculture + (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
-summary(glmm3)
+glmm_w_interactions <- glmer((scale(agb_plot_ha)+1) ~  env_pc1*agriculture + 
+                                         scale(slope) +
+                                         t_shannon*agriculture + 
+                                         t_shannon*grazing +
+                                         (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm_w_interactions)
+plot(glmm_w_interactions)
+qqnorm(resid(glmm_w_interactions))
+qqline(resid(glmm_w_interactions))
 
+plot_model(glmm_w_interactions, show.values = T)
+stargazer(glmm_w_interactions, type = "text")
+
+# Reduced:
+
+glmm_w_interactions_r <- glmer((scale(agb_plot_ha)+1) ~  env_pc1*agriculture + 
+                                         scale(slope) +
+                                         t_shannon*agriculture + 
+                                         #t_shannon*grazing +
+                                         (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm_w_interactions_r)
+plot(glmm_w_interactions_r)
+qqnorm(resid(glmm_w_interactions_r))
+qqline(resid(glmm_w_interactions_r))
+
+plot_model(glmm_w_interactions_r, show.values = T)
+stargazer(glmm_w_interactions_r, type = "text")
+
+glmm_wo_interactions <- glmer((scale(agb_plot_ha)+1) ~  env_pc1 + 
+                                                        agriculture + 
+                                                        scale(slope) +
+                                                        t_shannon + 
+                                                        grazing +
+                                         (1|site), Gamma(link="inverse"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm_wo_interactions)
+plot(glmm_wo_interactions)
+qqnorm(resid(glmm_wo_interactions))
+qqline(resid(glmm_wo_interactions))
+
+plot_model(glmm_wo_interactions, show.values = T)
+stargazer(glmm_wo_interactions, type = "text")
 ```
+
+```{r}
+
+lmer_w_interactions <- lmer(log1p(agb_plot_ha) ~ env_pc1*agriculture + 
+                                         #env_pc1*grazing + #If added to the model, AIC decreases and env turns very relevant, but it seems weird because these two are not really related (see test above)
+                                         scale(slope) +
+                                         t_shannon*agriculture + 
+                                         t_shannon*grazing +
+                                         (1|site), data = plots_cf_4p)
+
+summary(lmer_w_interactions)
+plot(lmer_w_interactions)
+qqnorm(resid(lmer_w_interactions))
+qqline(resid(lmer_w_interactions))
+
+plot_model(lmer_w_interactions, show.values = T)
+stargazer(lmer_w_interactions, type = "text")
+```
+
 
 Plots classification
 
