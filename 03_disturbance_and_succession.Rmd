@@ -94,7 +94,7 @@ agriculture_grazing <- disturbance_cf %>%
   mutate(cause = ifelse(cause == "Uso del suelo diferente al forestal", "lulcc",
                         ifelse(cause =="Aprovechamientos forestales", "logging",
                                ifelse(cause == "Incendios", "fire",
-                                      ifelse(cause == "Pastoreo", "grazing", "unknown"))))) %>%
+                                      ifelse(cause == "Pastoreo", "grazing", cause))))) %>%
   mutate(cause = ifelse(cause == "logging" & 
                           notes == "Tala para sembrar café." |
                           notes == "Roza-Tumba y quema." |
@@ -103,18 +103,19 @@ agriculture_grazing <- disturbance_cf %>%
                           notes == "Quemas agrícolas." |
                           notes == "Rosa, tumba y quema" |
                           notes == "Quema agrícola.", "agriculture", cause)) %>%
-  filter(cause == "lulcc" |
-           cause == "grazing" |
-           cause == "agriculture" |
-           is.na(cause)) %>%
+  mutate(cause = ifelse(cause == "lulcc" &
+                          notes == "Forestal con ganadería extensiva y cultivo de maíz", "agriculture", cause)) %>% #both grazing and ag but this site has another entry for grazing (below) so I labelled as ag
   mutate(cause = ifelse(cause == "lulcc" &
                            notes == "Potrero" |
                            notes == "Forestal con ganadería" |
                            notes == "Forestal con ganadería extensiva" |
                            notes == "De forestal a potreros" |
-                           notes == "Forestal con ganaderia extensiva." |
-                           notes == "Forestal con ganadería extensiva y cultivo de maíz", "grazing", cause)) %>%
+                           notes == "Forestal con ganaderia extensiva.", "grazing", cause)) %>%
   mutate(cause = ifelse(cause == "lulcc", "agriculture", cause)) %>%
+  filter(cause == "grazing & agriculture" |
+           cause == "grazing" |
+           cause == "agriculture" |
+           is.na(cause)) %>%
   mutate(disturbance_type = as.character(cause),
          disturbance_severity = as.character(on_veg),
          disturbance_notes = as.character(notes)) %>%
@@ -161,10 +162,10 @@ Join to sites
 
 sites_cf <- agriculture_grazing %>%
   select(-disturbance_notes) %>%
-  group_by(site) %>%
+  group_by(site, disturbance_type) %>%
   summarize(disturbance_type = unique(disturbance_type),
-            disturbance_severity = mean(disturbance_severity)) %>%
-  mutate(disturbance_severity = ifelse(disturbance_type == "unknown", -1, disturbance_severity )) %>%
+            disturbance_severity = max(disturbance_severity)) %>% #some sites have the same disturbance repeated but with different severity values, I kept the max value
+  mutate(disturbance_severity = ifelse(disturbance_type == "unknown", -1, disturbance_severity )) %>% #Just to keep track of unknown values
   pivot_wider(names_from = disturbance_type, values_from = disturbance_severity, values_fill = 0) %>%
   right_join(sites_cf, by = "site") %>%
   mutate(agriculture = ifelse(is.na(agriculture), 0, agriculture),
@@ -176,6 +177,127 @@ sites_cf <- agriculture_grazing %>%
   select(-unknown) %>%
   relocate(c("agriculture", "grazing"), .after = "sp_richness_site_sd")
 
+```
+
+Logging and firewood collection
+
+```{r}
+
+logging <- disturbance_cf %>%
+  mutate(cause = ifelse(is.na(cause), "unknown", cause)) %>% #Keep sites that were not recorded on disturbance data set
+  filter(cause == "Aprovechamientos forestales") %>%  #Logging
+  mutate(cause = ifelse(cause =="Aprovechamientos forestales", "logging", "unknown")) %>%
+  mutate(cause = ifelse(cause == "logging" & 
+                          notes == "Tala para sembrar café." |
+                          notes == "Roza-Tumba y quema." |
+                          notes == "Roza tumba quema cambio a agricultura temporal.", "agriculture", cause)) %>%
+  filter(!cause == "agriculture") %>%
+  mutate(disturbance_type = as.character(cause),
+         disturbance_severity = as.character(on_veg),
+         disturbance_notes = as.character(notes)) %>%
+  select(-state, -municipality, -cause, -on_veg, -notes) %>%
+  mutate(disturbance_type = ifelse(is.na(disturbance_type), "unknown", disturbance_type)) %>%
+  mutate(disturbance_severity = ifelse(disturbance_severity == "Mayor", 4,
+                                       ifelse(disturbance_severity == "Mediana", 3,
+                                              ifelse(disturbance_severity == "Menor", 2,
+                                                     ifelse(disturbance_severity == "No perceptible", 1, NA))))) %>%
+  mutate(disturbance_severity = as.numeric(disturbance_severity))
+
+
+```
+
+Built-up
+
+```{r}
+# Apertura de caminos, Asentamientos humanos, Lineas Electricas
+
+builtup <- disturbance_cf %>%
+  mutate(cause = ifelse(is.na(cause), "unknown", cause)) %>% #Keep sites that were not recorded on disturbance data set
+  filter(cause == "Apertura de caminos" | #Roads
+           cause == "Asentamientos humanos" | #Urbanization
+           cause == "Lineas Electricas" | #Power lines
+           cause == "unknown") %>% #disturbance not reported
+  mutate(cause = ifelse(cause == "Apertura de caminos" | 
+                          cause =="Asentamientos humanos" |
+                          cause == "Lineas Electricas", "builtup", cause)) %>%
+  mutate(disturbance_type = as.character(cause),
+         disturbance_severity = as.character(on_veg),
+         disturbance_notes = as.character(notes)) %>%
+  select(-state, -municipality, -cause, -on_veg, -notes) %>%
+  mutate(disturbance_type = ifelse(is.na(disturbance_type), "unknown", disturbance_type)) %>%
+  mutate(disturbance_severity = ifelse(disturbance_severity == "Mayor", 4,
+                                       ifelse(disturbance_severity == "Mediana", 3,
+                                              ifelse(disturbance_severity == "Menor", 2,
+                                                     ifelse(disturbance_severity == "No perceptible", 1, NA))))) %>%
+  mutate(disturbance_severity = as.numeric(disturbance_severity))
+
+```
+
+Other disturbances (fires, pest outbreaks, hurricanes)
+
+```{r}
+
+other_dist <- disturbance_cf %>%
+  mutate(cause = ifelse(is.na(cause), "unknown", cause)) %>% #Keep sites that were not recorded on disturbance data set
+  filter(cause == "Huracanes" | #Hurricanes
+           cause == "Incendios" | #Fire
+           cause == "Plagas y enfermedades" | #Pests
+           cause == "unknown") %>% #disturbance not reported
+  mutate(cause = ifelse(cause == "Incendios" &
+                          notes == "Quemas agrícolas." |
+                          notes == "Rosa, tumba y quema" |
+                          notes == "Quema agrícola.", "agriculture", cause)) %>%
+  filter(!cause == "agriculture") %>%
+  mutate(cause = ifelse(cause == "Huracanes" | 
+                          cause =="Plagas y enfermedades" |
+                          cause == "Incendios", "other_dist", cause)) %>%
+  mutate(disturbance_type = as.character(cause),
+         disturbance_severity = as.character(on_veg),
+         disturbance_notes = as.character(notes)) %>%
+  select(-state, -municipality, -cause, -on_veg, -notes) %>%
+  mutate(disturbance_type = ifelse(is.na(disturbance_type), "unknown", disturbance_type)) %>%
+  mutate(disturbance_severity = ifelse(disturbance_severity == "Mayor", 4,
+                                       ifelse(disturbance_severity == "Mediana", 3,
+                                              ifelse(disturbance_severity == "Menor", 2,
+                                                     ifelse(disturbance_severity == "No perceptible", 1, NA))))) %>%
+  mutate(disturbance_severity = as.numeric(disturbance_severity))
+```
+
+Join all datasets
+
+```{r}
+
+sites_cf <- logging %>%
+  select(-disturbance_notes) %>%
+  pivot_wider(names_from = disturbance_type, values_from = disturbance_severity, values_fill = 0) %>%
+  right_join(sites_cf, by = "site") %>%
+  mutate(logging = ifelse(is.na(logging), 0, logging)) %>%
+  mutate(logging = ifelse(is.na(agriculture), NA, logging)) %>%
+  relocate(logging, .after = grazing)
+
+sites_cf <- builtup %>%
+  select(-disturbance_notes) %>%
+  filter(disturbance_type == "builtup") %>%
+  group_by(site, disturbance_type) %>%
+  summarize(disturbance_type = unique(disturbance_type),
+            disturbance_severity = max(disturbance_severity)) %>% #some sites have the same disturbance repeated but with different severity values, I kept the max value
+  pivot_wider(names_from = disturbance_type, values_from = disturbance_severity, values_fill = 0) %>%
+  right_join(sites_cf, by = "site") %>%
+  mutate(builtup = ifelse(is.na(builtup), 0, builtup)) %>%
+  mutate(builtup = ifelse(is.na(agriculture), NA, builtup)) %>%
+  relocate(builtup, .after = logging)
+
+sites_cf <- other_dist %>%
+  select(-disturbance_notes) %>%
+  filter(disturbance_type == "other_dist") %>%
+  group_by(site, disturbance_type) %>%
+  summarize(disturbance_type = unique(disturbance_type),
+            disturbance_severity = max(disturbance_severity)) %>% #some sites have the same disturbance repeated but with different severity values, I kept the max value
+  pivot_wider(names_from = disturbance_type, values_from = disturbance_severity, values_fill = 0) %>%
+  right_join(sites_cf, by = "site") %>%
+  mutate(other_dist = ifelse(is.na(other_dist), 0, other_dist)) %>%
+  mutate(other_dist = ifelse(is.na(agriculture), NA, other_dist)) %>%
+  relocate(other_dist, .after = builtup)
 ```
 
 ## Forest Succession
@@ -305,12 +427,12 @@ plots_cf <- plots_cf %>%
 
 # with 4 p only:
 
-str_k3_plots <- str_k3_plots %>%
-  mutate(str_class_plots_4p = as.character(value)) %>%
-  select(-value)
+#str_k3_plots <- str_k3_plots %>%
+#  mutate(str_class_plots_4p = as.character(value)) %>%
+#  select(-value)
 
-plots_cf_4p <- plots_cf_4p %>%
-  left_join(str_k3_plots, by = "plot_id")
+#plots_cf_4p <- plots_cf_4p %>%
+#  left_join(str_k3_plots, by = "plot_id")
 
 ```
 
@@ -452,9 +574,9 @@ plots_cf <- plots_cf %>%
   mutate(site = as.character(site))
 
 sites_cf %>%
-  select(site, agriculture, grazing) %>%
+  select(site, agriculture, grazing, logging, builtup, other_dist) %>%
   right_join(plots_cf, by = "site") %>%
-  relocate(c("agriculture", "grazing"), .after = sp_richness_plot) -> plots_cf
+  relocate(c("agriculture", "grazing", "logging", "builtup", "other_dist"), .after = sp_richness_plot) -> plots_cf
 ```
 
 ### Landscape composition: mosaic description

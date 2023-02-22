@@ -72,11 +72,12 @@ corrplot(corr, method = 'ellipse')
 corrplot(corr, method = 'number')
 plot(numeric_variables)
 ```
+
 Environmental data is highly correlated, so I'm going to get rid of some of that colinearity with a PCA
 
 ```{r}
 env <- plots_cf_4p %>%
-  select(plot_id, temp, precip, ai, altitude, northness, eastness, slope)
+  select(plot_id, temp, precip, ai, altitude, latitude, longitude, northness, eastness, slope)
 env <- as.data.frame(env)
 env$plot_id -> row.names(env)
 env <- env[,c(-1, -2)]
@@ -119,10 +120,14 @@ pc2
 plot(pc2[,1], plots_cf_4p$slope)
 plot(pc2[,1], plots_cf_4p$northness)
 plot(pc2[,1], plots_cf_4p$eastness)
+plot(pc2[,1], plots_cf_4p$latitude)
+plot(pc2[,1], plots_cf_4p$longitude)
 
 summary(lm(pc2[,1] ~ plots_cf_4p$slope))
 summary(lm(pc2[,1] ~ plots_cf_4p$northness))
 summary(lm(pc2[,1] ~ plots_cf_4p$eastness))
+summary(lm(pc2[,1] ~ plots_cf_4p$latitude))
+summary(lm(pc2[,1] ~ plots_cf_4p$longitude))
 
 ```
 Slope and aspect are more related to PC2 but relationships are weak.
@@ -291,7 +296,12 @@ summary(glmm1b)
 lmer1 <- lmer(log1p(agb_plot_ha) ~ t_shannon + (1|site), data = plots_cf_4p)
 summary(lmer1)
 plot(lmer1)
+plot_model(lmer1, show.p = T, show.values = T)
 stargazer(lmer1, type = "text")
+# This model is significant but the relationship doesn't seem to be normal
+# Also, about 60% of variation is explained by the random effect
+# which I think it means that there's a stronger relationship between
+# agb and diversity between plots than between sites 
 
 lmer1b <- lmer(agb_plot_ha ~ t_shannon + (1|site), data = plots_cf_4p)
 summary(lmer1b)
@@ -302,6 +312,7 @@ glmm1c <- glmer((log1p(agb_plot_ha+1)) ~ t_shannon + (1|site), Gamma(link = "inv
 summary(glmm1c)
 plot(glmm1c)
 
+# GAMM?
 ```
 
 GMM: agb ~ all variables
