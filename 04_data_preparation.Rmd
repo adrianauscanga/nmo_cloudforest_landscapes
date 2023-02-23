@@ -190,6 +190,35 @@ ggqqplot(sites_cf2$t_shannon_av_site)
 Shapiro-Wilk's normality test:
 
 ```{r}
+
+# Plots
+
+shapiro.test(plots_cf$agb_plot_ha)
+shapiro.test(plots_cf$temp)
+shapiro.test(plots_cf$precip)
+shapiro.test(plots_cf$northness) 
+shapiro.test(plots_cf$eastness)
+shapiro.test(plots_cf$slope) 
+shapiro.test(plots_cf$logging)
+shapiro.test(plots_cf$agriculture)
+shapiro.test(plots_cf$grazing)
+shapiro.test(plots_cf$sp_richness_plot) 
+shapiro.test(plots_cf$t_shannon) 
+
+ggdensity(plots_cf$agb_plot_ha)
+ggdensity(plots_cf$temp)
+ggdensity(plots_cf$precip)
+ggdensity(plots_cf$northness) #
+ggdensity(plots_cf$eastness)
+ggdensity(plots_cf$slope) 
+ggdensity(plots_cf$logging)
+ggdensity(plots_cf$agriculture)
+ggdensity(plots_cf$grazing)
+ggdensity(plots_cf$sp_richness_plot) 
+ggdensity(plots_cf$t_shannon)
+
+# Sites
+
 shapiro.test(sites_cf2$av_agb_site)
 shapiro.test(sites_cf2$temp)
 shapiro.test(sites_cf2$precip)
@@ -220,6 +249,9 @@ Although more important is to see if the residuals of OLS are normal or not.
 Data transformation may solve the problem.
 
 ```{r}
+
+shapiro.test(log1p(plots_cf$agb_plot_ha))
+ggdensity(log1p(plots_cf$agb_plot_ha))
 
 shapiro.test(log(sites_cf2$av_agb_site))
 ggdensity(log(sites_cf2$av_agb_site))
