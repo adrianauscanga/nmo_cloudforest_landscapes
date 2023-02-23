@@ -300,7 +300,19 @@ sites_cf <- other_dist %>%
   relocate(other_dist, .after = builtup)
 ```
 
-## Forest Succession
+Join disturbance info to plots_cf data set
+
+```{r}
+plots_cf <- plots_cf %>%
+  mutate(site = as.character(site))
+
+sites_cf %>%
+  select(site, agriculture, grazing, logging, builtup, other_dist) %>%
+  right_join(plots_cf, by = "site") %>%
+  relocate(c("agriculture", "grazing", "logging", "builtup", "other_dist"), .after = sp_richness_plot) -> plots_cf
+```
+
+## Forest Classification by Structure
 
 ### Non-hierarchical cluster analysis and PCA
 
@@ -317,41 +329,12 @@ plots_str <- plots_cf %>%
   select(plot_id,
          tree_density,
          loreys_height,
-         basal_area_ha,
-         agb_plot_ha)
+         basal_area_ha)
 
 plot(plots_str)
 
 # Scale data so that variables in different units can be compared
-plots_str_scaled <- scale(plots_str[,-c(1,5)])
-row.names(plots_str_scaled) <- plots_str$plot_id
-
-# Repeat with a subset of 180 plots (for the sites that have 4 plots each)
-
-sites_cf_4p <- sites_cf %>%
-  filter(plot_no == 4) 
-
-# Plots
-# subset plots_cf data set
-
-plots_cf <- plots_cf %>%
-  mutate(site = as.character(site))
-
-plots_cf_4p <- sites_cf_4p %>%
-  select(site) %>%
-  left_join(plots_cf, by ="site") 
-
-plots_str <- plots_cf_4p %>%
-  select(plot_id,
-         tree_density,
-         loreys_height,
-         basal_area_ha,
-         agb_plot_ha)
-
-plot(plots_str)
-
-# Scale data so that variables in different units can be compared
-plots_str_scaled <- scale(plots_str[,-c(1,2,6)])
+plots_str_scaled <- scale(plots_str[,c(3:5)])
 row.names(plots_str_scaled) <- plots_str$plot_id
 
 ```
@@ -425,14 +408,6 @@ str_k3_plots <- str_k3_plots %>%
 plots_cf <- plots_cf %>%
   left_join(str_k3_plots, by = "plot_id")
 
-# with 4 p only:
-
-#str_k3_plots <- str_k3_plots %>%
-#  mutate(str_class_plots_4p = as.character(value)) %>%
-#  select(-value)
-
-#plots_cf_4p <- plots_cf_4p %>%
-#  left_join(str_k3_plots, by = "plot_id")
 
 ```
 
@@ -465,36 +440,6 @@ plots_cf %>%
   scale_color_manual(values = c("tomato", "green3", "dodgerblue2")) +
   ggtitle("Basal area")
 
-# Only 4 plots:
-
-plots_cf_4p %>%
-  ggplot(aes(x = tree_density, group = str_class_plots_4p, fill = str_class_plots_4p, color = str_class_plots_4p)) +
-  geom_density(alpha= 0.5) +
-  scale_fill_manual(values = c("tomato", "green3", "dodgerblue2")) +
-  scale_color_manual(values = c("tomato", "green3", "dodgerblue2")) +
-  ggtitle("Tree density")
-
-plots_cf_4p %>%
-  ggplot(aes(x = loreys_height, group = str_class_plots_4p, fill = str_class_plots_4p, color = str_class_plots_4p)) +
-  geom_density(alpha= 0.5) +
-  scale_fill_manual(values = c("tomato", "green3", "dodgerblue2")) +
-  scale_color_manual(values = c("tomato", "green3", "dodgerblue2")) +
-  ggtitle("Tree height")
-
-plots_cf_4p %>%
-  ggplot(aes(x = basal_area_ha, group = str_class_plots_4p, fill = str_class_plots_4p, color = str_class_plots_4p)) +
-  geom_density(alpha= 0.5) +
-  scale_fill_manual(values = c("tomato", "green3", "dodgerblue2")) +
-  scale_color_manual(values = c("tomato", "green3", "dodgerblue2")) +
-  ggtitle("Basal area")
-
-#plots_cf %>%
-#  ggplot(aes(x = agb_plot_ha, group = str_class_plots, fill = str_class_plots)) +
-#  geom_density(alpha= 0.5) +
-#  ggtitle("Biomass")
-
-
-
 ```
 
 ```{r}
@@ -525,31 +470,6 @@ plots_cf %>%
   ggplot(aes(y = t_shannon, color = str_class_plots)) +
   geom_boxplot()
 
-# Plots with 4 repetitions
-
-plots_cf_4p %>%
-  ggplot(aes(y = tree_density, color = str_class_plots_4p)) +
-  geom_boxplot()
-
-plots_cf_4p %>%
-  ggplot(aes(y = loreys_height, color = str_class_plots_4p)) +
-  geom_boxplot()
-
-plots_cf_4p %>%
-  ggplot(aes(y = basal_area_ha, color = str_class_plots_4p)) +
-  geom_boxplot()
-
-plots_cf_4p %>%
-  ggplot(aes(y = agb_plot_ha, color = str_class_plots_4p)) +
-  geom_boxplot()
-
-plots_cf_4p %>%
-  ggplot(aes(y = shannon, color = str_class_plots_4p)) +
-  geom_boxplot()
-
-plots_cf_4p %>%
-  ggplot(aes(y = t_shannon, color = str_class_plots_4p)) +
-  geom_boxplot()
 ```
 
 * Note: there's a plot with more than 600 Mg/ha of biomass!
@@ -563,20 +483,29 @@ but this is exactly the question we are after (the relationship between structur
 
 ```{r}
 
-# First, let's add agriculture and grazing data to the plots dataset
+plots_cf %>%
+  ggplot(aes(x = altitude, y = agriculture, color = str_class_plots)) +
+  geom_jitter()
 
-sites_cf_4p %>%
-  select(site, agriculture, grazing) %>%
-  right_join(plots_cf_4p, by ="site") %>%
-  relocate(c("agriculture", "grazing"), .after = str_class_plots_4p) -> plots_cf_4p
+plots_cf %>%
+  ggplot(aes(x = altitude, y = logging, color = str_class_plots)) +
+  geom_jitter()
 
-plots_cf <- plots_cf %>%
-  mutate(site = as.character(site))
+plots_cf %>%
+  ggplot(aes(x = altitude, y = grazing, color = str_class_plots)) +
+  geom_jitter()
 
-sites_cf %>%
-  select(site, agriculture, grazing, logging, builtup, other_dist) %>%
-  right_join(plots_cf, by = "site") %>%
-  relocate(c("agriculture", "grazing", "logging", "builtup", "other_dist"), .after = sp_richness_plot) -> plots_cf
+plots_cf %>%
+  mutate(lu = (agriculture + grazing + logging),
+         dist = (agriculture + grazing + logging + builtup)) %>%
+  #filter(lu == 0) %>%
+  ggplot(aes(x = altitude, y = lu, color = str_class_plots)) +
+  geom_jitter()
+
+plots_cf %>%
+  filter(altitude > 2500,
+         str_class_plots == 2)
+  
 ```
 
 ### Landscape composition: mosaic description
