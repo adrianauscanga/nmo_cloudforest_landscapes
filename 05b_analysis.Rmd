@@ -25,6 +25,7 @@ library(corrplot)
 library(vegan)
 library(stargazer)
 library(sjPlot)
+library(cAIC4)
 
 #library(rstatix)
 #library(corrplot)
@@ -52,6 +53,10 @@ plots_cf_4p %>%
   geom_histogram(bins = 20)
 
 plots_cf_4p %>%
+  ggplot(aes(x= sqrt(agb_plot_ha))) +
+  geom_histogram(bins = 20)
+
+plots_cf_4p %>%
   ggplot(aes(x= t_shannon)) +
   geom_histogram(bins = 20)
 
@@ -63,7 +68,7 @@ plots_cf_4p %>%
 
 ```{r}
 numeric_variables <- plots_cf_4p %>%
-  select(temp, precip, ai, altitude, latitude, longitude, northness, eastness, slope, t_shannon, sp_richness_plot, agb_plot_ha, agriculture, grazing) %>%
+  select(temp, precip, ai, altitude, latitude, longitude, northness, eastness, slope, t_shannon, sp_richness_plot, agb_plot_ha, agriculture, grazing, logging) %>%
   mutate(log_agb = log1p(agb_plot_ha)) %>%
   select(-agb_plot_ha)
 
@@ -72,8 +77,8 @@ corrplot(corr, method = 'ellipse')
 corrplot(corr, method = 'number')
 plot(numeric_variables)
 ```
-
-Environmental data is highly correlated, so I'm going to get rid of some of that colinearity with a PCA
+From this correlation matrix, I'm going to select variables that have correlation > 0.3
+Environmental data is highly correlated, so I'm going to get rid of some of that collinearity with a PCA
 
 ```{r}
 env <- plots_cf_4p %>%
@@ -132,7 +137,9 @@ summary(lm(pc2[,1] ~ plots_cf_4p$longitude))
 ```
 Slope and aspect are more related to PC2 but relationships are weak.
 Correlation among them is also weak. 
-To avoid colinearity, we are going to use PC1 (which encompasses temp, precip, elevation, and ai), slope and aspect.
+PC2 is mainly driven by lat and lon.
+To avoid collinearity, we are going to use PC1 (which encompasses temp, precip, elevation, and ai), and slope.
+Lat, lon, and aspect don't seem to be related to other variables (see corrplot).
 
 ```{r}
 # Add PC1 values to dataset
@@ -144,7 +151,874 @@ env_pc1 <- as_tibble(pc1, .name_repair = "minimal", rownames = "plot_id")
 
 plots_cf_4p <- plots_cf_4p %>%
   left_join(env_pc1, by = "plot_id")
+
+plots_cf_4p <- plots_cf_4p %>%
+  relocate(env_pc1, .after = ai)
+
 ```
+
+Once we addressed collinearity, and checked which variables are correlated,
+the selected variables that will go to the model are:
+* env_pc1
+* slope (?)
+* t_shannon
+* sp_richness_plot
+* agriculture
+* grazing
+* logging (?)
+* log_agb
+
+(?) are not related to agb nor tree diversity but are correlated.
+
+Mixed models
+
+We are going to fit models for predicting AGB using the plots dataset
+and using the variable 'site' as random factor.
+
+1) First fit a model of agb with each predictor
+2) then run a stepwise model selecion process
+(backward and forward) with all predictors. 
+3) Test interactions between predictors and assess whether adding
+interactions in the model is worth it or not
+4) repeat with glmm 
+
+
+```{r}
+
+lmm_env <- lmer(log1p(agb_plot_ha) ~ env_pc1 + (1| site), data = plots_cf_4p)
+summary(lmm_env)
+plot(lmm_env)
+stargazer(lmm_env, type = "text")
+cAIC(lmm_env)
+```
+
+```{r}
+lmm_slope <- lmer(log1p(agb_plot_ha) ~ slope + (1| site), data = plots_cf_4p)
+summary(lmm_slope)
+plot(lmm_slope)
+stargazer(lmm_slope, type = "text")
+cAIC(lmm_slope)
+```
+
+```{r}
+
+lmm_t_shannon <- lmer(log1p(agb_plot_ha) ~ t_shannon + (1| site), data = plots_cf_4p)
+summary(lmm_t_shannon)
+plot(lmm_t_shannon)
+stargazer(lmm_t_shannon, type = "text")
+cAIC(lmm_t_shannon)
+
+```
+```{r}
+
+lmm_sp_rich <- lmer(log1p(agb_plot_ha) ~ sp_richness_plot + (1| site), data = plots_cf_4p)
+summary(lmm_sp_rich)
+plot(lmm_sp_rich)
+stargazer(lmm_sp_rich, type = "text")
+cAIC(lmm_sp_rich)
+
+```
+```{r}
+
+lmm_ag <- lmer(log1p(agb_plot_ha) ~ agriculture + (1| site), data = plots_cf_4p)
+summary(lmm_ag)
+plot(lmm_ag)
+stargazer(lmm_ag, type = "text")
+cAIC(lmm_ag)
+
+```
+```{r}
+
+lmm_graz <- lmer(log1p(agb_plot_ha) ~ grazing + (1| site), data = plots_cf_4p)
+summary(lmm_graz)
+plot(lmm_graz)
+stargazer(lmm_graz, type = "text")
+cAIC(lmm_graz)
+
+```
+```{r}
+
+lmm_logg <- lmer(log1p(agb_plot_ha) ~ logging + (1| site), data = plots_cf_4p)
+summary(lmm_logg)
+plot(lmm_logg)
+stargazer(lmm_logg, type = "text")
+cAIC(lmm_logg)
+
+```
+
+```{r}
+anocAIC(lmm_env, lmm_slope, lmm_t_shannon, lmm_sp_rich, lmm_ag, lmm_graz, lmm_logg, digits = 3)
+```
+
+Best model with only 1 predictor is agb ~ sp_richness!
+
+```{r}
+
+lmm_all <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t_shannon +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_all6 <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t_shannon +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_all5 <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t_shannon +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_all4 <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #t_shannon +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+
+anocAIC(lmm_all, lmm_all6, lmm_all5, lmm_all4, digits = 3)
+```
+
+"Stepwise" model (by hand)
+
+```{r}
+# Two predictors
+combn(c("env","slope","sp_rich", "t_shannon","ag","graz","logg"), 2, simplify = T)
+
+# env_pc1
+
+lmm_2p_a <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_b <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_c <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #t_shannon +
+           sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_d <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_e <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_f <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+# Slope 
+
+lmm_2p_g <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_h <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #t_shannon +
+           sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_i <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #t_shannon +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_j <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_k <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+# T_shannon
+
+lmm_2p_l <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t_shannon +
+           sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_m <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t_shannon +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_n <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_o <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+# Sp_richness_plot
+
+lmm_2p_p <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_q <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           sp_richness_plot +
+           #agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_r <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+# Agriculture
+
+lmm_2p_s <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_2p_t <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+# Grazing
+
+lmm_2p_u <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm2p_cAIC <- anocAIC(lmm_2p_a,
+        lmm_2p_b,
+        lmm_2p_c,
+        lmm_2p_d,
+        lmm_2p_e,
+        lmm_2p_f,
+        lmm_2p_g,
+        lmm_2p_h,
+        lmm_2p_i,
+        lmm_2p_j,
+        lmm_2p_k,
+        lmm_2p_l,
+        lmm_2p_m,
+        lmm_2p_n,
+        lmm_2p_o,
+        lmm_2p_p,
+        lmm_2p_q,
+        lmm_2p_r,
+        lmm_2p_s,
+        lmm_2p_t,
+        lmm_2p_u,
+        digits = 3)
+
+lmm2p_cAIC <- as_tibble(lmm2p_cAIC, rownames = "model")
+
+lmm2p_cAIC %>%
+  arrange(cAIC)
+```
+Best model with 2 predictors: sp_richness + agriculture cAIC 446.844
+I'll remove t_shannon because sp_richness seems to work better and they're very related
+
+```{r}
+# 3 predictors
+combn(c("env","slope","sp_rich","ag","graz","logg"), 3, simplify = T)
+
+# env_pc1
+
+lmm_3p_a <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_b <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_c <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_d <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_e <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_f <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           sp_richness_plot +
+           #agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_g <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_h <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_i <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_j <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+# slope
+
+lmm_3p_k <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_l <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           sp_richness_plot +
+           #agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_m <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_n <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_o <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_p <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+# sp_richness
+
+lmm_3p_q <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_r <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_3p_s <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+# agriculture
+
+lmm_3p_t <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm3p_cAIC <- anocAIC(lmm_3p_a,
+        lmm_3p_b,
+        lmm_3p_c,
+        lmm_3p_d,
+        lmm_3p_e,
+        lmm_3p_f,
+        lmm_3p_g,
+        lmm_3p_h,
+        lmm_3p_i,
+        lmm_3p_j,
+        lmm_3p_k,
+        lmm_3p_l,
+        lmm_3p_m,
+        lmm_3p_n,
+        lmm_3p_o,
+        lmm_3p_p,
+        lmm_3p_q,
+        lmm_3p_r,
+        lmm_3p_s,
+        lmm_3p_t,
+        digits = 3)
+
+lmm3p_cAIC <- as_tibble(lmm3p_cAIC, rownames = "model")
+
+lmm3p_cAIC %>%
+  arrange(cAIC)
+
+```
+Best model with 3 predictors is slope + sp_richness + agriculture cAIC 443.707
+
+```{r}
+# 4 predictors
+combn(c("env","slope","sp_rich","ag","graz","logg"), 4, simplify = T)
+
+# env_pc1
+
+lmm_4p_a <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_b <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           sp_richness_plot +
+           #agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_c <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_d <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_e <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_f <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_g <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_h <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_i <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_j <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_k <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_l <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_m <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_n <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_4p_o <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm4p_cAIC <- anocAIC(lmm_4p_a,
+        lmm_4p_b,
+        lmm_4p_c,
+        lmm_4p_d,
+        lmm_4p_e,
+        lmm_4p_f,
+        lmm_4p_g,
+        lmm_4p_h,
+        lmm_4p_i,
+        lmm_4p_j,
+        lmm_4p_k,
+        lmm_4p_l,
+        lmm_4p_m,
+        lmm_4p_n,
+        lmm_4p_o,
+        digits = 3)
+
+lmm4p_cAIC <- as_tibble(lmm4p_cAIC, rownames = "model")
+
+lmm4p_cAIC %>%
+  arrange(cAIC)
+
+```
+Best model with 4 predictors is env_pc1 + slope + sp_richness + agriculture cAIC: 443.194
+
+```{r}
+
+# 5 predictors
+combn(c("env","slope","sp_rich","ag","graz","logg"), 5, simplify = T)
+
+lmm_5p_a <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           #logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_5p_b <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_5p_c <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_5p_d <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_5p_e <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm_5p_f <- lmer(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+lmm5p_cAIC <- anocAIC(lmm_5p_a,
+        lmm_5p_b,
+        lmm_5p_c,
+        lmm_5p_d,
+        lmm_5p_e,
+        lmm_5p_f,
+        digits = 3)
+
+lmm5p_cAIC <- as_tibble(lmm5p_cAIC, rownames = "model")
+
+lmm5p_cAIC %>%
+  arrange(cAIC)
+
+```
+
+Best model with 5 predictors is env_pc1 + slope + sp_richness_plot + agriculture + logging cAIC 443.769
+
+```{r}
+# All 6 predictors
+
+lmm_6p_a <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           sp_richness_plot +
+           agriculture +
+           grazing +
+           logging +
+           (1| site), data = plots_cf_4p)
+
+cAIC(lmm_6p_a)
+```
+
+Best model has 4 predictors: 
+```{r}
+
+summary(lmm_4p_a)
+plot(lmm_4p_a)
+plot_model(lmm_4p_a, show.p = T, show.values = T)
+stargazer(lmm_4p_a, type = "text")
+cAIC(lmm_4p_a)
+
+qqnorm(resid(lmm_4p_a))
+qqline(resid(lmm_4p_a))
+
+shapiro.test(resid(lmm_4p_a))
+```
+
+As we would expect some variables to be related, we also made models with interactions
+
+```{r}
+
+
+lmm_4p_int <- lmer(log1p(agb_plot_ha) ~ env_pc1 * agriculture +
+                     sp_richness_plot * agriculture +
+                     slope +
+                     (1| site), data = plots_cf_4p)
+
+cAIC(lmm_4p_int)
+stargazer(lmm_4p_int, type = "text")
+
+summary(lmm_4p_int)
+shapiro.test(resid(lmm_4p_int))
+
+plot(lmm_4p_int)
+plot_model(lmm_4p_int, show.p = T, show.values = T)
+
+qqnorm(resid(lmm_4p_int))
+qqline(resid(lmm_4p_int))
+
+
+```
+
+```{r}
+cAIC(lmm_4p_a)
+cAIC(lmm_4p_int)
+```
+
+So far, the best models are with 4 predictors. 
+When adding an interactions between agriculture and sp_richness, the model improves a lot,
+although residuals are not normal.
+
+
 
 Linear mixed model
 
