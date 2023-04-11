@@ -26,6 +26,8 @@ library(vegan)
 library(stargazer)
 library(sjPlot)
 library(cAIC4)
+library(mgcv)
+library(gamm4)
 
 #library(rstatix)
 #library(corrplot)
@@ -65,6 +67,7 @@ plots_cf_4p %>%
   geom_histogram(bins = 10)
 
 ```
+### Correlations
 
 ```{r}
 numeric_variables <- plots_cf_4p %>%
@@ -79,6 +82,8 @@ plot(numeric_variables)
 ```
 From this correlation matrix, I'm going to select variables that have correlation > 0.3
 Environmental data is highly correlated, so I'm going to get rid of some of that collinearity with a PCA
+
+## 2. PCA of environmental variables
 
 ```{r}
 env <- plots_cf_4p %>%
@@ -158,7 +163,7 @@ plots_cf_4p <- plots_cf_4p %>%
 ```
 
 Once we addressed collinearity, and checked which variables are correlated,
-the selected variables that will go to the model are:
+the selected variables that will be predictors in the model are:
 * env_pc1
 * slope (?)
 * t_shannon
@@ -169,19 +174,19 @@ the selected variables that will go to the model are:
 * log_agb
 
 (?) are not related to agb nor tree diversity but are correlated.
+Also, slope is always included in agb models of tropical montane forests.
 
-Mixed models
+## 3. Linear Mixed Effects Models
 
-We are going to fit models for predicting AGB using the plots dataset
+We are going to fit models for predicting AGB using the plots_cf_4p dataset
 and using the variable 'site' as random factor.
 
 1) First fit a model of agb with each predictor
-2) then run a stepwise model selecion process
-(backward and forward) with all predictors. 
+2) Test all possible models and select the best ones
 3) Test interactions between predictors and assess whether adding
-interactions in the model is worth it or not
-4) repeat with glmm 
+interactions in the model is worth it 
 
+### LMM: each predictor
 
 ```{r}
 
@@ -190,6 +195,7 @@ summary(lmm_env)
 plot(lmm_env)
 stargazer(lmm_env, type = "text")
 cAIC(lmm_env)
+
 ```
 
 ```{r}
@@ -209,6 +215,8 @@ stargazer(lmm_t_shannon, type = "text")
 cAIC(lmm_t_shannon)
 
 ```
+
+
 ```{r}
 
 lmm_sp_rich <- lmer(log1p(agb_plot_ha) ~ sp_richness_plot + (1| site), data = plots_cf_4p)
@@ -218,6 +226,8 @@ stargazer(lmm_sp_rich, type = "text")
 cAIC(lmm_sp_rich)
 
 ```
+
+
 ```{r}
 
 lmm_ag <- lmer(log1p(agb_plot_ha) ~ agriculture + (1| site), data = plots_cf_4p)
@@ -294,7 +304,7 @@ lmm_all4 <- lmer(log1p(agb_plot_ha) ~ env_pc1 +
 anocAIC(lmm_all, lmm_all6, lmm_all5, lmm_all4, digits = 3)
 ```
 
-"Stepwise" model (by hand)
+### LMM: all posible models
 
 ```{r}
 # Two predictors
@@ -982,9 +992,27 @@ qqnorm(resid(lmm_4p_a))
 qqline(resid(lmm_4p_a))
 
 shapiro.test(resid(lmm_4p_a))
+
+rsq.lmm(lmm_4p_a, adj= T)
+
+plot(plots_cf_4p$log_agb~fitted(lmm_4p_a))
+
+model_performance(lmm_4p_a, estimator = "ML")
+# returns to the un-transformed response variable
+
+#RMSE
+
+sqrt(mean((plots_cf_4p$log_agb - fitted(lmm_4p_a))^2))
+
+yhat_lmm_4p_a <- fitted(lmm_4p_a)
+res_lmm_4p_a <- residuals(lmm_4p_a)
+
+# plot observed vs predicted and observed vs residuals and model coefficients
 ```
 
 As we would expect some variables to be related, we also made models with interactions
+
+### LMM: best model with interactions
 
 ```{r}
 
@@ -1006,20 +1034,57 @@ plot_model(lmm_4p_int, show.p = T, show.values = T)
 qqnorm(resid(lmm_4p_int))
 qqline(resid(lmm_4p_int))
 
+rsq.lmm(lmm_4p_int, adj= T)
 
+sqrt(mean((plots_cf_4p$log_agb - fitted(lmm_4p_int))^2))
 ```
+
 
 ```{r}
 cAIC(lmm_4p_a)
 cAIC(lmm_4p_int)
+
+anova(lmm_4p_a, lmm_4p_int)
 ```
 
 So far, the best models are with 4 predictors. 
 When adding an interactions between agriculture and sp_richness, the model improves a lot,
 although residuals are not normal.
 
+# GLMM
+
+```{r}
+plots_cf_4p <- plots_cf_4p %>%
+  mutate(log_agb = log1p(agb_plot_ha))
+
+plots_cf_4p %>%
+  mutate(log_agb_scaled = scale(log_agb)) %>%
+  select(log_agb, log_agb_scaled) %>%
+  arrange(log_agb_scaled) # -1.499155119	
+
+glmm_4p <- glmer(log_agb+0.1 ~ env_pc1 +
+           scale(slope) +
+           scale(sp_richness_plot) +
+           scale(agriculture) +
+           (1| site),
+           Gamma(link="inverse"),
+           data = plots_cf_4p,
+           glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+summary(glmm_4p)
+stargazer(glmm_4p, type = "text")
+
+shapiro.test(resid(glmm_4p))
+
+plot(glmm_4p)
+plot_model(glmm_4p, show.p = T, show.values = T)
+
+qqnorm(resid(glmm_4p))
+qqline(resid(glmm_4p))
+
+```
 
 
+#################################################################################
 Linear mixed model
 
 LMM with all variables and site as random effect
@@ -1206,6 +1271,8 @@ getME(g, "glmer.nb.theta")
 
 glmm3 <- glmer(agriculture ~ env_pc1 + (1|site), negative.binomial(theta= 87730.47, link="log"), data = plots_cf_4p, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
 summary(glmm3)
+shapiro.test(resid(glmm3))
+plot(glmm3)
 
 ## *Significant interaction!*
 
@@ -1451,5 +1518,834 @@ plots_cf_4p %>%
   
 ```
 
+# GAMMs
 
-Option 1: PCA?
+Null model with random effects 
+
+```{r}
+
+gamm4_null <- gamm4(log1p(agb_plot_ha) ~ 1, random = ~(1|site), data = plots_cf_4p)
+summary(gamm4_null)
+summary(gamm4_null$mer)
+summary(gamm4_null$gam)
+gam0 <- gamm4_null$gam
+
+```
+
+## GAMM: 1 predictor
+
+```{r}
+# env_pc1, slope, t_shannon, sp_richness_plot, agriculture, grazing, logging
+
+gamm4_1a <- gamm4(log1p(agb_plot_ha) ~ env_pc1, # relationship looks linear so I removed t2
+                  random = ~(1|site), data = plots_cf_4p) 
+
+gamm4_1b <-  gamm4(log1p(agb_plot_ha) ~ t2(t_shannon, bs="tp", k=4),
+                   random = ~(1|site), data = plots_cf_4p)
+
+gamm4_1c <- gamm4(log1p(agb_plot_ha) ~ t2(sp_richness_plot, bs="tp", k=4),
+                   random = ~(1|site), data = plots_cf_4p)
+
+gamm4_1d <- gamm4(log1p(agb_plot_ha) ~ agriculture,
+                   random = ~(1|site), data = plots_cf_4p)
+
+gamm4_1e <- gamm4(log1p(agb_plot_ha) ~ grazing,
+                   random = ~(1|site), data = plots_cf_4p)
+
+gamm4_1f <- gamm4(log1p(agb_plot_ha) ~ logging,
+                   random = ~(1|site), data = plots_cf_4p)
+
+gamm4_1g <-  gamm4(log1p(agb_plot_ha) ~ slope,
+                   random = ~(1|site), data = plots_cf_4p)
+
+summary(gamm4_1a$mer)
+summary(gamm4_1a$gam)
+#plot.gam(gamm4_1a$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_1a$gam)
+aic1a <- cAIC(gamm4_1a)
+
+summary(gamm4_1b$mer)
+summary(gamm4_1b$gam)
+plot.gam(gamm4_1b$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_1b$gam)
+aic1b <- cAIC(gamm4_1b)
+
+summary(gamm4_1c$mer)
+summary(gamm4_1c$gam)
+plot.gam(gamm4_1c$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_1c$gam)
+aic1c <- cAIC(gamm4_1c)
+
+summary(gamm4_1d$mer)
+summary(gamm4_1d$gam)
+#plot.gam(gamm4_1d$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_1d$gam)
+aic1d <- cAIC(gamm4_1d)
+
+summary(gamm4_1e$mer)
+summary(gamm4_1e$gam)
+#plot.gam(gamm4_1e$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_1e$gam)
+aic1e <- cAIC(gamm4_1e)
+
+summary(gamm4_1f$mer)
+summary(gamm4_1f$gam)
+#plot.gam(gamm4_1f$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_1f$gam)
+aic1f <- cAIC(gamm4_1f)
+
+summary(gamm4_1g$mer)
+summary(gamm4_1g$gam)
+#plot.gam(gamm4_1g$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_1g$gam)
+aic1g <- cAIC(gamm4_1g)
+
+
+gamms1_aic <- c(aic1a$caic,
+                aic1b$caic,
+                aic1c$caic,
+                aic1d$caic,
+                aic1e$caic,
+                aic1f$caic,
+                aic1g$caic)
+
+# Best model with 1 predictor (based on cAIC) is agb ~ sp richness 
+```
+
+## GAMM: 2 predictors
+
+```{r}
+
+gamm4_2a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 + # relationship looks linear so I removed t2
+            slope,
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           t2(t_shannon, bs="tp", k=4),
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #t_shannon +
+           t2(sp_richness_plot, bs="tp", k=4),
+           #agriculture +
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           agriculture,
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           grazing, 
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2f <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+# Slope 
+
+gamm4_2g <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           t2(t_shannon, bs="tp", k=4),
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2h <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #t_shannon +
+           t2(sp_richness_plot, bs="tp", k=4),
+           #agriculture +
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2i <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #t_shannon +
+           #sp_richness_plot +
+           agriculture,
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2j <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2k <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+# T_shannon
+
+gamm4_2l <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t2(t_shannon, bs="tp", k=4) +
+           t2(sp_richness_plot, bs="tp", k=4),
+           #agriculture +
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2m <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t2(t_shannon, bs="tp", k=4) +
+           #sp_richness_plot +
+           agriculture,
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2n <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t2(t_shannon, bs="tp", k=4) +
+           #sp_richness_plot +
+           #agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2o <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t2(t_shannon, bs="tp", k=4) +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+# Sp_richness_plot
+
+gamm4_2p <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture,
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2q <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2r <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+# Agriculture
+
+gamm4_2s <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_2t <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+# Grazing
+
+gamm4_2u <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #t_shannon +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+# cAIC
+
+aic2a <- cAIC(gamm4_2a)
+aic2b <- cAIC(gamm4_2b)
+aic2c <- cAIC(gamm4_2c)
+aic2d <- cAIC(gamm4_2d)
+aic2e <- cAIC(gamm4_2e)
+aic2f <- cAIC(gamm4_2f)
+aic2g <- cAIC(gamm4_2g)
+aic2h <- cAIC(gamm4_2h)
+aic2i <- cAIC(gamm4_2i)
+aic2j <- cAIC(gamm4_2j)
+aic2k <- cAIC(gamm4_2k)
+aic2l <- cAIC(gamm4_2l)
+aic2m <- cAIC(gamm4_2m)
+aic2n <- cAIC(gamm4_2n)
+aic2o <- cAIC(gamm4_2o)
+aic2p <- cAIC(gamm4_2p)
+aic2q <- cAIC(gamm4_2q)
+aic2r <- cAIC(gamm4_2r)
+aic2s <- cAIC(gamm4_2s)
+aic2t <- cAIC(gamm4_2t)
+aic2u <- cAIC(gamm4_2u)
+
+
+gamms2_aic <- c("gamm4_2a", aic2a$caic,
+                "gamm4_2b", aic2b$caic,
+                "gamm4_2c", aic2c$caic,
+                "gamm4_2d", aic2d$caic,
+                "gamm4_2e", aic2e$caic,
+                "gamm4_2f", aic2f$caic,
+                "gamm4_2g", aic2g$caic,
+                "gamm4_2h", aic2h$caic,
+                "gamm4_2i", aic2i$caic,
+                "gamm4_2j", aic2j$caic,
+                "gamm4_2k", aic2k$caic,
+                "gamm4_2l", aic2l$caic,
+                "gamm4_2m", aic2m$caic,
+                "gamm4_2n", aic2n$caic,
+                "gamm4_2o", aic2o$caic,
+                "gamm4_2p", aic2p$caic,
+                "gamm4_2q", aic2q$caic,
+                "gamm4_2r", aic2r$caic,
+                "gamm4_2s", aic2s$caic,
+                "gamm4_2t", aic2t$caic,
+                "gamm4_2u", aic2u$caic)
+
+# Best model of 2 predictors is agb ~ sp_richness + agriculture cAIC = 437.158
+```
+## GAMM: 3 predictors
+
+```{r}
+gamm4_3a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4),
+           #agriculture +
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture,
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           #agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           #agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture,
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3f <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3g <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           #grazing +
+           logging, 
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3h <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing, 
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3i <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging, 
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3j <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging, 
+           random = ~(1|site), data = plots_cf_4p)
+
+# slope
+
+gamm4_3k <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture,
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3l <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3m <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3n <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3o <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3p <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+# sp_richness
+
+gamm4_3q <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3r <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_3s <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+# agriculture
+
+gamm4_3t <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+aic3a <- cAIC(gamm4_3a)
+aic3b <- cAIC(gamm4_3b)
+aic3c <- cAIC(gamm4_3c)
+aic3d <- cAIC(gamm4_3d)
+aic3e <- cAIC(gamm4_3e)
+aic3f <- cAIC(gamm4_3f)
+aic3g <- cAIC(gamm4_3g)
+aic3h <- cAIC(gamm4_3h)
+aic3i <- cAIC(gamm4_3i)
+aic3j <- cAIC(gamm4_3j)
+aic3k <- cAIC(gamm4_3k)
+aic3l <- cAIC(gamm4_3l)
+aic3m <- cAIC(gamm4_3m)
+aic3n <- cAIC(gamm4_3n)
+aic3o <- cAIC(gamm4_3o)
+aic3p <- cAIC(gamm4_3p)
+aic3q <- cAIC(gamm4_3q)
+aic3r <- cAIC(gamm4_3r)
+aic3s <- cAIC(gamm4_3s)
+aic3t <- cAIC(gamm4_3t)
+
+gamms3_aic <- c("gamm4_3a", aic3a$caic,
+                "gamm4_3b", aic3b$caic,
+                "gamm4_3c", aic3c$caic,
+                "gamm4_3d", aic3d$caic,
+                "gamm4_3e", aic3e$caic,
+                "gamm4_3f", aic3f$caic,
+                "gamm4_3g", aic3g$caic,
+                "gamm4_3h", aic3h$caic,
+                "gamm4_3i", aic3i$caic,
+                "gamm4_3j", aic3j$caic,
+                "gamm4_3k", aic3k$caic,
+                "gamm4_3l", aic3l$caic,
+                "gamm4_3m", aic3m$caic,
+                "gamm4_3n", aic3n$caic,
+                "gamm4_3o", aic3o$caic,
+                "gamm4_3p", aic3p$caic,
+                "gamm4_3q", aic3q$caic,
+                "gamm4_3r", aic3r$caic,
+                "gamm4_3s", aic3s$caic,
+                "gamm4_3t", aic3t$caic)
+
+# Best model with 3 predictors is agb ~ slope + sp_richness + agriculture cAIC= 434.859
+```
+## GAMM: 4 predictors
+
+```{r}
+gamm4_4a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture,
+           #grazing +
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4f <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           #agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4g <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4h <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4i <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4j <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4k <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4l <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4m <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4n <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4o <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+aic4a <- cAIC(gamm4_4a)
+aic4b <- cAIC(gamm4_4b)
+aic4c <- cAIC(gamm4_4c)
+aic4d <- cAIC(gamm4_4d)
+aic4e <- cAIC(gamm4_4e)
+aic4f <- cAIC(gamm4_4f)
+aic4g <- cAIC(gamm4_4g)
+aic4h <- cAIC(gamm4_4h)
+aic4i <- cAIC(gamm4_4i)
+aic4j <- cAIC(gamm4_4j)
+aic4k <- cAIC(gamm4_4k)
+aic4l <- cAIC(gamm4_4l)
+aic4m <- cAIC(gamm4_4m)
+aic4n <- cAIC(gamm4_4n)
+aic4o <- cAIC(gamm4_4o)
+
+gamms4_aic <- c("gamm4_4a", aic4a$caic,
+                "gamm4_4b", aic4b$caic,
+                "gamm4_4c", aic4c$caic,
+                "gamm4_4d", aic4d$caic,
+                "gamm4_4e", aic4e$caic,
+                "gamm4_4f", aic4f$caic,
+                "gamm4_4g", aic4g$caic,
+                "gamm4_4h", aic4h$caic,
+                "gamm4_4i", aic4i$caic,
+                "gamm4_4j", aic4j$caic,
+                "gamm4_4k", aic4k$caic,
+                "gamm4_4l", aic4l$caic,
+                "gamm4_4m", aic4m$caic,
+                "gamm4_4n", aic4n$caic,
+                "gamm4_4o", aic4o$caic)
+
+# Best model with 4 predictors is agb ~ env + slope + richness + agriculture cAIC = 434.939
+```
+## GAMM: 5 predictors
+
+```{r}
+gamm4_5a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           grazing,
+           #logging +
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_5b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           #grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_5c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           #agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_5d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           #sp_richness_plot +
+           agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_5e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           #slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_5f <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+aic5a <- cAIC(gamm4_5a)
+aic5b <- cAIC(gamm4_5b)
+aic5c <- cAIC(gamm4_5c)
+aic5d <- cAIC(gamm4_5d)
+aic5e <- cAIC(gamm4_5e)
+aic5f <- cAIC(gamm4_5f)
+
+gamms5_aic <- c("gamm4_5a", aic5a$caic,
+                "gamm4_5b", aic5b$caic,
+                "gamm4_5c", aic5c$caic,
+                "gamm4_5d", aic5d$caic,
+                "gamm4_5e", aic5e$caic,
+                "gamm4_5f", aic5f$caic)
+
+# Best model with 5 predictors is agb ~ env + slope + sp_richness + agriculture + logging cAIC = 435.350
+```
+
+## GAMM: 6 predictors
+
+```{r}
+
+gamm4_6 <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
+           slope +
+           t2(sp_richness_plot, bs="tp", k=4) +
+           agriculture +
+           grazing +
+           logging,
+           random = ~(1|site), data = plots_cf_4p)
+
+cAIC(gamm4_6)
+
+# Model with 6 predictors cAIC= 436.12
+```
+
+Best models are:
+1 predictor. gamm4_1c. cAIC = 439.3378
+2 predictors. gamm4_2p. cAIC = 437.158 
+3 predictors. gamm4_3k. cAIC= 434.859
+4 predictors. gamm4_4a. cAIC = 434.939
+5 predictors. gamm4_5b. cAIC = 435.350
+6 predictors. gamm4_6. cAIC= 436.12
+
+```{r}
+summary(gamm4_1c)
+summary(gamm4_1c$mer)
+summary(gamm4_1c$gam)
+plot.gam(gamm4_1c$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_1c$gam)
+
+plot.gam(gamm4_2p$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_2p$gam)
+
+plot.gam(gamm4_3k$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+gam.check(gamm4_3k$gam)
+summary(gamm4_3k$mer)
+summary(gamm4_3k$gam)
+
+summary(gamm4_4a$gam)
+
+summary(gamm4_5b$gam)
+
+summary(gamm4_6$gam)
+```
+
