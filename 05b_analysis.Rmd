@@ -2349,3 +2349,33 @@ summary(gamm4_5b$gam)
 summary(gamm4_6$gam)
 ```
 
+## GAMM: Interactions
+
+```{r}
+
+gamm4_4_int <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
+           slope +
+           t2(sp_richness_plot*agriculture, bs= "tp", k=4),
+           random = ~(1|site), data = plots_cf_4p)
+
+summary(gamm4_4_int$gam)
+summary(gamm4_4a$gam)
+cAIC(gamm4_4_int)
+cAIC(gamm4_4a)
+plot(gamm4_4_int$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+plot(gamm4_4a$gam)
+
+ag_env <- gamm4(agriculture ~ t2(env_pc1, bs="tp", k=4), random = ~(1|site), data = plots_cf_4p)
+plot(ag_env$gam)
+
+sp_env <- gamm4(sp_richness_plot ~ t2(env_pc1, bs="tp", k=4), random = ~(1|site), data = plots_cf_4p)
+summary(sp_env$gam)
+plot(sp_env$gam)
+
+sp_ag <- gamm4(sp_richness_plot ~ t2(agriculture, bs="tp", k=4), random = ~(1|site), data = plots_cf_4p)
+summary(sp_ag$gam)
+plot(sp_ag$gam)
+
+plot_model(gamm4_4_int, show.p = T, show.values = T)
+```
+
