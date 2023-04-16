@@ -175,7 +175,7 @@ sites_cf <- agriculture_grazing %>%
   mutate(agriculture = ifelse(is.na(unknown), NA, agriculture),
          grazing = ifelse(is.na(unknown), NA, grazing)) %>%
   select(-unknown) %>%
-  relocate(c("agriculture", "grazing"), .after = "sp_richness_site_sd")
+  relocate(c("agriculture", "grazing"), .after = "hill_shannon_ucl")
 
 ```
 
@@ -309,7 +309,7 @@ plots_cf <- plots_cf %>%
 sites_cf %>%
   select(site, agriculture, grazing, logging, builtup, other_dist) %>%
   right_join(plots_cf, by = "site") %>%
-  relocate(c("agriculture", "grazing", "logging", "builtup", "other_dist"), .after = sp_richness_plot) -> plots_cf
+  relocate(c("agriculture", "grazing", "logging", "builtup", "other_dist"), .after = hill_shannon_ucl) -> plots_cf
 ```
 
 ## Forest Classification by Structure
@@ -463,11 +463,11 @@ plots_cf %>%
   geom_boxplot()
 
 plots_cf %>%
-  ggplot(aes(y = shannon, color = str_class_plots)) +
+  ggplot(aes(y = hill_shannon, color = str_class_plots)) +
   geom_boxplot()
 
 plots_cf %>%
-  ggplot(aes(y = t_shannon, color = str_class_plots)) +
+  ggplot(aes(y = hill_richness, color = str_class_plots)) +
   geom_boxplot()
 
 ```
@@ -543,6 +543,9 @@ sites_cf %>%
   filter(plot_no == 4,
          mosaic == 0.5)
 
+#Note: this visualization only works with this classification of str_class_plots 
+# (if k-means is repeated, classification may change)
+
 sites_cf %>%
   filter(plot_no >3) %>%
   group_by(mosaic) %>%
@@ -551,15 +554,6 @@ sites_cf %>%
   geom_point() +
   geom_point(aes(x= mosaic, y = agb_mosaic), color = "red")
   
-
-```
-
-## Save datasets
-
-```{r}
-save(sites_cf, file = "output/sites_cf3.RData")
-save(plots_cf, file = "output/plots_cf3.RData")
-save(trees_cf, file = "output/trees_cf3.RData")
 
 ```
 
@@ -981,7 +975,8 @@ reclass_all <- reclass_all %>%
                                                  reclass == "as_deforested2", "deforested",
                                                ifelse(reclass == "as_degraded" |
                                                         reclass == "as_degraded2", "degraded",
-                                                      ifelse(reclass == "as_undisturbed", "undisturbed", "other")))))
+                                                      ifelse(reclass == "as_undisturbed", "undisturbed", "other"))))) %>%
+  select(-site)
 
 reclass_all %>%
   group_by(reclass) %>%
@@ -999,9 +994,48 @@ plots_cf %>%
   ggplot(aes(y = agb_plot_ha, color = forest_classification)) +
   geom_boxplot()
 
+plots_cf <- plots_cf %>%
+  left_join(reclass_all, by = "plot_id")
+
+#filter(forest_classification != "other",
+#         !is.na(forest_classification))
+
 ```
 
+Landscape?
+
 ```{r}
+plots_cf %>%
+  filter(forest_classification != "other") %>%
+  select(site, plot_id, forest_classification) %>%
+  mutate(forest_class_num = ifelse(forest_classification == "undisturbed", 4,
+                         ifelse(forest_classification == "degraded", 3,
+                                ifelse(forest_classification == "regrowth", 2,
+                                       ifelse(forest_classification == "deforested", 1, 99))))) %>%
+  group_by(site) %>%
+  # normalized mosaic = value - min value / max value - min value
+  # mosaic goes from 1 (all mature forest) to 0 (all agriculture/very young forest)
+  summarize(mosaic4 = ifelse(n()==4, (sum(forest_class_num)-4)/(16-4), NA),
+            mosaic3 = ifelse(n()==3, (sum(forest_class_num)-3)/(12-3), NA),
+            mosaic2 = ifelse(n()==2, (sum(forest_class_num)-2)/(8-2), NA),
+            mosaic1 = ifelse(n()==1, (sum(forest_class_num)-1)/(4-1), NA),
+            mosaic = ifelse(n()==4, mosaic4,
+                            ifelse(n()==3, mosaic3,
+                                   ifelse(n()==2, mosaic2, mosaic1)))) %>%
+  arrange(mosaic) %>%
+  transmute(site = as.character(site),
+            mosaic_dist = as.numeric(mosaic)) %>% #mosaic calculated with disturbance classes
+  right_join(sites_cf) %>%
+  relocate(mosaic_dist, .after = other_dist) -> sites_cf
+
+plot(sites_cf$mosaic, sites_cf$mosaic_dist)
+```
+
+
+Year of disturbance
+
+```{r}
+
 plots_cf %>%
   left_join(reclass_all, by = "plot_id") %>%
   left_join(def_deg_year) %>%
@@ -1012,3 +1046,11 @@ plots_cf %>%
          -JRC_TMF_DegradationYear_INT_1982_2022_v1_SAM_ID65_N20_W100)
 ```
 
+## Save datasets
+
+```{r}
+save(sites_cf, file = "output/sites_cf3.RData")
+save(plots_cf, file = "output/plots_cf3.RData")
+save(trees_cf, file = "output/trees_cf3.RData")
+
+```
