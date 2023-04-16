@@ -36,7 +36,7 @@ plots_str <- trees_cf_4p %>%
   right_join(plots_cf_4p) %>%
   mutate(mean_wd_plot = ifelse(tree_no == 0, 0, mean_wd_plot),
          sd_wd_plot = ifelse(tree_no == 0, 0, sd_wd_plot)) %>%
-  select(plot_id,
+  dplyr::select(plot_id,
          tree_density,
          loreys_height,
          basal_area_ha,
@@ -165,18 +165,20 @@ pd <- plots_cf_4p %>%
   theme_classic() +
   scale_fill_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
   theme(axis.title.x = element_blank()) +
-  labs(y = (bquote('Basal Area ('*"m"~ha^-1*')'))) +
+  labs(y = (bquote('Basal area ('*"m"^2 ~ha^-1*')'))) +
   theme(axis.title.y = element_text(size = 10)) +
   theme(axis.text = element_text(size = 9)) +
   theme(legend.position = "none") 
 
 # Panel e: wood density
-
-pe <- plots_str <- trees_cf_4p %>%
+pe <- trees_cf_4p %>%
   filter(!is.na(mean_wd)) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n()),
+                   mean_wd = as.numeric(mean_wd)) %>%
   group_by(plot_id) %>%
-  summarise(mean_wd_plot = mean(mean_wd),
-            sd_wd_plot = sd(mean_wd)) %>%
+  summarise(mean_wd_plot = weighted.mean(mean_wd, abundance),
+            sd_wd_plot = sd(mean_wd, na.rm = T)) %>%
   right_join(plots_cf_4p) %>%
   mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
@@ -961,20 +963,42 @@ t <- tukey_hsd(anova3)
 
 ```{r}
 
+sp_plot <- trees_cf_4p %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  #separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "plot_id")
+
+sp_plot2 <- trees_cf_4p %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  #separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species))
+
 fig4_df <- trees_cf_4p %>%
   filter(!is.na(mean_wd)) %>%
-  group_by(plot_id) %>%
-  summarise(ave_wd = mean(mean_wd),
-            sd_wd = sd(mean_wd, na.rm = T),
-            se_wd = calcSE(mean_wd),
-            max_height = max(height),
-            mean_height = mean(height),
-            sd_height = sd(height)) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n()),
+                   mean_wd = as.numeric(mean_wd),
+                   height = as.numeric(height)) %>%
   right_join(plots_cf_4p) %>%
-  select(altitude, tree_density, basal_area_ha, loreys_height, mean_height, max_height, ave_wd, se_wd, agb_plot_ha, agb_se_ha, str_class_plots) %>%
+  dplyr::group_by(plot_id) %>%
+  dplyr::summarize(ave_wd = weighted.mean(mean_wd, abundance),
+                   sd_wd = sd(mean_wd, na.rm = T),
+                   se_wd = calcSE(mean_wd),
+                   max_height = max(height),
+                   mean_height = mean(height),
+                   sd_height = sd(height)) %>%
+  right_join(plots_cf_4p) %>%
+  dplyr::select(altitude, tree_density, basal_area_ha, loreys_height, mean_height, max_height, ave_wd, se_wd, agb_plot_ha, agb_se_ha, str_class_plots) %>%
   mutate(succ = ifelse(str_class_plots == "1", "F",
                        ifelse(str_class_plots == "2", "Y", "M")))
-
 
 f4a <- fig4_df %>%
   ggplot(aes(x = tree_density, y = log1p(agb_plot_ha)))  +
@@ -1008,7 +1032,7 @@ f4b <- fig4_df %>%
   #scale_x_continuous(limits = c(0, 60)) +
   theme_classic() +
   #theme(legend.position = "none") +
-  labs(x = (bquote('Basal area ('*"m"~ha^-1*')')),
+  labs(x = (bquote('Basal area ('*"m"^2 ~ha^-1*')')),
        y = (bquote('log AGB ('*"Mg "~ha^-1*')'))) +
   theme(legend.title = element_blank(),
       legend.position = c(0.9, 0.2),

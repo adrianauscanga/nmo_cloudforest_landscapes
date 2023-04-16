@@ -35,9 +35,9 @@ Read and order FI forest disturbance dataset.
 disturbance <- load("output/disturbance_sno.RData")
 
 disturbance_cf <- sites_cf %>%
-  select(site) %>%
+  dplyr::select(site) %>%
   left_join(disturbance_sno, by = "site") %>%
-  select(-c(on_soil, on_water))
+  dplyr::select(-c(on_soil, on_water))
 
 disturbance_cf
 rm(disturbance_sno)
@@ -326,7 +326,7 @@ Select structure attributes and scale dataset so that variables in different uni
 # Remove tree_no_ave to avoid correlation in further analyses.
 
 plots_str <- plots_cf %>%
-  select(plot_id,
+  dplyr::select(plot_id,
          tree_density,
          loreys_height,
          basal_area_ha)
@@ -480,6 +480,9 @@ How can we know this classification is more related to disturbance/succession th
 We can compare the 3 clusters with info on disturbance (from FI)
 We can explore whether plots at higher elevations with stunted trees may be passing by secondary forests,
 but this is exactly the question we are after (the relationship between structure, environment, and land use)
+We can also compare this classification with the disturbance history of this site using this
+Tracking long-term (1990-2021) deforestation and degradation in tropical moist forests
+https://forobs.jrc.ec.europa.eu/TMF/index.php
 
 ```{r}
 
@@ -505,7 +508,7 @@ plots_cf %>%
 plots_cf %>%
   filter(altitude > 2500,
          str_class_plots == 2)
-  
+# All plots above 2,500 m asl in class 2 have logging activities  
 ```
 
 ### Landscape composition: mosaic description
@@ -551,12 +554,450 @@ sites_cf %>%
 
 ```
 
-Save datasets
+## Save datasets
 
 ```{r}
 save(sites_cf, file = "output/sites_cf3.RData")
 save(plots_cf, file = "output/plots_cf3.RData")
 save(trees_cf, file = "output/trees_cf3.RData")
+
+```
+
+## Forest classification by disturbance
+
+Based on https://www.science.org/doi/10.1126/sciadv.abe1603
+
+```{r}
+
+forestclass <- read_csv("input/forestclass.csv") # extracted from JRC_TMF_TransitionMap_MainClasses_v1_1982_2022_SAM_ID65_N20_W100 and JRC_TMF_TransitionMap_Subtypes_v1_1982_2022_SAM_ID65_N20_W100
+
+forestclass <- forestclass %>%
+  transmute(plot_id = as.character(field_1),
+              subtypes = as.character(JRC_TMF_TransitionMap_Subtypes_v1_1982_2022_SAM_ID65_N20_W100),
+              mainclasses = as.character(JRC_TMF_TransitionMap_MainClasses_v1_1982_2022_SAM_ID65_N20_W100))
+
+forestclass %>%
+  group_by(subtypes) %>%
+  summarize(subtypes_list = unique(subtypes))
+
+forestclass %>%
+  group_by(mainclasses) %>%
+  summarize(mainclasses_list = unique(mainclasses), counts = n())
+
+forestclass <- forestclass %>%
+  mutate(mainclasses_legend = ifelse(mainclasses == "10", "Undisturbed",
+                                     ifelse(mainclasses == "20", "Degraded",
+                                            ifelse(mainclasses == "30", "Regrowth",
+                                                   ifelse(mainclasses == "43", "Deforested",
+                                                          ifelse(mainclasses == "50", "Ongoing deforestation/degradation", "Other"))))))
+
+forestclass %>%
+  group_by(mainclasses_legend) %>%
+  summarize(counts = n())
+
+forestclass <- forestclass %>%
+  mutate(subtypes_legend = ifelse(subtypes == "10", "Undisturbed",
+                                  ifelse(subtypes == "21", "Degraded forest with short-duration disturbance (started before 2012)",
+                                         ifelse(subtypes == "22", "Degraded forest with short-duration disturbance (started in 2012-2020)",
+                                                ifelse(subtypes == "23", "Degraded forest with long-duration disturbance (started before 2012)",
+                                                       ifelse(subtypes == "24", "Degraded forest with long-duration disturbance (started in 2012-2020)",
+                                                              ifelse(subtypes == "25", "Degraded forest with 2/3 short degradation periods (last degradation started before 2012)",
+                                                                     ifelse(subtypes == "26", "Degraded forest with 2/3 short degradation periods (last degradation started in 2012-2020)",
+                                                                            ifelse(subtypes == "31", "Old forest regrowth (disturbed before 2002)",
+                                                                                   ifelse(subtypes == "32", "Young forest regrowth (disturbed in 2002-2011)",
+                                                                                          ifelse(subtypes == "33", "Very young forest regrowth (disturbed in 2012-2018)",
+                                                                                                 ifelse(subtypes == "41", "Deforestation started before 2011",
+                                                                                                        ifelse(subtypes == "42", "Deforestation started in 2011-2018",
+                                                                                                               ifelse(subtypes == "51", "Deforestation started in 2019",
+                                                                                                                      ifelse(subtypes == "52", "Deforestation started in 2020",
+                                                                                                                             ifelse(subtypes == "91", "Other LC without afforestation",
+                                                                                                                                    ifelse(subtypes == "92", "Young afforestation (between 3 and 9 years of regrowth)", "Old afforestation (between 10 and 20 years of regrowth)")))))))))))))))))
+       
+
+forestclass %>%
+  group_by(mainclasses_legend, subtypes_legend) %>%
+  summarize(counts = n())
+
+```
+Compare to plots_cf data
+
+```{r}
+plots_cf <- plots_cf %>%
+  left_join(forestclass)
+
+plots_cf %>%
+  group_by(mainclasses_legend) %>%
+  summarize(counts = n())
+
+plots_cf %>%
+  dplyr::select(plot_id, agriculture, grazing, logging, builtup, str_class_plots, subtypes, mainclasses, subtypes_legend, mainclasses_legend) %>%
+  group_by(str_class_plots, mainclasses_legend, subtypes_legend) %>%
+  summarize(counts = n())
+
+plots_cf %>%
+  ggplot(aes(x= mainclasses_legend, y = agb_plot_ha)) +
+  geom_boxplot()
+```
+
+Match time of disturbance to time of data collection
+
+```{r}
+plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  select(plot_id, year, agriculture, grazing, logging, builtup, str_class_plots, subtypes_legend, mainclasses_legend) %>%
+  group_by(mainclasses_legend, subtypes_legend) %>%
+  summarize(year = as.numeric(year),
+            plot_id = as.character(plot_id),
+            str_class_plots = as.numeric(str_class_plots),
+            agriculture = as.numeric(agriculture),
+            grazing = as.numeric(grazing),
+            logging = as.numeric(logging),
+            builtup = as.numeric(builtup))
+
+plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  group_by(mainclasses_legend) %>%
+  summarize(count = n())
+```
+Make new classification, from:
+Deforested	17			
+Degraded	54			
+Ongoing deforestation/degradation	2			
+Other	83			
+Regrowth	20			
+Undisturbed	92
+
+To: 
+Deforested - agriculture, grazing, and intensive logging
+Degraded - some logging (wood harvesting- logging values 1 and 2)
+Regrowth and Afforestation - forest growth and not noticeable disturbance (values 0 and 1) 
+Undisturbed
+
+```{r}
+# Undisturbed (n = 92)
+
+reclass1 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Undisturbed") %>% # 92 plots
+   #8 plots lack info on disturbance
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(lu == 0 & logging > 2, "as_deforested2",
+                                 ifelse(lu == 0 & logging < 3 & logging > 0, "as_degraded", "as_undisturbed")))) %>%
+  select(plot_id, reclass)
+
+reclass_undisturbed <- reclass1
+```
+Plots that are "undisturbed" in forestclass product (mainclasses_legend), but have disturbance according to FI were re-classified as 'deforested' or 'degraded', according to the level and type of disturbance. 
+
+Plots in other categories that were undisturbed by the time of data collection
+
+```{r}
+# Deforested (n=17)
+
+reclass2 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Deforested") %>% 
+  filter(subtypes_legend == "Deforestation started before 2011") %>%
+  # 9 plots, most of them have agriculture, grazing or logging > 2
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested", "as_degraded")) %>%
+  select(plot_id, reclass)
+
+reclass3 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Deforested") %>% 
+  filter(subtypes_legend == "Deforestation started in 2011-2018") %>%
+  # 8 plots, many have ag, grazing, logging = 0, re-classify to undisturbed
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested", "as_undisturbed")) %>%
+  select(plot_id, reclass)
+
+reclass_deforested <- rbind(reclass2, reclass3)
+```
+
+Degraded 
+
+```{r}
+# Degraded (n = 54)
+
+plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Degraded") %>%
+  # 67 plots
+  # 13 plots lack info on disturbance (FI)
+  group_by(mainclasses_legend, subtypes_legend) %>%
+  summarize(counts = n()) # 6 subtypes
+
+reclass4 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Degraded",
+         subtypes_legend == "Degraded forest with 2/3 short degradation periods (last degradation started before 2012)") %>%
+  arrange(year) %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(lu == 0 & logging > 2, "as_deforested2","as_degraded"))) %>%
+  select(plot_id, reclass)
+# Keep some as degraded, re-classify some as deforested
+
+plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Degraded",
+         subtypes_legend == "Degraded forest with 2/3 short degradation periods (last degradation started in 2012-2020)") %>%
+  arrange(year) 
+
+reclass5 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Degraded",
+         subtypes_legend == "Degraded forest with 2/3 short degradation periods (last degradation started in 2012-2020)") %>%
+  arrange(year) %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(year < 2012 & lu == 0 & logging == 0, "as_undisturbed","as_degraded"))) %>%
+  select(plot_id, reclass)
+# All plots have disturbance according to FI even before 2012
+# Keep some as degraded, re-classify some as deforested
+
+reclass6 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Degraded",
+         subtypes_legend == "Degraded forest with long-duration disturbance (started before 2012)") %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested", "as_degraded")) %>%
+  select(plot_id, reclass)
+# Keep as degraded
+
+reclass7 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Degraded",
+         subtypes_legend == "Degraded forest with long-duration disturbance (started in 2012-2020)") %>%
+  arrange(year) %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(lu == 0 & logging > 2, "as_deforested2",
+                                 ifelse(lu == 0 & logging < 3 & logging > 0, "as_degraded", "as_undisturbed")))) %>%
+  select(plot_id, reclass)
+# Some deforestation/degradation took place after data collection, 
+# re-classify plots 
+
+reclass8 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Degraded",
+         subtypes_legend == "Degraded forest with short-duration disturbance (started before 2012)") %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(lu == 0 & logging > 2, "as_deforested2",
+                                 ifelse(lu == 0 & logging < 3 & logging > 0, "as_degraded", "as_degraded2")))) %>%
+  select(plot_id, reclass)
+# Keep some as degraded, change as deforested the ones that have agriculture and/or grazing
+# because degradation took place before data collection, none of the plots are reclassified as undisturbed
+
+reclass9 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Degraded",
+         subtypes_legend == "Degraded forest with short-duration disturbance (started in 2012-2020)") %>%
+  # 7 plots
+  arrange(year) %>%
+  filter(year < 2013) %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(lu == 0 & logging > 2, "as_deforested2",
+                                 ifelse(lu == 0 & logging < 3 & logging > 0, "as_degraded", "as_undisturbed")))) %>%
+  select(plot_id, reclass)
+
+reclass_degraded <- rbind(reclass4, reclass5, reclass6, reclass7, reclass8, reclass9)
+```
+
+Regrowth
+
+```{r}
+#Regrowth (n = 20)
+# Classify as forest growth when meanclasses_legend = Regrowth and there's not noticeable disturbance (values 0 and 1)
+
+plots_cf %>%
+  filter(mainclasses_legend == "Regrowth") %>%
+  # 21 plots
+  filter(!is.na(agriculture)) %>%
+  # 1 plot lacks info on disturbance (FI)
+  group_by(mainclasses_legend, subtypes_legend) %>%
+  summarize(counts = n())
+
+reclass10 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Regrowth",
+         subtypes_legend == "Old forest regrowth (disturbed before 2002)") %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  # All plots have disturbance according to FI dataset
+  mutate(reclass = ifelse(lu > 0, "as_deforested", "as_regrowth")) %>%
+  select(plot_id, reclass)
+# Note that plots in secondary succession experience disturbance by logging
+
+reclass11 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Regrowth",
+         subtypes_legend == "Very young forest regrowth (disturbed in 2012-2018)") %>%
+  arrange(year) %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  #filter(year < 2013) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(lu == 0 & logging < 3 & logging > 0 & year < 2012, "as_degraded",
+                                 ifelse(lu == 0 & logging == 0 & year < 2012, "as_undisturbed", "as_regrowth")))) %>%
+  select(plot_id, reclass)
+
+reclass12 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Regrowth",
+         subtypes_legend == "Young forest regrowth (disturbed in 2002-2011)") %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested", "as_regrowth")) %>%
+  select(plot_id, reclass)
+
+reclass_regrowth <- rbind(reclass10, reclass11, reclass12)
+```
+Other
+
+```{r}
+
+#Other (n= 83)
+
+plots_cf %>%
+  filter(mainclasses_legend == "Other") %>%
+  # 91 plots
+  filter(!is.na(agriculture)) %>%
+  # 83 plots
+  group_by(mainclasses_legend, subtypes_legend) %>%
+  summarize(counts = n())
+
+reclass13 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Other",
+         subtypes_legend == "Old afforestation (between 10 and 20 years of regrowth)") %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  # only keep as regrowth when lu < 2
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(lu == 0 & logging > 2, "as_deforested2", "as_afforestation"))) %>%
+  select(plot_id, reclass)
+# re classify plots that have ag, grazing, and intensive logging as deforested and the others as afforestation
+# note that afforestation plots can present some 'mild' logging (logging < 3)
+
+reclass14 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Other",
+         subtypes_legend == "Other LC without afforestation") %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(lu == 0 & logging > 2, "as_deforested2",
+                                 ifelse(lu == 0 & logging < 3 & logging > 0, "as_degraded", "other")))) %>%
+  select(plot_id, reclass)
+# keep as other
+# Most of Other LC without afforestation plots have ag, grazing, or logging
+# These are probably plots that have been 'managed' many years
+
+
+reclass15 <- plots_cf %>%
+  filter(!is.na(agriculture)) %>%
+  filter(mainclasses_legend == "Other",
+         subtypes_legend == "Young afforestation (between 3 and 9 years of regrowth)") %>%
+  mutate(lu = (agriculture + grazing),
+         dist = (agriculture + grazing + logging + builtup + other_dist)) %>%
+  arrange(-lu) %>%
+  mutate(reclass = ifelse(lu > 0, "as_deforested",
+                          ifelse(lu == 0 & logging > 2, "as_deforested2",
+                                 ifelse(lu == 0 & logging < 3 & logging > 0, "as_degraded", "other")))) %>%
+  select(plot_id, reclass)
+# Afforestation happen after data collection. These are forests with some logging activity (deforested or degraded)  
+
+reclass_other <- rbind(reclass13, reclass14, reclass15)
+```
+
+Ongoing deforestation/degradation
+
+```{r}
+
+# Ongoing (n= 2)
+
+plots_cf %>%
+  filter(mainclasses_legend == "Ongoing deforestation/degradation") %>%
+  # 3 plots
+  filter(!is.na(agriculture)) %>%
+  # 2 plots
+  group_by(mainclasses_legend, subtypes_legend) %>%
+  summarize(counts = n()) 
+
+reclass16 <- plots_cf %>%
+  filter(mainclasses_legend == "Ongoing deforestation/degradation") %>%
+  # 3 plots
+  filter(!is.na(agriculture)) %>%
+  mutate(reclass = "as_undisturbed") %>%
+  select(plot_id, reclass)
+# Deforestation started after data collection and FI records don't show disturbances
+
+reclass_ongoing <- reclass16
+```
+Bind datasets
+
+```{r}
+
+reclass_all <- rbind(reclass_deforested, reclass_degraded, reclass_ongoing, reclass_other, reclass_regrowth, reclass_undisturbed)
+
+plots_cf %>%
+  filter(!is.na(agriculture))
+
+reclass_all %>%
+  group_by(reclass) %>%
+  summarize(counts = n())
+
+reclass_all <- reclass_all %>%
+  mutate(forest_classification = ifelse(reclass == "as_afforestation" |
+                                          reclass == "as_regrowth", "regrowth",
+                                        ifelse(reclass == "as_deforested" |
+                                                 reclass == "as_deforested2", "deforested",
+                                               ifelse(reclass == "as_degraded" |
+                                                        reclass == "as_degraded2", "degraded",
+                                                      ifelse(reclass == "as_undisturbed", "undisturbed", "other")))))
+
+reclass_all %>%
+  group_by(reclass) %>%
+  summarize(counts = n())
+
+reclass_all %>%
+  group_by(forest_classification) %>%
+  summarize(counts = n())
+
+plots_cf %>%
+  left_join(reclass_all, by = "plot_id") %>%
+  filter(forest_classification != "other",
+         !is.na(forest_classification)) %>%
+  group_by(forest_classification) %>%
+  ggplot(aes(y = agb_plot_ha, color = forest_classification)) +
+  geom_boxplot()
 
 ```
 

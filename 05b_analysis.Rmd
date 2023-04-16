@@ -72,9 +72,9 @@ plots_cf_4p %>%
 
 ```{r}
 numeric_variables <- plots_cf_4p %>%
-  select(temp, precip, ai, altitude, latitude, longitude, northness, eastness, slope, t_shannon, sp_richness_plot, agb_plot_ha, agriculture, grazing, logging) %>%
+  dplyr::select(temp, precip, ai, altitude, latitude, longitude, northness, eastness, slope, t_shannon, sp_richness_plot, agb_plot_ha, agriculture, grazing, logging) %>%
   mutate(log_agb = log1p(agb_plot_ha)) %>%
-  select(-agb_plot_ha)
+  dplyr::select(-agb_plot_ha)
 
 corr <- cor(drop_na(numeric_variables[,-1]))
 corrplot(corr, method = 'ellipse')
@@ -88,7 +88,7 @@ Environmental data is highly correlated, so I'm going to get rid of some of that
 
 ```{r}
 env <- plots_cf_4p %>%
-  select(plot_id, temp, precip, ai, altitude, latitude, longitude, northness, eastness, slope)
+  dplyr::select(plot_id, temp, precip, ai, altitude, latitude, longitude, northness, eastness, slope)
 env <- as.data.frame(env)
 env$plot_id -> row.names(env)
 env <- env[,c(-1, -2)]
@@ -1547,7 +1547,7 @@ gamm4_1b <-  gamm4(log1p(agb_plot_ha) ~ t2(t_shannon, bs="tp", k=4),
 gamm4_1c <- gamm4(log1p(agb_plot_ha) ~ t2(sp_richness_plot, bs="tp", k=4),
                    random = ~(1|site), data = plots_cf_4p)
 
-gamm4_1d <- gamm4(log1p(agb_plot_ha) ~ agriculture,
+gamm4_1d <- gamm4(log1p(agb_plot_ha) ~ griculture,
                    random = ~(1|site), data = plots_cf_4p)
 
 gamm4_1e <- gamm4(log1p(agb_plot_ha) ~ grazing,
@@ -2572,48 +2572,33 @@ agb_prop_str <- plots_cf_4p %>%
   dplyr::select(-site.x, -site.y) %>%
   mutate(succ = ifelse(str_class_plots == "1", "s1",
                        ifelse(str_class_plots == "2", "s2", "s3"))) %>%
+  mutate(diam_class = ifelse(diam_class == 1, "diam1",
+                             ifelse(diam_class == 2, "diam2",
+                                    ifelse(diam_class == 3, "diam3",
+                                           ifelse(diam_class == 4, "diam4",
+                                                  ifelse(diam_class == 5, "diam5", "diam6")))))) %>%
   group_by(str_class_plots, diam_class)
 
-lmm_agb_diam_str <- lmer(agb_prop_logit ~ diam_class*succ + (1|site/plot_id), data = agb_prop_str)
+
+int <- interaction(agb_prop_str$diam_class, agb_prop_str$succ)
+lmm_agb_diam_str <- lmer(agb_prop_logit ~ int + (1|site/plot_id), data = agb_prop_str)
 summary(lmm_agb_diam_str)
+comp <- glht(lmm_agb_diam_str, linfct = mcp(int = "Tukey"), test = adjusted("holm"))
+summary(comp)
+comp_df <- as_tibble(comp[["linfct"]], rownames = "comps")
+
+# lmm_agb_diam_str <- lmer(agb_prop_logit ~ diam_class*succ + (1|site/plot_id), data = agb_prop_str)
+# summary(lmm_agb_diam_str)
 stargazer(lmm_agb_diam_str, type = "text")
-#lmm_agb_diam_str <- lmer(agb_prop_logit ~ int + (1|site/plot_id), data = agb_prop_str)
-#int <- interaction(agb_prop_str$diam_class, agb_prop_str$succ)
-#summary(glht(lmm_agb_diam_str, linfct = mcp(int = "Tukey")), test = adjusted("holm"))
-summary(glht(lmm_agb_diam_str, linfct = mcp(diam_class= "Tukey", succ = "Tukey")), test = adjusted("holm"))
+# summary(glht(lmm_agb_diam_str, linfct = mcp(diam_class= "Tukey", succ = "Tukey")), test = adjusted("holm"))
 
-
-anova3 <- aov(agb_prop ~ diam_class*succ, data = agb_prop_str)
-summary(anova3)
-TukeyHSD(anova3)
-multcompLetters4(anova3, TukeyHSD(anova3), reversed = T)
-
-agb_vy <- agb_prop_str %>%
-  ungroup() %>%
-  filter(succ == "vy") 
-
-# anova5 <- aov(agb_prop ~ diam_class, data = agb_vy)
-# summary(anova5)
-# TukeyHSD(anova5)
-
-# multcompLetters4(anova5, (TukeyHSD(anova5)), reversed = T)
-
-# agb_y <- agb_prop_str %>%
-#   ungroup() %>%
-#   filter(succ == "y") 
-# 
-# anova6 <- aov(agb_prop ~ diam_class, data = agb_y)
-# summary(anova6)
-# TukeyHSD(anova6)
-# 
-# multcompLetters4(anova6, (TukeyHSD(anova6)), reversed = T)
 ```
 
 Contribution to Stem Number
 
 ```{r}
 plots_cf_4p %>%
-  select(plot_id, tree_no, str_class_plots) %>%
+  dplyr::select(plot_id, tree_no, str_class_plots) %>%
   right_join(stems_class_plot, by = "plot_id") %>%
   mutate(stem_prop = stems/tree_no)  %>%
   mutate(succ = ifelse(str_class_plots == "1", "vy",
@@ -2625,6 +2610,28 @@ plots_cf_4p %>%
   labs(fill ='Successional Stage') +
   scale_fill_brewer(palette = "Accent")
 
+stem_prop_str <- plots_cf_4p %>%
+  dplyr::select(plot_id, str_class_plots) %>%
+  right_join(stemprop, by = "plot_id") %>%
+  mutate(site = site.x) %>%
+  dplyr::select(-site.x, -site.y) %>%
+  mutate(succ = ifelse(str_class_plots == "1", "s1",
+                       ifelse(str_class_plots == "2", "s2", "s3"))) %>%
+  mutate(diam_class = ifelse(diam_class == 1, "diam1",
+                             ifelse(diam_class == 2, "diam2",
+                                    ifelse(diam_class == 3, "diam3",
+                                           ifelse(diam_class == 4, "diam4",
+                                                  ifelse(diam_class == 5, "diam5", "diam6")))))) %>%
+  group_by(str_class_plots, diam_class)
+
+
+int_stem <- interaction(stem_prop_str$diam_class, stem_prop_str$succ)
+lmm_stem_diam_str <- lmer(stem_prop_logit ~ int_stem + (1|site/plot_id), data = stem_prop_str)
+summary(lmm_stem_diam_str)
+summary(glht(lmm_stem_diam_str, linfct = mcp(int_stem = "Tukey"), test = adjusted("holm")))
+
+
+
 plots_cf_4p %>%
   select(plot_id, str_class_plots) %>%
   right_join(stems_prop, by = "plot_id") %>%
@@ -2632,17 +2639,6 @@ plots_cf_4p %>%
   group_by(str_class_plots, diam_class) %>%
   get_summary_stats(stems_prop, type = "mean_sd") 
 
-stem_prop_str <- plots_cf_4p %>%
-  select(plot_id, str_class_plots) %>%
-  right_join(stems_prop, by = "plot_id") %>%
-  select(-site.x, -site.y) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  group_by(str_class_plots, diam_class)
-
-anova4 <- aov(stems_prop ~ succ * diam_class, data = stem_prop_str)
-summary(anova4)
-TukeyHSD(anova4)
 ```
 
 ### Structural attributes and AGB in three successional stages
