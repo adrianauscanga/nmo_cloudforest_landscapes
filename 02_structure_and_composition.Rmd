@@ -25,6 +25,7 @@ library(lubridate)
 library(ggplot2)
 library(betapart)
 library(goeveg)
+library(iNEXT)
 
 load("output/sites_cf.RData")
 load("output/plots_cf.RData")
@@ -716,6 +717,120 @@ sites_cf <- sites_cf %>%
   left_join(sp_richness_site_av, by = "site")
 
 ```
+
+### True Diversity (richness and shannon)
+
+Calculate Hill numbers after equal-coverage standardization.
+Based on: https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12613
+and https://onlinelibrary.wiley.com/doi/full/10.1111/oik.07202
+
+```{r}
+# use library iNEXT
+# Calculate Hill numbers (richness and shannon) by plot:
+
+sp_plot <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  #separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "plot_id")
+
+sp_plot2 <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  #separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species))
+
+sample_size <- DataInfo(t(sp_plot)) %>%
+  select(n)
+
+sample_cov <- DataInfo(t(sp_plot))
+
+richness <- estimateD(t(sp_plot), q= c(0), datatype = "abundance", base = "coverage", nboot = 100)
+shannon <- estimateD(t(sp_plot), q= c(1), datatype = "abundance", base = "coverage", nboot = 100)
+
+richness
+shannon
+```
+
+```{r}
+# Calculate Hill numbers (richness and shannon) by site
+
+# By site
+
+sp_site <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species)) %>%
+  spread(species, abundance, fill = 0) %>%
+  column_to_rownames(var = "site")
+
+sp_site2 <- trees_cf %>% # make a table of community data for estimating diversity
+  filter(life_form == "Arbol" |
+           is.na(life_form)) %>%
+  separate(plot_id, c("site", "plot"), sep = "_", remove = F) %>%
+  dplyr::group_by(site, species) %>%
+  dplyr::summarize(abundance = sum(n())) %>%
+  filter(!is.na(species))
+
+richness_site <- estimateD(t(sp_site), q= c(0), datatype = "abundance", base = "coverage", nboot= 100)
+shannon_site <- estimateD(t(sp_site), q= c(1), datatype = "abundance", base = "coverage", nboot = 100)
+
+richness_site
+shannon_site
+```
+Join datasets
+
+```{r}
+# Plot
+
+richness %>%
+  select(Assemblage, qD, qD.LCL, qD.UCL) %>%
+  mutate(plot_id = as.character(Assemblage)) %>%
+  right_join(plots_cf, by = "plot_id") %>%
+  mutate(hill_richness = as.numeric(qD),
+         hill_richness_lcl = as.numeric(qD.LCL),
+         hill_richness_ucl = as.numeric(qD.UCL)) %>%
+  select(-c(Assemblage, qD, qD.LCL, qD.UCL)) -> plots_cf
+
+shannon %>%
+  select(Assemblage, qD, qD.LCL, qD.UCL) %>%
+  mutate(plot_id = as.character(Assemblage)) %>%
+  right_join(plots_cf, by = "plot_id") %>%
+  mutate(hill_shannon = as.numeric(qD),
+         hill_shannon_lcl = as.numeric(qD.LCL),
+         hill_shannon_ucl = as.numeric(qD.UCL)) %>%
+  select(-c(Assemblage, qD, qD.LCL, qD.UCL)) -> plots_cf  
+
+# Site
+
+richness_site %>%
+  select(Assemblage, qD, qD.LCL, qD.UCL) %>%
+  mutate(site = as.character(Assemblage)) %>%
+  right_join(sites_cf, by = "site") %>%
+  mutate(hill_richness = as.numeric(qD),
+         hill_richness_lcl = as.numeric(qD.LCL),
+         hill_richness_ucl = as.numeric(qD.UCL)) %>%
+  select(-c(Assemblage, qD, qD.LCL, qD.UCL)) -> sites_cf
+
+shannon_site %>%
+  select(Assemblage, qD, qD.LCL, qD.UCL) %>%
+  mutate(site = as.character(Assemblage)) %>%
+  right_join(sites_cf, by = "site") %>%
+  mutate(hill_shannon = as.numeric(qD),
+         hill_shannon_lcl = as.numeric(qD.LCL),
+         hill_shannon_ucl = as.numeric(qD.UCL)) %>%
+  select(-c(Assemblage, qD, qD.LCL, qD.UCL)) -> sites_cf  
+```
+
 
 Save these datasets to use them in following analyses:
 
