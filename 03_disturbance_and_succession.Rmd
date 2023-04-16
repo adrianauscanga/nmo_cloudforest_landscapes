@@ -1001,3 +1001,14 @@ plots_cf %>%
 
 ```
 
+```{r}
+plots_cf %>%
+  left_join(reclass_all, by = "plot_id") %>%
+  left_join(def_deg_year) %>%
+  select(plot_id, year, forest_classification, JRC_TMF_DeforestationYear_INT_1982_2022_v1_SAM_ID65_N20_W100, JRC_TMF_DegradationYear_INT_1982_2022_v1_SAM_ID65_N20_W100) %>%
+  mutate(def_year = as.numeric(JRC_TMF_DeforestationYear_INT_1982_2022_v1_SAM_ID65_N20_W100),
+            deg_year = as.numeric(JRC_TMF_DegradationYear_INT_1982_2022_v1_SAM_ID65_N20_W100)) %>%
+  select(-JRC_TMF_DeforestationYear_INT_1982_2022_v1_SAM_ID65_N20_W100,
+         -JRC_TMF_DegradationYear_INT_1982_2022_v1_SAM_ID65_N20_W100)
+```
+
