@@ -306,13 +306,13 @@ Replace NAs by 0 when needed
 
 ```{r}
 
-plots_cf <- plots_cf %>%
-  mutate(hill_shannon = ifelse(is.na(hill_shannon), 0, hill_shannon),
-         hill_richness = ifelse(is.na(hill_richness), 0, hill_richness))
-
-plots_cf_4p <- plots_cf_4p %>%
-  mutate(hill_shannon = ifelse(is.na(hill_shannon), 0, hill_shannon),
-         hill_richness = ifelse(is.na(hill_richness), 0, hill_richness))
+# plots_cf <- plots_cf %>%
+#   mutate(hill_shannon = ifelse(is.na(hill_shannon), 0, hill_shannon),
+#          hill_richness = ifelse(is.na(hill_richness), 0, hill_richness))
+# 
+# plots_cf_4p <- plots_cf_4p %>%
+#   mutate(hill_shannon = ifelse(is.na(hill_shannon), 0, hill_shannon),
+#          hill_richness = ifelse(is.na(hill_richness), 0, hill_richness))
 
 ```
 
