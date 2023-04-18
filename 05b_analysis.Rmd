@@ -1542,6 +1542,9 @@ gamm4_1a <- gamm4(log1p(agb_plot_ha) ~ env_pc1, # relationship looks linear so I
 
 gamm4_1b <-  gamm4(log1p(agb_plot_ha) ~ t2(hill_shannon, bs="tp", k=4),
                    random = ~(1|site), data = plots_cf_4p)
+gamm4_1b_3 <-  gamm4(log1p(agb_plot_ha) ~ t2(sqrt(hill_shannon), bs="tp", k=4),
+                   random = ~(1|site), data = plots_cf_4p)
+
 
 gamm4_1c <- gamm4(log1p(agb_plot_ha) ~ t2(hill_richness, bs="tp", k=4),
                    random = ~(1|site), data = plots_cf_4p)
@@ -1609,7 +1612,21 @@ gamms1_aic <- c(aic1a$caic,
                 aic1f$caic,
                 aic1g$caic)
 
+gamms1_aic
 # Best model with 1 predictor (based on cAIC) is agb ~ sp richness 
+summary(gamm4_1b$mer)
+summary(gamm4_1b$gam)
+aic1b$caic
+
+plots_cf_4p_wo <- plots_cf_4p %>%
+  filter(hill_shannon < 9)
+
+gamm4_1b_2 <-  gamm4(log1p(agb_plot_ha) ~ t2(hill_shannon, bs="tp", k=4),
+                   random = ~(1|site), data = plots_cf_4p_wo)
+summary(gamm4_1b_2$mer)
+summary(gamm4_1b_2$gam)
+cAIC(gamm4_1b_2)
+plot.gam(gamm4_1b_2$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
 ```
 
 ## GAMM: 2 predictors
@@ -1832,7 +1849,7 @@ aic2l <- cAIC(gamm4_2l)
 aic2m <- cAIC(gamm4_2m)
 aic2n <- cAIC(gamm4_2n)
 aic2o <- cAIC(gamm4_2o)
-aic2p <- cAIC(gamm4_2p) #Error: After removing the terms with zero variance components and refitting the model cAIC can be called again.
+#aic2p <- cAIC(gamm4_2p) #Error: After removing the terms with zero variance components and refitting the model cAIC can be called again.
 aic2q <- cAIC(gamm4_2q)
 aic2r <- cAIC(gamm4_2r)
 aic2s <- cAIC(gamm4_2s)
@@ -1864,13 +1881,16 @@ gamms2_aic <- c("gamm4_2a", aic2a$caic,
 
 # Best model of 2 predictors is agb ~ slope + shannon cAIC = 437.6538
 summary(gamm4_2g$mer)
+summary(gamm4_2g$gam)
+summary(gamm4_2h$mer)
+summary(gamm4_2h$gam)
 ```
 ## GAMM: 3 predictors
 
 ```{r}
 gamm4_3a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4),
+           t2(hill_shannon, bs="tp", k=4),
            #agriculture +
            #grazing +
            #logging +
@@ -1878,7 +1898,7 @@ gamm4_3a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture,
            #grazing +
            #logging +
@@ -1886,7 +1906,7 @@ gamm4_3b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            #agriculture +
            grazing,
            #logging +
@@ -1894,7 +1914,7 @@ gamm4_3c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            #agriculture +
            #grazing +
            logging,
@@ -1902,7 +1922,7 @@ gamm4_3d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture,
            #grazing +
            #logging +
@@ -1910,7 +1930,7 @@ gamm4_3e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3f <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            grazing,
            #logging +
@@ -1918,7 +1938,7 @@ gamm4_3f <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3g <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            #grazing +
            logging, 
@@ -1926,7 +1946,7 @@ gamm4_3g <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3h <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            grazing, 
            #logging +
@@ -1934,7 +1954,7 @@ gamm4_3h <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3i <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            #grazing +
            logging, 
@@ -1942,7 +1962,7 @@ gamm4_3i <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3j <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           #hill_richness +
+           #hill_shannon +
            #agriculture +
            grazing +
            logging, 
@@ -1952,7 +1972,7 @@ gamm4_3j <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_3k <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture,
            #grazing +
            #logging +
@@ -1960,7 +1980,7 @@ gamm4_3k <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_3l <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            grazing,
            #logging +
@@ -1968,7 +1988,7 @@ gamm4_3l <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_3m <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            #grazing +
            logging,
@@ -1976,7 +1996,7 @@ gamm4_3m <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_3n <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            grazing,
            #logging +
@@ -1984,7 +2004,7 @@ gamm4_3n <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_3o <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            #grazing +
            logging,
@@ -1992,7 +2012,7 @@ gamm4_3o <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_3p <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            #agriculture +
            grazing +
            logging,
@@ -2002,7 +2022,7 @@ gamm4_3p <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_3q <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            grazing,
            #logging +
@@ -2010,7 +2030,7 @@ gamm4_3q <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_3r <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            #grazing +
            logging,
@@ -2018,7 +2038,7 @@ gamm4_3r <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_3s <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            grazing +
            logging,
@@ -2028,7 +2048,7 @@ gamm4_3s <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_3t <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            #slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            grazing +
            logging,
@@ -2044,13 +2064,13 @@ aic3g <- cAIC(gamm4_3g)
 aic3h <- cAIC(gamm4_3h)
 aic3i <- cAIC(gamm4_3i)
 aic3j <- cAIC(gamm4_3j)
-aic3k <- cAIC(gamm4_3k)
+#aic3k <- cAIC(gamm4_3k) # Error: After removing the terms with zero variance components and refitting the model cAIC can be called again.
 aic3l <- cAIC(gamm4_3l)
 aic3m <- cAIC(gamm4_3m)
 aic3n <- cAIC(gamm4_3n)
 aic3o <- cAIC(gamm4_3o)
 aic3p <- cAIC(gamm4_3p)
-aic3q <- cAIC(gamm4_3q)
+#aic3q <- cAIC(gamm4_3q) # Error: After removing the terms with zero variance components and refitting the model cAIC can be called again.
 aic3r <- cAIC(gamm4_3r)
 aic3s <- cAIC(gamm4_3s)
 aic3t <- cAIC(gamm4_3t)
@@ -2065,13 +2085,13 @@ gamms3_aic <- c("gamm4_3a", aic3a$caic,
                 "gamm4_3h", aic3h$caic,
                 "gamm4_3i", aic3i$caic,
                 "gamm4_3j", aic3j$caic,
-                "gamm4_3k", aic3k$caic,
+                #"gamm4_3k", aic3k$caic,
                 "gamm4_3l", aic3l$caic,
                 "gamm4_3m", aic3m$caic,
                 "gamm4_3n", aic3n$caic,
                 "gamm4_3o", aic3o$caic,
                 "gamm4_3p", aic3p$caic,
-                "gamm4_3q", aic3q$caic,
+                #"gamm4_3q", aic3q$caic,
                 "gamm4_3r", aic3r$caic,
                 "gamm4_3s", aic3s$caic,
                 "gamm4_3t", aic3t$caic)
@@ -2083,7 +2103,7 @@ gamms3_aic <- c("gamm4_3a", aic3a$caic,
 ```{r}
 gamm4_4a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture,
            #grazing +
            #logging +
@@ -2091,7 +2111,7 @@ gamm4_4a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            grazing,
            #logging +
@@ -2099,7 +2119,7 @@ gamm4_4b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            #grazing +
            logging,
@@ -2107,7 +2127,7 @@ gamm4_4c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            grazing,
            #logging +
@@ -2115,7 +2135,7 @@ gamm4_4d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            #grazing +
            logging,
@@ -2123,7 +2143,7 @@ gamm4_4e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4f <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            #agriculture +
            grazing +
            logging,
@@ -2131,7 +2151,7 @@ gamm4_4f <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4g <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           hill_shannon +
            agriculture +
            grazing,
            #logging +
@@ -2139,7 +2159,7 @@ gamm4_4g <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4h <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            #grazing +
            logging,
@@ -2147,7 +2167,7 @@ gamm4_4h <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4i <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            grazing +
            logging,
@@ -2155,7 +2175,7 @@ gamm4_4i <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4j <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            grazing +
            logging,
@@ -2163,7 +2183,7 @@ gamm4_4j <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_4k <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            grazing,
            #logging +
@@ -2171,7 +2191,7 @@ gamm4_4k <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_4l <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            #grazing +
            logging,
@@ -2179,7 +2199,7 @@ gamm4_4l <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_4m <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            grazing +
            logging,
@@ -2187,7 +2207,7 @@ gamm4_4m <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_4n <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            grazing +
            logging,
@@ -2195,7 +2215,7 @@ gamm4_4n <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 gamm4_4o <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            grazing +
            logging,
@@ -2207,7 +2227,7 @@ aic4c <- cAIC(gamm4_4c)
 aic4d <- cAIC(gamm4_4d)
 aic4e <- cAIC(gamm4_4e)
 aic4f <- cAIC(gamm4_4f)
-aic4g <- cAIC(gamm4_4g)
+#aic4g <- cAIC(gamm4_4g)
 aic4h <- cAIC(gamm4_4h)
 aic4i <- cAIC(gamm4_4i)
 aic4j <- cAIC(gamm4_4j)
@@ -2217,21 +2237,21 @@ aic4m <- cAIC(gamm4_4m)
 aic4n <- cAIC(gamm4_4n)
 aic4o <- cAIC(gamm4_4o)
 
-gamms4_aic <- c("gamm4_4a", aic4a$caic,
-                "gamm4_4b", aic4b$caic,
-                "gamm4_4c", aic4c$caic,
-                "gamm4_4d", aic4d$caic,
-                "gamm4_4e", aic4e$caic,
-                "gamm4_4f", aic4f$caic,
-                "gamm4_4g", aic4g$caic,
-                "gamm4_4h", aic4h$caic,
-                "gamm4_4i", aic4i$caic,
-                "gamm4_4j", aic4j$caic,
-                "gamm4_4k", aic4k$caic,
-                "gamm4_4l", aic4l$caic,
-                "gamm4_4m", aic4m$caic,
-                "gamm4_4n", aic4n$caic,
-                "gamm4_4o", aic4o$caic)
+#gamms4_aic <- c("gamm4_4a", aic4a$caic,
+                # "gamm4_4b", aic4b$caic,
+                # "gamm4_4c", aic4c$caic,
+                # "gamm4_4d", aic4d$caic,
+                # "gamm4_4e", aic4e$caic,
+                # "gamm4_4f", aic4f$caic,
+                # "gamm4_4g", aic4g$caic,
+                # "gamm4_4h", aic4h$caic,
+                # "gamm4_4i", aic4i$caic,
+                # "gamm4_4j", aic4j$caic,
+                # "gamm4_4k", aic4k$caic,
+                # "gamm4_4l", aic4l$caic,
+                # "gamm4_4m", aic4m$caic,
+                # "gamm4_4n", aic4n$caic,
+                # "gamm4_4o", aic4o$caic)
 
 # Best model with 4 predictors is agb ~ env + slope + richness + agriculture cAIC = 434.939
 ```
@@ -2240,7 +2260,7 @@ gamms4_aic <- c("gamm4_4a", aic4a$caic,
 ```{r}
 gamm4_5a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            grazing,
            #logging +
@@ -2248,7 +2268,7 @@ gamm4_5a <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_5b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            #grazing +
            logging,
@@ -2256,7 +2276,7 @@ gamm4_5b <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_5c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            #agriculture +
            grazing +
            logging,
@@ -2264,7 +2284,7 @@ gamm4_5c <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_5d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           #hill_richness +
+           #hill_shannon +
            agriculture +
            grazing +
            logging,
@@ -2272,7 +2292,7 @@ gamm4_5d <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_5e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            #slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            grazing +
            logging,
@@ -2280,7 +2300,7 @@ gamm4_5e <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 gamm4_5f <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            grazing +
            logging,
@@ -2309,7 +2329,7 @@ gamms5_aic <- c("gamm4_5a", aic5a$caic,
 
 gamm4_6 <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
            slope +
-           t2(hill_richness, bs="tp", k=4) +
+           t2(hill_shannon, bs="tp", k=4) +
            agriculture +
            grazing +
            logging,

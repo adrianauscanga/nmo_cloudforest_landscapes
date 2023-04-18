@@ -14,11 +14,11 @@ Load packages and files:
 ```{r}
 library(tidyverse)
 library(ggplot2)
-library(vegan)
-library(factoextra)
-library(gridExtra)
-library(NbClust)
-library(goeveg)
+# library(vegan)
+# library(factoextra)
+# library(gridExtra)
+# library(NbClust)
+# library(goeveg)
 
 load("output/sites_cf2.RData")
 load("output/plots_cf2.RData")
@@ -997,39 +997,13 @@ plots_cf %>%
 plots_cf <- plots_cf %>%
   left_join(reclass_all, by = "plot_id")
 
-#filter(forest_classification != "other",
-#         !is.na(forest_classification))
+plots_cf <- plots_cf %>%
+  mutate(site = as.character(site.x)) %>%
+  select(-site.x, -site.y)
 
 ```
 
-Landscape?
 
-```{r}
-plots_cf %>%
-  filter(forest_classification != "other") %>%
-  select(site, plot_id, forest_classification) %>%
-  mutate(forest_class_num = ifelse(forest_classification == "undisturbed", 4,
-                         ifelse(forest_classification == "degraded", 3,
-                                ifelse(forest_classification == "regrowth", 2,
-                                       ifelse(forest_classification == "deforested", 1, 99))))) %>%
-  group_by(site) %>%
-  # normalized mosaic = value - min value / max value - min value
-  # mosaic goes from 1 (all mature forest) to 0 (all agriculture/very young forest)
-  summarize(mosaic4 = ifelse(n()==4, (sum(forest_class_num)-4)/(16-4), NA),
-            mosaic3 = ifelse(n()==3, (sum(forest_class_num)-3)/(12-3), NA),
-            mosaic2 = ifelse(n()==2, (sum(forest_class_num)-2)/(8-2), NA),
-            mosaic1 = ifelse(n()==1, (sum(forest_class_num)-1)/(4-1), NA),
-            mosaic = ifelse(n()==4, mosaic4,
-                            ifelse(n()==3, mosaic3,
-                                   ifelse(n()==2, mosaic2, mosaic1)))) %>%
-  arrange(mosaic) %>%
-  transmute(site = as.character(site),
-            mosaic_dist = as.numeric(mosaic)) %>% #mosaic calculated with disturbance classes
-  right_join(sites_cf) %>%
-  relocate(mosaic_dist, .after = other_dist) -> sites_cf
-
-plot(sites_cf$mosaic, sites_cf$mosaic_dist)
-```
 
 
 Year of disturbance
