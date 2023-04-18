@@ -29,8 +29,9 @@ library(cAIC4)
 library(mgcv)
 library(gamm4)
 library(multcomp)
+library(car)
 
-#library(rstatix)
+library(rstatix)
 #library(corrplot)
 #library(vegan)
 #library(leaps)
@@ -76,7 +77,7 @@ numeric_variables <- plots_cf_4p %>%
   mutate(log_agb = log1p(agb_plot_ha)) %>%
   dplyr::select(-agb_plot_ha)
 
-corr <- cor(drop_na(numeric_variables))
+corr <- cor(drop_na(numeric_variables[,-1]))
 corrplot(corr, method = 'ellipse')
 corrplot(corr, method = 'number')
 plot(numeric_variables)
@@ -1156,62 +1157,62 @@ Best model thus far.
 
 plots_cf_4p %>%
   ggplot(aes(x = hill_shannon, y = log1p(agb_plot_ha))) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(y = hill_shannon, x = agriculture)) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(y = hill_shannon, x = grazing)) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(x = agriculture, y = log1p(agb_plot_ha))) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(x = slope, y = log1p(agb_plot_ha))) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(x = grazing, y = log1p(agb_plot_ha))) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(x = env_pc1, y = agriculture)) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(x = altitude, y = agriculture)) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(x = altitude, y = grazing)) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(x = env_pc1, y = grazing)) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(x = env_pc1, y = hill_shannon)) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 plots_cf_4p %>%
   ggplot(aes(x = env_pc1, y = log1p(agb_plot_ha))) +
-  geom_point(aes(color = str_class_plots)) +
+  geom_point(aes(color = forest_classification)) +
   geom_smooth(method = "lm")
 
 ```
@@ -1484,36 +1485,36 @@ ordiplot(pca_str_plots, display = 'sites', type = 'text')
 biplot(pca_str_plots)
 
 plots_cf_4p %>%
-  ggplot(aes(x= str_class_plots, y = agriculture, color = basal_area_ha)) +
+  ggplot(aes(x= forest_classification, y = agriculture, color = basal_area_ha)) +
   geom_jitter()
 
 plots_cf_4p %>%
-  ggplot(aes(x= str_class_plots, y = grazing)) +
+  ggplot(aes(x= forest_classification, y = grazing)) +
   geom_jitter(color = 'blue')
 
 plots_cf_4p %>%
-  filter(str_class_plots == 1) %>%
+  filter(forest_classification == 1) %>%
   ggplot(aes(x = env_pc1, y = loreys_height, color = as.factor(agriculture))) +
   geom_point()
 
 plots_cf_4p %>%
-  filter(str_class_plots == 2) %>%
+  filter(forest_classification == 2) %>%
   ggplot(aes(x = altitude, y = agb_plot_ha, color = as.factor(agriculture))) +
   geom_point()
 
 plots_cf_4p %>%
-  filter(str_class_plots == 3) %>%
+  filter(forest_classification == 3) %>%
   ggplot(aes(x = altitude, y = agb_plot_ha, color = as.factor(agriculture))) +
   geom_point()
 
 
 plots_cf_4p %>%
-  filter(str_class_plots == 1) %>%
+  filter(forest_classification == 1) %>%
   arrange(agriculture, -altitude)
 
 plots_cf_4p %>%
   mutate(land_use = agriculture + grazing) %>%
-  ggplot(aes(x = str_class_plots, y = land_use)) +
+  ggplot(aes(x = forest_classification, y = land_use)) +
   geom_jitter()
   
 ```
@@ -2337,7 +2338,7 @@ gamm4_6 <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 
 cAIC(gamm4_6)
 
-# Model with 6 predictors cAIC= 436.12
+# Model with 6 predictors cAIC= 439.09
 ```
 
 Best models are:
@@ -2412,7 +2413,7 @@ agb_class_plots <- trees_cf_4p %>%
   right_join(plots_cf_4p, by = "plot_id") %>%
   filter(status == "Vivo") %>%
   filter(is.na(life_form) | life_form == "Arbol") %>%
-  select(plot_id, species, genus, sp, family, diam_bh, agb, str_class_plots) %>%
+  dplyr::select(plot_id, species, genus, sp, family, diam_bh, agb, forest_classification) %>%
   mutate(diam_class = ifelse(diam_bh <= 10, "1",
                              ifelse(diam_bh > 10 & diam_bh <= 20, "2",
                                     ifelse(diam_bh > 20 & diam_bh<= 30, "3",
@@ -2429,7 +2430,7 @@ agb_class_plots
 # Contribution of tree size to AGB
 
 agbprop <- plots_cf_4p %>%
-  select(plot_id, agb_plot) %>%
+  dplyr::select(plot_id, agb_plot) %>%
   right_join(agb_class_plots, by = "plot_id") %>%
   mutate(agb_prop = agb_class_plot/agb_plot)  %>%
   mutate(agb_prop_logit = logit(agb_prop))
@@ -2463,20 +2464,20 @@ plots_cf_4p %>%
 
 # Anova
 
-agb_prop <- plots_cf_4p %>%
-  select(plot_id, agb_plot) %>%
-  right_join(agb_class_plots, by = "plot_id") %>%
-  mutate(agb_prop = agb_class_plot/agb_plot) %>%
-  arrange(diam_class)
-
-pairwise.wilcox.test(x= agbprop$agb_prop_logit, g= agbprop$diam_class, p.adjust.method = "bonferroni")
-
-anova <- aov(agb_prop ~ diam_class, data = agb_prop)
-summary(anova)
-TukeyHSD(anova)
-tukey_hsd(anova)
-
-multcompLetters4(anova, (TukeyHSD(anova)))  
+# agb_prop <- plots_cf_4p %>%
+#   dplyr::select(plot_id, agb_plot) %>%
+#   right_join(agb_class_plots, by = "plot_id") %>%
+#   mutate(agb_prop = agb_class_plot/agb_plot) %>%
+#   arrange(diam_class)
+# 
+# pairwise.wilcox.test(x= agbprop$agb_prop_logit, g= agbprop$diam_class, p.adjust.method = "bonferroni")
+# 
+# anova <- aov(agb_prop ~ diam_class, data = agb_prop)
+# summary(anova)
+# TukeyHSD(anova)
+# tukey_hsd(anova)
+# 
+# multcompLetters4(anova, (TukeyHSD(anova)))  
 
 ```
 
@@ -2540,21 +2541,21 @@ bp %>%
 
 # Anova
 
-stems_prop <- plots_cf_4p %>%
-  select(plot_id, tree_no) %>%
-  right_join(stems_class_plot, by = "plot_id") %>%
-  mutate(stems_prop = stems/tree_no) %>%
-  arrange(diam_class)
-
-pairwise.wilcox.test(x= stems_prop$stems_prop, g= stems_prop$diam_class, p.adjust.method = "bonferroni")
-
-anova2 <- aov(stems_prop ~ diam_class, data = stems_prop)
-summary(anova2)
-TukeyHSD(anova2)
-tukey_hsd(anova2) %>%
-  get_test_label()
-
-multcompLetters4(anova2, (TukeyHSD(anova2)))
+# stems_prop <- plots_cf_4p %>%
+#   select(plot_id, tree_no) %>%
+#   right_join(stems_class_plot, by = "plot_id") %>%
+#   mutate(stems_prop = stems/tree_no) %>%
+#   arrange(diam_class)
+# 
+# pairwise.wilcox.test(x= stems_prop$stems_prop, g= stems_prop$diam_class, p.adjust.method = "bonferroni")
+# 
+# anova2 <- aov(stems_prop ~ diam_class, data = stems_prop)
+# summary(anova2)
+# TukeyHSD(anova2)
+# tukey_hsd(anova2) %>%
+#   get_test_label()
+# 
+# multcompLetters4(anova2, (TukeyHSD(anova2)))
 ```
 
 Trees of class 2 (10-20 cm of DBH) are the most abundant. All classes are statistically different except for classes 4 and 5, and 5 and 6.
@@ -2566,50 +2567,48 @@ Contribution to AGB
 ```{r}
 
 plots_cf_4p %>%
-  dplyr::select(plot_id, agb_plot, str_class_plots) %>%
+  dplyr::select(plot_id, agb_plot, forest_classification) %>%
   right_join(agb_class_plots, by = "plot_id") %>%
   mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  group_by(str_class_plots, diam_class) %>%
-  ggplot(aes(x = diam_class, y = agb_prop, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  group_by(forest_classification, diam_class) %>%
+  ggplot(aes(x = diam_class, y = agb_prop, fill = factor(forest_classification, levels = c('undisturbed', 'regrowth', 'degraded', 'deforested'),ordered = TRUE))) +
   geom_boxplot() +
   theme_classic() +
-  labs(fill ='Successional Stage') +
+  labs(fill ='Disturbance Class') +
   scale_fill_brewer(palette = "Accent")
 
-plots_cf_4p %>%
-  select(plot_id, str_class_plots) %>%
-  right_join(agb_prop, by = "plot_id") %>%
-  select(-site.x, -site.y) %>%
-  group_by(str_class_plots, diam_class) %>%
-  get_summary_stats(agb_prop, type = "mean_sd") 
+# plots_cf_4p %>%
+#   select(plot_id, forest_classification) %>%
+#   right_join(agbprop, by = "plot_id") %>%
+#   select(-site.x, -site.y) %>%
+#   group_by(forest_classification, diam_class) %>%
+#   get_summary_stats(agb_prop, type = "mean_sd") # remove rstatix package if not running these lines
 
-agb_prop_str <- plots_cf_4p %>%
-  dplyr::select(plot_id, str_class_plots) %>%
+agb_prop_fc <- plots_cf_4p %>%
+  dplyr::select(plot_id, forest_classification) %>%
   right_join(agbprop, by = "plot_id") %>%
   mutate(site = site.x) %>%
   dplyr::select(-site.x, -site.y) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "s1",
-                       ifelse(str_class_plots == "2", "s2", "s3"))) %>%
+  # mutate(succ = ifelse(forest_classification == "1", "s1",
+  #                      ifelse(forest_classification == "2", "s2", "s3"))) %>%
   mutate(diam_class = ifelse(diam_class == 1, "diam1",
                              ifelse(diam_class == 2, "diam2",
                                     ifelse(diam_class == 3, "diam3",
                                            ifelse(diam_class == 4, "diam4",
                                                   ifelse(diam_class == 5, "diam5", "diam6")))))) %>%
-  group_by(str_class_plots, diam_class)
+  group_by(forest_classification, diam_class)
 
 
-int <- interaction(agb_prop_str$diam_class, agb_prop_str$succ)
-lmm_agb_diam_str <- lmer(agb_prop_logit ~ int + (1|site/plot_id), data = agb_prop_str)
-summary(lmm_agb_diam_str)
-comp <- glht(lmm_agb_diam_str, linfct = mcp(int = "Tukey"), test = adjusted("holm"))
+int <- interaction(agb_prop_fc$diam_class, agb_prop_fc$forest_classification)
+lmm_agb_diam_fc <- lmer(agb_prop_logit ~ int + (1|site/plot_id), data = agb_prop_fc)
+summary(lmm_agb_diam_fc)
+summary(glht(lmm_agb_diam_fc, linfct = mcp(int = "Tukey"), test = adjusted("holm")))
 summary(comp)
 comp_df <- as_tibble(comp[["linfct"]], rownames = "comps")
 
 # lmm_agb_diam_str <- lmer(agb_prop_logit ~ diam_class*succ + (1|site/plot_id), data = agb_prop_str)
 # summary(lmm_agb_diam_str)
-stargazer(lmm_agb_diam_str, type = "text")
+stargazer(lmm_agb_diam_fc, type = "text")
 # summary(glht(lmm_agb_diam_str, linfct = mcp(diam_class= "Tukey", succ = "Tukey")), test = adjusted("holm"))
 
 ```
@@ -2618,31 +2617,27 @@ Contribution to Stem Number
 
 ```{r}
 plots_cf_4p %>%
-  dplyr::select(plot_id, tree_no, str_class_plots) %>%
+  dplyr::select(plot_id, tree_no, forest_classification) %>%
   right_join(stems_class_plot, by = "plot_id") %>%
   mutate(stem_prop = stems/tree_no)  %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  group_by(str_class_plots, diam_class) %>%
-  ggplot(aes(x = diam_class, y = stem_prop, fill = factor(succ, levels = c('vy','y', 'm'),ordered = TRUE))) +
+  group_by(forest_classification, diam_class) %>%
+  ggplot(aes(x = diam_class, y = stem_prop, fill = factor(forest_classification, levels = c('undisturbed', 'regrowth', 'degraded', 'deforested'), ordered = TRUE))) +
   geom_boxplot() +
   theme_classic() +
-  labs(fill ='Successional Stage') +
+  labs(fill ='Disturbance Class') +
   scale_fill_brewer(palette = "Accent")
 
 stem_prop_str <- plots_cf_4p %>%
-  dplyr::select(plot_id, str_class_plots) %>%
+  dplyr::select(plot_id, forest_classification) %>%
   right_join(stemprop, by = "plot_id") %>%
   mutate(site = site.x) %>%
   dplyr::select(-site.x, -site.y) %>%
-  mutate(succ = ifelse(str_class_plots == "1", "s1",
-                       ifelse(str_class_plots == "2", "s2", "s3"))) %>%
   mutate(diam_class = ifelse(diam_class == 1, "diam1",
                              ifelse(diam_class == 2, "diam2",
                                     ifelse(diam_class == 3, "diam3",
                                            ifelse(diam_class == 4, "diam4",
                                                   ifelse(diam_class == 5, "diam5", "diam6")))))) %>%
-  group_by(str_class_plots, diam_class)
+  group_by(forest_classification, diam_class)
 
 
 int_stem <- interaction(stem_prop_str$diam_class, stem_prop_str$succ)
@@ -2653,10 +2648,10 @@ summary(glht(lmm_stem_diam_str, linfct = mcp(int_stem = "Tukey"), test = adjuste
 
 
 plots_cf_4p %>%
-  select(plot_id, str_class_plots) %>%
+  select(plot_id, forest_classification) %>%
   right_join(stems_prop, by = "plot_id") %>%
   select(-site.x, -site.y) %>%
-  group_by(str_class_plots, diam_class) %>%
+  group_by(forest_classification, diam_class) %>%
   get_summary_stats(stems_prop, type = "mean_sd") 
 
 ```
@@ -2668,50 +2663,60 @@ plots_cf_4p %>%
 # Tree density
 
 plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  group_by(succ) %>%
+  group_by(forest_classification) %>%
   get_summary_stats(tree_density, type = "mean_sd")
 
-summary(aov(tree_density ~ str_class_plots, data = plots_cf_4p))
-TukeyHSD(aov(tree_density ~ str_class_plots, data = plots_cf_4p))
-tukey_hsd(aov(tree_density ~ str_class_plots, data = plots_cf_4p))
+summary(aov(tree_density ~ forest_classification, data = plots_cf_4p))
+TukeyHSD(aov(tree_density ~ forest_classification, data = plots_cf_4p))
+tukey_hsd(aov(tree_density ~ forest_classification, data = plots_cf_4p))
+td_fc <- lmer(tree_density ~ forest_classification + (1|site), data = plots_cf_4p)
+summary(td_fc)
+stargazer(td_fc, type = "text")
+summary(glht(td_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
+
 
 # Tree height
 
 plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  group_by(succ) %>%
+  group_by(forest_classification) %>%
   get_summary_stats(loreys_height, type = "mean_sd")
 
-summary(aov(loreys_height ~ str_class_plots, data = plots_cf_4p))
-tukey_hsd(aov(loreys_height ~ str_class_plots, data = plots_cf_4p))
-TukeyHSD(aov(loreys_height ~ str_class_plots, data = plots_cf_4p))
+summary(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
+tukey_hsd(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
+TukeyHSD(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
+th_fc <- lmer(loreys_height ~ forest_classification + (1|site), data = plots_cf_4p)
+summary(th_fc)
+stargazer(th_fc, type = "text")
+summary(glht(th_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
+
 
 # Basal area
 
 plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  group_by(succ) %>%
+  group_by(forest_classification) %>%
   get_summary_stats(basal_area_ha, type = "mean_sd")
 
-summary(aov(basal_area_ha ~ str_class_plots, data = plots_cf_4p))
-tukey_hsd(aov(basal_area_ha ~ str_class_plots, data = plots_cf_4p))
-TukeyHSD(aov(basal_area_ha ~ str_class_plots, data = plots_cf_4p))
+summary(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
+tukey_hsd(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
+TukeyHSD(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
+ba_fc <- lmer(basal_area_ha ~ forest_classification + (1|site), data = plots_cf_4p)
+summary(ba_fc)
+stargazer(ba_fc, type = "text")
+summary(glht(ba_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
 
 # AGB
 
 plots_cf_4p %>%
-  mutate(succ = ifelse(str_class_plots == "1", "vy",
-                       ifelse(str_class_plots == "2", "y", "m"))) %>%
-  group_by(succ) %>%
+  group_by(forest_classification) %>%
   get_summary_stats(agb_plot_ha, type = "mean_sd")
 
-summary(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
-TukeyHSD(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
-tukey_hsd(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
+summary(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
+TukeyHSD(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
+tukey_hsd(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
+agb_fc <- lmer(agb_plot_ha ~ forest_classification + (1|site), data = plots_cf_4p)
+summary(agb_fc)
+stargazer(agb_fc, type = "text")
+summary(glht(agb_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
 
 # plots_cf_4p %>%
 #   ungroup() %>%
@@ -2719,10 +2724,15 @@ tukey_hsd(aov(agb_plot_ha ~ str_class_plots, data = plots_cf_4p))
 
 plots_cf_4p %>%
   ungroup() %>%
-  select(agb_plot_ha, str_class_plots) %>%
-  filter(!is.na(agb_plot_ha), !is.na(str_class_plots)) %>%
-  t_test(agb_plot_ha ~ str_class_plots, p.adjust.method = "bonferroni") %>%
+  select(agb_plot_ha, forest_classification) %>%
+  filter(!is.na(agb_plot_ha), !is.na(forest_classification)) %>%
+  t_test(agb_plot_ha ~ forest_classification, p.adjust.method = "bonferroni") %>%
   add_significance("p.adj") 
+
+plots_cf_4p %>%
+  ggplot(aes(x = forest_classification, y = agb_plot_ha)) +
+  geom_boxplot()
+
 ```
 
 
