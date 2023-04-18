@@ -2730,9 +2730,28 @@ plots_cf_4p %>%
   add_significance("p.adj") 
 
 plots_cf_4p %>%
-  ggplot(aes(x = forest_classification, y = agb_plot_ha)) +
+  ggplot(aes(x = forest_classification, y = log1p(agb_plot_ha))) +
   geom_boxplot()
 
+plots_cf_4p %>%
+  #filter(hill_shannon < 5) %>%
+  ggplot(aes(x = forest_classification, y = sqrt(hill_shannon))) +
+  geom_boxplot()
+
+plots_cf_4p %>%
+  #filter(hill_shannon < 5) %>%
+  ggplot(aes(x = agriculture, y = sqrt(hill_shannon))) +
+  geom_point()
+
+plots_cf_4p %>%
+  #filter(hill_shannon < 5) %>%
+  ggplot(aes(x = agriculture, y = log1p(agb_plot_ha))) +
+  geom_point()
+
+plots_cf_4p %>%
+  #filter(hill_shannon < 5) %>%
+  ggplot(aes(x = sqrt(hill_shannon), y = log1p(agb_plot_ha), color = forest_classification)) +
+  geom_point()
 ```
 
 

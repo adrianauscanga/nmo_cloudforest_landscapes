@@ -74,7 +74,7 @@ pa <- pca_scores_plots %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
   geom_point() +
   guides(color = guide_legend(override.aes = list(size = 2.5))) +
-  scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) +
+  scale_color_manual(values = c("#d95f02", "#7570b3", "#1b9e77")) + #add color #e7298a
   theme_classic() +
   scale_x_continuous(limits = c(-2.5,2),
                      breaks = c(-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2)) +
