@@ -166,9 +166,9 @@ plots_cf <- sites_cf %>%
 Change direction of mosaic values (so that 0-forest and 1-ag) and rename variable
 
 ```{r}
-sites_cf <- sites_cf %>%
- mutate(landscape_str = 1- mosaic,
-        landscape_dist = 1 - mosaic_dist)
+# sites_cf <- sites_cf %>%
+#  mutate(landscape_str = 1- mosaic,
+#         landscape_dist = 1 - mosaic_dist)
 ```
 
 Visual inspection of data
@@ -225,7 +225,7 @@ shapiro.test(sites_cf2$temp)
 shapiro.test(sites_cf2$precip)
 shapiro.test(sites_cf2$aspect_gee) # normal p = 0.42
 shapiro.test(sites_cf2$slope_gee) # marginally normal p = 0.02
-shapiro.test(sites_cf2$mosaic)
+#shapiro.test(sites_cf2$mosaic)
 shapiro.test(sites_cf2$agriculture)
 shapiro.test(sites_cf2$grazing)
 shapiro.test(sites_cf2$hill_richness) # normal p=0.15
@@ -236,7 +236,7 @@ ggdensity(sites_cf2$temp)
 ggdensity(sites_cf2$precip)
 ggdensity(sites_cf2$aspect_gee)
 ggdensity(sites_cf2$slope_gee)
-ggdensity(sites_cf2$mosaic)
+#ggdensity(sites_cf2$mosaic)
 ggdensity(sites_cf2$agriculture)
 ggdensity(sites_cf2$grazing)
 ggdensity(sites_cf2$hill_richness)
