@@ -532,15 +532,19 @@ sites_coords_4p <- sites_cf_4p %>%
   dplyr::select(longitude, latitude)
 
 #distance neighbors
-loc_subs <- cbind(sites_coords_4p$longitude, sites_coords_4p$latitude)
-d_subs <- 50 #distance has to be larger than the distance that exists between sites, which is 2.5 km
+#loc_subs <- cbind(sites_coords_4p$longitude, sites_coords_4p$latitude)
+loc_subs <- cbind(plots_cf_4p$longitude, plots_cf_4p$latitude)
+d_subs <- 10 #distance has to be larger than the distance that exists between sites, which is 2.5 km
 neighbors_dist <- dnearneigh(loc_subs, 0, d_subs, longlat = T)
 str(neighbors_dist)
 plot(neighbors_dist, loc_subs)
 
+# Extract model residuals
+model_res <- gamm4_4_int$gam$residuals
+
 #Moran test
-# spatial autocorrelation of lm3 residuals
-moran.test(lm2_res, zero.policy=T, 
+# spatial autocorrelation of model residuals
+moran.test(model_res, zero.policy=T, 
      nb2listw(neighbors_dist, zero.policy=T, style="W"))
 
 # p-value = 0.5176 with d= 10 Moran I= -0.04971499

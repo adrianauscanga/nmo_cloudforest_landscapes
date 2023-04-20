@@ -1543,7 +1543,8 @@ gamm4_1a <- gamm4(log1p(agb_plot_ha) ~ env_pc1, # relationship looks linear so I
 
 gamm4_1b <-  gamm4(log1p(agb_plot_ha) ~ t2(hill_shannon, bs="tp", k=4),
                    random = ~(1|site), data = plots_cf_4p)
-gamm4_1b_3 <-  gamm4(log1p(agb_plot_ha) ~ t2(sqrt(hill_shannon), bs="tp", k=4),
+
+gamm4_1b_3 <-  gamm4(log1p(agb_plot_ha) ~ t2(hill_shannon, bs="tp", k=4),
                    random = ~(1|site), data = plots_cf_4p)
 
 
@@ -1835,50 +1836,50 @@ gamm4_2u <- gamm4(log1p(agb_plot_ha) ~ #env_pc1 +
 
 # cAIC
 
-aic2a <- cAIC(gamm4_2a)
-aic2b <- cAIC(gamm4_2b)
-aic2c <- cAIC(gamm4_2c)
-aic2d <- cAIC(gamm4_2d)
-aic2e <- cAIC(gamm4_2e)
-aic2f <- cAIC(gamm4_2f)
-aic2g <- cAIC(gamm4_2g)
-aic2h <- cAIC(gamm4_2h)
-aic2i <- cAIC(gamm4_2i)
-aic2j <- cAIC(gamm4_2j)
-aic2k <- cAIC(gamm4_2k)
-aic2l <- cAIC(gamm4_2l)
-aic2m <- cAIC(gamm4_2m)
-aic2n <- cAIC(gamm4_2n)
-aic2o <- cAIC(gamm4_2o)
-#aic2p <- cAIC(gamm4_2p) #Error: After removing the terms with zero variance components and refitting the model cAIC can be called again.
-aic2q <- cAIC(gamm4_2q)
-aic2r <- cAIC(gamm4_2r)
-aic2s <- cAIC(gamm4_2s)
-aic2t <- cAIC(gamm4_2t)
-aic2u <- cAIC(gamm4_2u)
+# aic2a <- cAIC(gamm4_2a)
+# aic2b <- cAIC(gamm4_2b)
+# aic2c <- cAIC(gamm4_2c)
+# aic2d <- cAIC(gamm4_2d)
+# aic2e <- cAIC(gamm4_2e)
+# aic2f <- cAIC(gamm4_2f)
+# aic2g <- cAIC(gamm4_2g)
+# aic2h <- cAIC(gamm4_2h)
+# aic2i <- cAIC(gamm4_2i)
+# aic2j <- cAIC(gamm4_2j)
+# aic2k <- cAIC(gamm4_2k)
+# aic2l <- cAIC(gamm4_2l)
+# aic2m <- cAIC(gamm4_2m)
+# aic2n <- cAIC(gamm4_2n)
+# aic2o <- cAIC(gamm4_2o)
+# #aic2p <- cAIC(gamm4_2p) #Error: After removing the terms with zero variance components and refitting the model cAIC can be called again.
+# aic2q <- cAIC(gamm4_2q)
+# aic2r <- cAIC(gamm4_2r)
+# aic2s <- cAIC(gamm4_2s)
+# aic2t <- cAIC(gamm4_2t)
+# aic2u <- cAIC(gamm4_2u)
 
 
-gamms2_aic <- c("gamm4_2a", aic2a$caic,
-                "gamm4_2b", aic2b$caic,
-                "gamm4_2c", aic2c$caic,
-                "gamm4_2d", aic2d$caic,
-                "gamm4_2e", aic2e$caic,
-                "gamm4_2f", aic2f$caic,
-                "gamm4_2g", aic2g$caic,
-                "gamm4_2h", aic2h$caic,
-                "gamm4_2i", aic2i$caic,
-                "gamm4_2j", aic2j$caic,
-                "gamm4_2k", aic2k$caic,
-                "gamm4_2l", aic2l$caic,
-                "gamm4_2m", aic2m$caic,
-                "gamm4_2n", aic2n$caic,
-                "gamm4_2o", aic2o$caic,
-                #"gamm4_2p", aic2p$caic,
-                "gamm4_2q", aic2q$caic,
-                "gamm4_2r", aic2r$caic,
-                "gamm4_2s", aic2s$caic,
-                "gamm4_2t", aic2t$caic,
-                "gamm4_2u", aic2u$caic)
+# gamms2_aic <- c("gamm4_2a", aic2a$caic,
+#                 "gamm4_2b", aic2b$caic,
+#                 "gamm4_2c", aic2c$caic,
+#                 "gamm4_2d", aic2d$caic,
+#                 "gamm4_2e", aic2e$caic,
+#                 "gamm4_2f", aic2f$caic,
+#                 "gamm4_2g", aic2g$caic,
+#                 "gamm4_2h", aic2h$caic,
+#                 "gamm4_2i", aic2i$caic,
+#                 "gamm4_2j", aic2j$caic,
+#                 "gamm4_2k", aic2k$caic,
+#                 "gamm4_2l", aic2l$caic,
+#                 "gamm4_2m", aic2m$caic,
+#                 "gamm4_2n", aic2n$caic,
+#                 "gamm4_2o", aic2o$caic,
+#                 #"gamm4_2p", aic2p$caic,
+#                 "gamm4_2q", aic2q$caic,
+#                 "gamm4_2r", aic2r$caic,
+#                 "gamm4_2s", aic2s$caic,
+#                 "gamm4_2t", aic2t$caic,
+#                 "gamm4_2u", aic2u$caic)
 
 # Best model of 2 predictors is agb ~ slope + shannon cAIC = 437.6538
 summary(gamm4_2g$mer)
@@ -2339,6 +2340,8 @@ gamm4_6 <- gamm4(log1p(agb_plot_ha) ~ env_pc1 +
 cAIC(gamm4_6)
 
 # Model with 6 predictors cAIC= 439.09
+
+
 ```
 
 Best models are:
@@ -2377,18 +2380,22 @@ summary(gamm4_6$gam)
 
 gamm4_4_int <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
            slope +
-           t2(hill_richness*agriculture, bs= "tp", k=4),
+           t2(hill_shannon*agriculture, bs= "tp", k= 4),
+           random = ~(1|site), data = plots_cf_4p)
+gamm4_4_int2 <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
+           slope +
+           t2(hill_shannon, bs= "tp", k= 4),
            random = ~(1|site), data = plots_cf_4p)
 
 summary(gamm4_4_int$gam)
-summary(gamm4_4a$gam)
+
 cAIC(gamm4_4_int)
-cAIC(gamm4_4a)
+
 plot(gamm4_4_int$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
-plot(gamm4_4a$gam)
+
 
 ag_env <- gamm4(agriculture ~ t2(env_pc1, bs="tp", k=4), random = ~(1|site), data = plots_cf_4p)
-plot(ag_env$gam)
+summary(ag_env$gam)
 
 sp_env <- gamm4(hill_richness ~ t2(env_pc1, bs="tp", k=4), random = ~(1|site), data = plots_cf_4p)
 summary(sp_env$gam)
@@ -2399,6 +2406,14 @@ summary(sp_ag$gam)
 plot(sp_ag$gam)
 
 plot_model(gamm4_4_int, show.p = T, show.values = T)
+
+gam.check(gamm4_4_int$gam)
+plot.gam(gamm4_4_int$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+plot.gam(gamm4_4_int2$gam, residuals=T, se=T, shade=T, pch=16, cex=0.5)
+summary(gamm4_4_int$gam)
+summary(gamm4_4_int2$gam)
+
+
 ```
 
 ## AGB distribution in TMCF
@@ -2560,7 +2575,7 @@ bp %>%
 
 Trees of class 2 (10-20 cm of DBH) are the most abundant. All classes are statistically different except for classes 4 and 5, and 5 and 6.
 
-### Tree size contribution to AGB and stems in relation to successional stage
+### Tree size contribution to AGB and stems in relation to disturbance level
 
 Contribution to AGB
 
@@ -2603,14 +2618,48 @@ int <- interaction(agb_prop_fc$diam_class, agb_prop_fc$forest_classification)
 lmm_agb_diam_fc <- lmer(agb_prop_logit ~ int + (1|site/plot_id), data = agb_prop_fc)
 summary(lmm_agb_diam_fc)
 summary(glht(lmm_agb_diam_fc, linfct = mcp(int = "Tukey"), test = adjusted("holm")))
-summary(comp)
-comp_df <- as_tibble(comp[["linfct"]], rownames = "comps")
+# Differences between diam_class within disturbance level class
+diam1 <- agb_prop_fc %>%
+  filter(diam_class == "diam1")
+summary(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam1))
+summary(glht(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam1), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+# summary(comp)
+# comp_df <- as_tibble(comp[["linfct"]], rownames = "comps")
 
 # lmm_agb_diam_str <- lmer(agb_prop_logit ~ diam_class*succ + (1|site/plot_id), data = agb_prop_str)
 # summary(lmm_agb_diam_str)
-stargazer(lmm_agb_diam_fc, type = "text")
+#stargazer(lmm_agb_diam_fc, type = "text")
 # summary(glht(lmm_agb_diam_str, linfct = mcp(diam_class= "Tukey", succ = "Tukey")), test = adjusted("holm"))
 
+diam1 <- agb_prop_fc %>%
+  filter(diam_class == "diam1")
+summary(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam1))
+summary(glht(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam1), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam2 <- agb_prop_fc %>%
+  filter(diam_class == "diam2")
+summary(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam2))
+summary(glht(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam2), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam3 <- agb_prop_fc %>%
+  filter(diam_class == "diam3")
+summary(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam3))
+summary(glht(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam3), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam4 <- agb_prop_fc %>%
+  filter(diam_class == "diam4")
+summary(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam4))
+summary(glht(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam4), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam5 <- agb_prop_fc %>%
+  filter(diam_class == "diam5")
+summary(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam5))
+summary(glht(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam5), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam6 <- agb_prop_fc %>%
+  filter(diam_class == "diam6")
+summary(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam6))
+summary(glht(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam6), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
 ```
 
 Contribution to Stem Number
@@ -2640,7 +2689,7 @@ stem_prop_str <- plots_cf_4p %>%
   group_by(forest_classification, diam_class)
 
 
-int_stem <- interaction(stem_prop_str$diam_class, stem_prop_str$succ)
+int_stem <- interaction(stem_prop_str$diam_class, stem_prop_str$forest_classification)
 lmm_stem_diam_str <- lmer(stem_prop_logit ~ int_stem + (1|site/plot_id), data = stem_prop_str)
 summary(lmm_stem_diam_str)
 summary(glht(lmm_stem_diam_str, linfct = mcp(int_stem = "Tukey"), test = adjusted("holm")))
@@ -2654,6 +2703,35 @@ plots_cf_4p %>%
   group_by(forest_classification, diam_class) %>%
   get_summary_stats(stems_prop, type = "mean_sd") 
 
+diam1 <- stem_prop_str %>%
+  filter(diam_class == "diam1")
+summary(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam1))
+summary(glht(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam1), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam2 <- stem_prop_str %>%
+  filter(diam_class == "diam2")
+summary(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam2))
+summary(glht(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam2), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam3 <- stem_prop_str %>%
+  filter(diam_class == "diam3")
+summary(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam3))
+summary(glht(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam3), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam4 <- stem_prop_str %>%
+  filter(diam_class == "diam4")
+summary(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam4))
+summary(glht(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam4), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam5 <- stem_prop_str %>%
+  filter(diam_class == "diam5")
+summary(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam5))
+summary(glht(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam5), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+diam6 <- stem_prop_str %>%
+  filter(diam_class == "diam6")
+summary(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam6))
+summary(glht(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam6), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
 ```
 
 ### Structural attributes and AGB in three successional stages
@@ -2664,11 +2742,19 @@ plots_cf_4p %>%
 
 plots_cf_4p %>%
   group_by(forest_classification) %>%
+  get_summary_stats(tree_density, type = "min")
+
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
   get_summary_stats(tree_density, type = "mean_sd")
 
-summary(aov(tree_density ~ forest_classification, data = plots_cf_4p))
-TukeyHSD(aov(tree_density ~ forest_classification, data = plots_cf_4p))
-tukey_hsd(aov(tree_density ~ forest_classification, data = plots_cf_4p))
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
+  get_summary_stats(tree_density, type = "max")
+
+# summary(aov(tree_density ~ forest_classification, data = plots_cf_4p))
+# TukeyHSD(aov(tree_density ~ forest_classification, data = plots_cf_4p))
+# tukey_hsd(aov(tree_density ~ forest_classification, data = plots_cf_4p))
 td_fc <- lmer(tree_density ~ forest_classification + (1|site), data = plots_cf_4p)
 summary(td_fc)
 stargazer(td_fc, type = "text")
@@ -2679,11 +2765,19 @@ summary(glht(td_fc, linfct = mcp(forest_classification = "Tukey")), test = adjus
 
 plots_cf_4p %>%
   group_by(forest_classification) %>%
+  get_summary_stats(loreys_height, type = "min")
+
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
   get_summary_stats(loreys_height, type = "mean_sd")
 
-summary(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
-tukey_hsd(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
-TukeyHSD(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
+  get_summary_stats(loreys_height, type = "max")
+
+# summary(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
+# tukey_hsd(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
+# TukeyHSD(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
 th_fc <- lmer(loreys_height ~ forest_classification + (1|site), data = plots_cf_4p)
 summary(th_fc)
 stargazer(th_fc, type = "text")
@@ -2694,33 +2788,116 @@ summary(glht(th_fc, linfct = mcp(forest_classification = "Tukey")), test = adjus
 
 plots_cf_4p %>%
   group_by(forest_classification) %>%
+  get_summary_stats(basal_area_ha, type = "min")
+
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
   get_summary_stats(basal_area_ha, type = "mean_sd")
 
-summary(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
-tukey_hsd(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
-TukeyHSD(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
+  get_summary_stats(basal_area_ha, type = "max")
+
+# summary(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
+# tukey_hsd(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
+# TukeyHSD(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
 ba_fc <- lmer(basal_area_ha ~ forest_classification + (1|site), data = plots_cf_4p)
 summary(ba_fc)
 stargazer(ba_fc, type = "text")
 summary(glht(ba_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
 
+# Wood density
+
+trees_cf_4p %>%
+  filter(!is.na(mean_wd)) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n()),
+                   mean_wd = as.numeric(mean_wd)) %>%
+  group_by(plot_id) %>%
+  summarize(mean_wd_plot = weighted.mean(mean_wd, abundance)) %>%
+  right_join(plots_cf_4p) %>%
+  filter(!is.na(mean_wd_plot)) %>%
+  group_by(forest_classification) %>%
+  summarize(min = min(mean_wd_plot),
+            mean = mean(mean_wd_plot),
+            sd = sd(mean_wd_plot),
+            max = max(mean_wd_plot))
+  
+
+
 # AGB
+
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
+  get_summary_stats(agb_plot_ha, type = "min")
 
 plots_cf_4p %>%
   group_by(forest_classification) %>%
   get_summary_stats(agb_plot_ha, type = "mean_sd")
 
-summary(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
-TukeyHSD(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
-tukey_hsd(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
+  get_summary_stats(agb_plot_ha, type = "max")
+
+
+# summary(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
+# TukeyHSD(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
+# tukey_hsd(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
 agb_fc <- lmer(agb_plot_ha ~ forest_classification + (1|site), data = plots_cf_4p)
 summary(agb_fc)
 stargazer(agb_fc, type = "text")
 summary(glht(agb_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
 
-# plots_cf_4p %>%
-#   ungroup() %>%
-#   anova_test(agb_plot_ha ~ str_class_plots, detailed = T, options(contrasts=c('contr.sum','contr.poly')))
+
+# Shannon
+
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
+  get_summary_stats(hill_shannon, type = "min")
+
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
+  get_summary_stats(hill_shannon, type = "mean_sd")
+
+plots_cf_4p %>%
+  group_by(forest_classification) %>%
+  get_summary_stats(hill_shannon, type = "max")
+
+# All plots
+
+min(plots_cf_4p$tree_density)
+mean(plots_cf_4p$tree_density)
+sd(plots_cf_4p$tree_density)
+max(plots_cf_4p$tree_density)
+
+min(plots_cf_4p$loreys_height)
+mean(plots_cf_4p$loreys_height)
+sd(plots_cf_4p$loreys_height)
+max(plots_cf_4p$loreys_height)
+
+min(plots_cf_4p$basal_area_ha)
+mean(plots_cf_4p$basal_area_ha)
+sd(plots_cf_4p$basal_area_ha)
+max(plots_cf_4p$basal_area_ha)
+
+min(plots_cf_4p$agb_plot_ha)
+mean(plots_cf_4p$agb_plot_ha)
+sd(plots_cf_4p$agb_plot_ha)
+max(plots_cf_4p$agb_plot_ha)
+
+trees_cf_4p %>%
+  filter(!is.na(mean_wd)) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n()),
+                   mean_wd = as.numeric(mean_wd)) %>%
+  group_by(plot_id) %>%
+  summarize(meanwd = mean(mean_wd)) %>%
+  summarize(sdwd = sd(meanwd))
+  
+min(plots_cf_4p$hill_shannon, na.rm = T)
+mean(plots_cf_4p$hill_shannon, na.rm = T)
+sd(plots_cf_4p$hill_shannon, na.rm = T)
+max(plots_cf_4p$hill_shannon, na.rm = T)
 
 plots_cf_4p %>%
   ungroup() %>%
@@ -2740,7 +2917,7 @@ plots_cf_4p %>%
 
 plots_cf_4p %>%
   #filter(hill_shannon < 5) %>%
-  ggplot(aes(x = agriculture, y = sqrt(hill_shannon))) +
+  ggplot(aes(x = agriculture, y = hill_shannon)) +
   geom_point()
 
 plots_cf_4p %>%
@@ -2754,6 +2931,4 @@ plots_cf_4p %>%
   geom_point()
 ```
 
-
-```
 
