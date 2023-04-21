@@ -2626,10 +2626,10 @@ summary(glht(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam
 # summary(comp)
 # comp_df <- as_tibble(comp[["linfct"]], rownames = "comps")
 
-# lmm_agb_diam_str <- lmer(agb_prop_logit ~ diam_class*succ + (1|site/plot_id), data = agb_prop_str)
+lmm_agb_diam_fc <- lmer(agb_prop_logit ~ diam_class*forest_classification + (1|site/plot_id), data = agb_prop_fc)
 # summary(lmm_agb_diam_str)
 #stargazer(lmm_agb_diam_fc, type = "text")
-# summary(glht(lmm_agb_diam_str, linfct = mcp(diam_class= "Tukey", succ = "Tukey")), test = adjusted("holm"))
+summary(glht(lmm_agb_diam_fc, linfct = mcp(diam_class= "Tukey", forest_classification = "Tukey")), test = adjusted("holm"))
 
 diam1 <- agb_prop_fc %>%
   filter(diam_class == "diam1")
@@ -2740,6 +2740,7 @@ summary(glht(lmer(stem_prop_logit ~ forest_classification + (1|site), data = dia
 
 # Tree density
 
+# Min, Mean, and Max values:
 plots_cf_4p %>%
   group_by(forest_classification) %>%
   get_summary_stats(tree_density, type = "min")
@@ -2752,17 +2753,17 @@ plots_cf_4p %>%
   group_by(forest_classification) %>%
   get_summary_stats(tree_density, type = "max")
 
-# summary(aov(tree_density ~ forest_classification, data = plots_cf_4p))
-# TukeyHSD(aov(tree_density ~ forest_classification, data = plots_cf_4p))
-# tukey_hsd(aov(tree_density ~ forest_classification, data = plots_cf_4p))
+# LMM:
 td_fc <- lmer(tree_density ~ forest_classification + (1|site), data = plots_cf_4p)
 summary(td_fc)
 stargazer(td_fc, type = "text")
+stargazer(td_fc,type="text",report=("vc*p"))
+plot_model(td_fc, show.p = T, show.values = T)
 summary(glht(td_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
-
 
 # Tree height
 
+# Min, Mean, and Max values:
 plots_cf_4p %>%
   group_by(forest_classification) %>%
   get_summary_stats(loreys_height, type = "min")
@@ -2775,9 +2776,8 @@ plots_cf_4p %>%
   group_by(forest_classification) %>%
   get_summary_stats(loreys_height, type = "max")
 
-# summary(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
-# tukey_hsd(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
-# TukeyHSD(aov(loreys_height ~ forest_classification, data = plots_cf_4p))
+# LMM:
+
 th_fc <- lmer(loreys_height ~ forest_classification + (1|site), data = plots_cf_4p)
 summary(th_fc)
 stargazer(th_fc, type = "text")
@@ -2786,6 +2786,7 @@ summary(glht(th_fc, linfct = mcp(forest_classification = "Tukey")), test = adjus
 
 # Basal area
 
+# Min, Mean, and Max values:
 plots_cf_4p %>%
   group_by(forest_classification) %>%
   get_summary_stats(basal_area_ha, type = "min")
@@ -2798,15 +2799,16 @@ plots_cf_4p %>%
   group_by(forest_classification) %>%
   get_summary_stats(basal_area_ha, type = "max")
 
-# summary(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
-# tukey_hsd(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
-# TukeyHSD(aov(basal_area_ha ~ forest_classification, data = plots_cf_4p))
+# LMM:
+
 ba_fc <- lmer(basal_area_ha ~ forest_classification + (1|site), data = plots_cf_4p)
 summary(ba_fc)
 stargazer(ba_fc, type = "text")
 summary(glht(ba_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
 
 # Wood density
+
+# Min, Mean, and Max values:
 
 trees_cf_4p %>%
   filter(!is.na(mean_wd)) %>%
@@ -2823,9 +2825,27 @@ trees_cf_4p %>%
             sd = sd(mean_wd_plot),
             max = max(mean_wd_plot))
   
+# LMM:
 
+wd_df <- trees_cf_4p %>%
+  filter(!is.na(mean_wd)) %>%
+  dplyr::group_by(plot_id, species) %>%
+  dplyr::summarize(abundance = sum(n()),
+                   mean_wd = as.numeric(mean_wd)) %>%
+  group_by(plot_id) %>%
+  summarize(mean_wd_plot = weighted.mean(mean_wd, abundance)) %>%
+  right_join(plots_cf_4p) %>%
+  filter(!is.na(mean_wd_plot)) %>%
+  select(site, plot_id, forest_classification, mean_wd_plot)
+
+wd_fc <- lmer(mean_wd_plot ~ forest_classification + (1|site), data = wd_df)
+summary(wd_fc)
+stargazer(wd_fc, type = "text")
+summary(glht(wd_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
 
 # AGB
+
+# Min, Mean, and Max values:
 
 plots_cf_4p %>%
   group_by(forest_classification) %>%
@@ -2840,9 +2860,7 @@ plots_cf_4p %>%
   get_summary_stats(agb_plot_ha, type = "max")
 
 
-# summary(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
-# TukeyHSD(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
-# tukey_hsd(aov(agb_plot_ha ~ forest_classification, data = plots_cf_4p))
+# LMM:
 agb_fc <- lmer(agb_plot_ha ~ forest_classification + (1|site), data = plots_cf_4p)
 summary(agb_fc)
 stargazer(agb_fc, type = "text")
@@ -2850,6 +2868,8 @@ summary(glht(agb_fc, linfct = mcp(forest_classification = "Tukey")), test = adju
 
 
 # Shannon
+
+# Min, Mean, and Max values:
 
 plots_cf_4p %>%
   group_by(forest_classification) %>%
@@ -2862,6 +2882,12 @@ plots_cf_4p %>%
 plots_cf_4p %>%
   group_by(forest_classification) %>%
   get_summary_stats(hill_shannon, type = "max")
+
+# LMM:
+hs_fc <- lmer(hill_shannon ~ forest_classification + (1|site), data = plots_cf_4p)
+summary(hs_fc)
+stargazer(hs_fc, type = "text")
+summary(glht(hs_fc, linfct = mcp(forest_classification = "Tukey")), test = adjusted("holm"))
 
 # All plots
 
