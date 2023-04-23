@@ -1543,10 +1543,29 @@ gamm4_1a <- gamm4(log1p(agb_plot_ha) ~ env_pc1, # relationship looks linear so I
 
 gamm4_1b <-  gamm4(log1p(agb_plot_ha) ~ t2(hill_shannon, bs="tp", k=4),
                    random = ~(1|site), data = plots_cf_4p)
-
-gamm4_1b_3 <-  gamm4(log1p(agb_plot_ha) ~ t2(hill_shannon, bs="tp", k=4),
+gamm4_1b_4 <-  gamm4(log1p(agb_plot_ha) ~ s(hill_shannon, bs="tp", k=4),
                    random = ~(1|site), data = plots_cf_4p)
 
+agb_h <- lmer(log1p(agb_plot_ha) ~ hill_shannon + (1|site), data = plots_cf_4p)
+stargazer(agb_h,type="text",report=("vc*p"))
+
+agb_h2 <- lmer(log1p(agb_plot_ha) ~ hill_shannon*forest_classification + (1|site), data = plots_cf_4p)
+summary(agb_h2)
+plot_model(agb_h2)
+stargazer(agb_h2,type="text",report=("vc*p"))
+
+agb_h3 <- lmer(log1p(agb_plot_ha) ~ hill_shannon + (1|forest_classification) + (1|site) , data = plots_cf_4p)
+summary(agb_h3)
+stargazer(agb_h3,type="text",report=("vc*p"))
+
+# Ganador (falta hacer cAICs) --Escribe sobre modelo con y sin forest_classification y sobre la variacion que Site explica. 
+gamm4_1b_3 <-  gamm4(log1p(agb_plot_ha) ~ s(hill_shannon, bs= "tp", k= 4),
+                   random = ~(1|site) + (1|forest_classification), data = plots_cf_4p)
+summary(gamm4_1b_3$gam)
+
+gamm4_1b_5 <-  gamm4(log1p(agb_plot_ha) ~ forest_classification + s(hill_shannon, bs= "tp", k= 4) ,
+                   random = ~(1|site), data = plots_cf_4p) #forest class as fixed effect because it has only 4 levels
+summary(gamm4_1b_5$gam)
 
 gamm4_1c <- gamm4(log1p(agb_plot_ha) ~ t2(hill_richness, bs="tp", k=4),
                    random = ~(1|site), data = plots_cf_4p)
@@ -2387,6 +2406,29 @@ gamm4_4_int2 <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
            t2(hill_shannon, bs= "tp", k= 4),
            random = ~(1|site), data = plots_cf_4p)
 
+gamm4_4_int5 <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
+           slope*agriculture +
+           t2(hill_shannon, bs= "tp", k= 4),
+           random = ~(1|site), data = plots_cf_4p)
+
+
+gamm4_4_int3 <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
+           slope +
+           s(hill_shannon, bs= "tp", k= 4),
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4_int4 <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
+           slope +
+           forest_classification +
+           t2(hill_shannon, bs= "tp", k= 4),
+           random = ~(1|site), data = plots_cf_4p)
+
+gamm4_4_int2 <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
+           slope +
+           t2(hill_shannon, bs= "tp", k= 4),
+           random = ~(1|site), data = plots_cf_4p)
+
+
 summary(gamm4_4_int$gam)
 
 cAIC(gamm4_4_int)
@@ -2734,7 +2776,7 @@ summary(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam6))
 summary(glht(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam6), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
 ```
 
-### Structural attributes and AGB in three successional stages
+### Structural attributes, AGB and diversity across disturbance levels
 
 ```{r}
 
