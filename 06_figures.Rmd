@@ -326,188 +326,6 @@ p1_df <- plots_cf_4p %>%
                                            ifelse(diam_class == "4", "30-40",
                                                   ifelse(diam_class == "5", "40-50", ">50"))))))
 
-## Stats
-
-### Statistical differences between successional stages within size classes
-# stat_test <- p1_df %>%
-#   group_by(diam_class) %>%
-#   t_test(stem_prop ~ str_class_plots) %>%
-#   adjust_pvalue(method = "bonferroni") %>%
-#   add_significance("p.adj")
-# stat_test
-# 
-# stat_test <- stat_test %>%
-#   add_xy_position(x= "diam_class", dodge = 0.8, group = "str_class_plots") %>% 
-#   # Change y position of statistical differences
-#   mutate(y.position = ifelse(diam_class == "1" &
-#                                group1 == "1" &
-#                                group2 == "2", 1.0, y.position)) %>%
-#   mutate(y.position = ifelse(diam_class == "1" &
-#                                group1 == "1" &
-#                                group2 == "3", 1.1, y.position)) %>%
-#   mutate(y.position = ifelse(diam_class == "6" &
-#                                group1 == "2" &
-#                                group2 == "3", 0.28, y.position))
-# 
-# ### Statistical differences between size classes within successional stages
-# 
-# stat_test2 <- p1_df %>%
-#   group_by(str_class_plots) %>%
-#   t_test(stem_prop ~ diam_class) %>%
-#   adjust_pvalue(method = "bonferroni") %>%
-#   add_significance("p.adj") 
-# 
-# #### Groupings resulted from stat_test2
-# 
-# c1 <- rep(c(1, 2, 3), each = 6)
-# c2 <- rep(seq(1, 6), times = 3)
-# c3 <- list(c("a", "b", "b", "b", "b", "b",
-#        "a", "b", "c", "d", "d", "d",
-#        "a", "b", "ac", "cd", "d", "d"))
-# 
-# groupings <- data.frame(c1, c2, c3) 
-# colnames(groupings) <- c("str_class_plots", "diam_class", "groupings")
-# 
-# groupings <- groupings %>%
-#   as_tibble() %>%
-#   arrange(diam_class) %>%
-#   mutate(succ = ifelse(str_class_plots == "1", "F",
-#                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
-#   mutate(size_class = ifelse(diam_class == "1", "<10",
-#                              ifelse(diam_class == "2", "10-20",
-#                                     ifelse(diam_class == "3", "20-30",
-#                                            ifelse(diam_class == "4", "30-40",
-#                                                   ifelse(diam_class == "5", "40-50", ">50"))))))
-# 
-# groupings <- groupings %>%
-#   mutate(x_groupings = c(0.7333333, 1.000000, 1.266667, 1.7333333, 2.000000, 2.266667,
-#                2.7333333, 3.000000, 3.266667, 3.7333333, 4.000000, 4.266667,
-#                4.7333333, 5.000000, 5.266667, 5.7333333, 6.000000, 6.266667))
-# 
-# groupings <- groupings %>%
-#   as_tibble() %>%
-#   mutate(str_class_plots = as.character(str_class_plots),
-#          diam_class = as.character(diam_class))
-# 
-# p1_df <- p1_df %>%
-#   left_join(groupings, by = c("str_class_plots", "diam_class", "succ", "size_class"))
-# 
-
-################## With ANOVA and Tukey ###################
-
-### Statistical differences between successional stages within size classes
-
-# ap1 <- p1_df %>%
-#   group_by(diam_class) %>%
-#   anova_test(stem_prop ~ succ)
-# 
-# tukeyp1 <- p1_df %>%
-#   group_by(diam_class) %>%
-#   tukey_hsd(stem_prop ~ str_class_plots)
-# 
-# tukeyp1 <- tukeyp1 %>%
-#   add_xy_position(x= "diam_class", dodge = 0.8, group = "str_class_plots") %>%
-#   # Change y position of statistical differences
-#   mutate(y.position = ifelse(diam_class == "1" &
-#                                group1 == "1" &
-#                                group2 == "2", 1.0, y.position)) %>%
-#   mutate(y.position = ifelse(diam_class == "1" &
-#                                group1 == "1" &
-#                                group2 == "3", 1.1, y.position)) %>%
-#   mutate(y.position = ifelse(diam_class == "4" &
-#                                group1 == "1" &
-#                                group2 == "2", 1.1, y.position)) %>%
-#   mutate(y.position = ifelse(diam_class == "6" &
-#                                group1 == "2" &
-#                                group2 == "3", 0.40, y.position))
-
-### Statistical differences between size classes within successional stages
-
-# a2p1 <- p1_df %>%
-#   group_by(succ) %>%
-#   anova_test(stem_prop ~ diam_class)
-# 
-# tukey2p1 <- p1_df %>%
-#   group_by(succ) %>%
-#   tukey_hsd(stem_prop ~ diam_class)
-
-# Groupings for F forests
-
-# tukey2p1_F <- tukey2p1 %>%
-#   filter(succ == "F") %>%
-#   select(group1, group2, p.adj.signif) %>%
-#   unite("comparisons", group1, group2, sep = "-") %>%
-#   mutate(dif = ifelse(p.adj.signif == "ns", FALSE, TRUE))
-# 
-# dif <- tukey2p1_F$dif
-# names(dif) <- tukey2p1_F$comparisons
-# difL <- multcompLetters(dif)
-# difL
-# 
-# 
-# # Groupings for Y forests
-# 
-# tukey2p1_y <- tukey2p1 %>%
-#   filter(succ == "Y") %>%
-#   select(group1, group2, p.adj.signif) %>%
-#   unite("comparisons", group1, group2, sep = "-") %>%
-#   mutate(dif = ifelse(p.adj.signif == "ns", FALSE, TRUE))
-# 
-# dify <- tukey2p1_y$dif
-# names(dify) <- tukey2p1_y$comparisons
-# difyL <- multcompLetters(dify)
-# difyL
-# 
-# 
-# # Groupings for M forests
-# 
-# tukey2p1_m <- tukey2p1 %>%
-#   filter(succ == "M") %>%
-#   select(group1, group2, p.adj.signif) %>%
-#   unite("comparisons", group1, group2, sep = "-") %>%
-#   mutate(dif = ifelse(p.adj.signif == "ns", FALSE, TRUE))
-# 
-# difm <- tukey2p1_m$dif
-# names(difm) <- tukey2p1_y$comparisons
-# difmL <- multcompLetters(difm)
-# difmL
-# 
-# #### Groupings resulted from anovas and tukey tests
-# 
-# c1 <- rep(c(1, 2, 3), each = 6)
-# c2 <- rep(seq(1, 6), times = 3)
-# c3 <- list(c("a", "a", "b", "b", "b", "b",
-#        "a", "b", "c", "d", "d", "d",
-#        "a", "b", "ac", "cd", "d", "d"))
-# 
-# groupings <- data.frame(c1, c2, c3) 
-# colnames(groupings) <- c("str_class_plots", "diam_class", "groupings")
-# 
-# groupings <- groupings %>%
-#   as_tibble() %>%
-#   arrange(diam_class) %>%
-#   mutate(succ = ifelse(str_class_plots == "1", "F",
-#                        ifelse(str_class_plots == "2", "Y", "M"))) %>%
-#   mutate(size_class = ifelse(diam_class == "1", "<10",
-#                              ifelse(diam_class == "2", "10-20",
-#                                     ifelse(diam_class == "3", "20-30",
-#                                            ifelse(diam_class == "4", "30-40",
-#                                                   ifelse(diam_class == "5", "40-50", ">50"))))))
-# 
-# groupings <- groupings %>%
-#   mutate(x_groupings = c(0.7333333, 1.000000, 1.266667, 1.7333333, 2.000000, 2.266667,
-#                2.7333333, 3.000000, 3.266667, 3.7333333, 4.000000, 4.266667,
-#                4.7333333, 5.000000, 5.266667, 5.7333333, 6.000000, 6.266667))
-# 
-# groupings <- groupings %>%
-#   as_tibble() %>%
-#   mutate(str_class_plots = as.character(str_class_plots),
-#          diam_class = as.character(diam_class))
-# 
-# p1_df <- p1_df %>%
-#   left_join(groupings, by = c("str_class_plots", "diam_class", "succ", "size_class"))
-# 
-
 ## Plot
 
 p1 <- p1_df %>%
@@ -847,105 +665,77 @@ fig4_df <- trees_cf_4p %>%
   dplyr::select(altitude, tree_density, basal_area_ha, loreys_height, mean_height, max_height, ave_wd, se_wd, agb_plot_ha, agb_se_ha, forest_classification) 
 
 f4a <- fig4_df %>%
-  ggplot(aes(x = tree_density, y = log1p(agb_plot_ha)))  +
+  ggplot(aes(x = tree_density, y = agb_plot_ha))  +
   geom_point(aes(color = factor(forest_classification, levels = c('undisturbed', 'regrowth', 'degraded', 'deforested'),ordered = TRUE)),
              size = 2, alpha = 0.75) +
   scale_color_manual(values = c("#1b9e77", "#7570b3", "#e7298a", "#d95f02")) +
-  geom_smooth(method = "loess", span= 0.9, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
-  #scale_y_continuous(limits = c(0,650)) +
+  geom_smooth(method = "lm", span= 0.9, color = "gray20", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
   scale_x_continuous(limits = c(0, 2000)) +
   theme_classic() +
   theme(legend.position = "none") +
   labs(x = (bquote('Tree density ('*"tree"~ha^-1*')')),
        y = (bquote('log AGB ('*"Mg "~ha^-1*')'))) +
-  theme(legend.position = "none") 
-
-
-summary(lm(fig4_df$agb_plot_ha ~ fig4_df$tree_density))
+  theme(legend.position = "none") +
+  scale_y_continuous(trans = "log1p",
+                     limits = c(0,1000),
+                     breaks = c(0,100,500,1000)) +
+  annotate("text", x = 400, y = 1000, label = "Adjusted R-squared:  0.332", size = 3.3)
+  
+summary(lm(log1p(fig4_df$agb_plot_ha) ~ fig4_df$tree_density))
 
 f4b <- fig4_df %>%
-  ggplot(aes(x = basal_area_ha, y = log1p(agb_plot_ha)))  +
+  ggplot(aes(x = basal_area_ha, y = agb_plot_ha))  +
   geom_point(aes(color = factor(forest_classification, levels = c('undisturbed', 'regrowth', 'degraded', 'deforested'),ordered = TRUE)),
              size = 2, alpha = 0.75) +
   scale_color_manual(values = c("#1b9e77", "#7570b3", "#e7298a", "#d95f02")) +
-  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
-  #geom_smooth(method = "lm", span=1, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
-  #scale_y_continuous(limits = c(0,650)) +
-  #scale_x_continuous(limits = c(0, 60)) +
+  geom_smooth(method = "lm", span=1, color = "gray20", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
   theme_classic() +
-  #theme(legend.position = "none") +
   labs(x = (bquote('Basal area ('*"m"^2 ~ha^-1*')')),
        y = (bquote('log AGB ('*"Mg "~ha^-1*')'))) +
   theme(legend.title = element_blank(),
       legend.position = c(0.9, 0.2),
       legend.background = element_rect(linetype = "solid", size = 0.01, color = "gray50"),
-      legend.margin = margin(0.1,5,0.1,0.1))
+      legend.margin = margin(0.1,5,0.1,0.1)) +
+  scale_y_continuous(trans = "log1p",
+                     limits = c(0,1000),
+                     breaks = c(0,100,500,1000)) +
+  annotate("text", x = 20, y = 1000, label = "Adjusted R-squared:  0.721", size = 3.3)
 
-summary(lm(fig4_df$agb_plot_ha ~ fig4_df$basal_area_ha))
+summary(lm(log1p(fig4_df$agb_plot_ha) ~ fig4_df$basal_area_ha))
 
 f4c <- fig4_df %>%
-  ggplot(aes(x = loreys_height, y = log1p(agb_plot_ha)))  +
+  ggplot(aes(x = loreys_height, y = agb_plot_ha))  +
   geom_point(aes(color = factor(forest_classification, levels = c('undisturbed', 'regrowth', 'degraded', 'deforested'),ordered = TRUE)),
              size = 2, alpha = 0.75) +
   scale_color_manual(values = c("#1b9e77", "#7570b3", "#e7298a", "#d95f02")) +
-  #geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
-  #scale_y_continuous(limits = c(0,650)) +
-  #scale_x_continuous(limits = c(0, 40)) +
-  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
+  geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
   theme_classic() +
   theme(legend.position = "none") +
   labs(x = "Lorey's height (m)",
-       y = (bquote('log AGB ('*"Mg "~ha^-1*')')))
+       y = (bquote('log AGB ('*"Mg "~ha^-1*')'))) +
+  scale_y_continuous(trans = "log1p",
+                     limits = c(0,1000),
+                     breaks = c(0,100,500,1000)) +
+  annotate("text", x = 5, y = 1000, label = "Adjusted R-squared:  0.525", size = 3.3)
 
-summary(lm(fig4_df$agb_plot_ha ~ fig4_df$loreys_height))
-
-f4d <- fig4_df %>%
-  ggplot(aes(x = mean_height, y = log1p(agb_plot_ha)))  +
-  geom_point(aes(color = factor(forest_classification, levels = c('undisturbed', 'regrowth', 'degraded', 'deforested'),ordered = TRUE)),
-             size = 2, alpha = 0.75) +
-  scale_color_manual(values = c("#1b9e77", "#7570b3", "#e7298a", "#d95f02")) +
-  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
-  #geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
-  #scale_y_continuous(limits = c(0,650)) +
-  #scale_x_continuous(limits = c(0, 30)) +
-  theme_classic() +
-  theme(legend.position = "none") +
-  labs(x = "Average height",
-       y = "log AGB")
-
-summary(lm(fig4_df$agb_plot_ha ~ fig4_df$mean_height))
-
-f4e <- fig4_df %>%
-  ggplot(aes(x = max_height, y = log1p(agb_plot_ha)))  +
-  geom_point(aes(color = factor(forest_classification, levels = c('undisturbed', 'regrowth', 'degraded', 'deforested'),ordered = TRUE)),
-             size = 2, alpha = 0.75) +
-  scale_color_manual(values = c("#1b9e77", "#7570b3", "#e7298a", "#d95f02")) +
-  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
-  #geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
-  #scale_y_continuous(limits = c(0,650)) +
-  #scale_x_continuous(limits = c(0, 40)) +
-  theme_classic() +
-  theme(legend.position = "none") +
-  labs(x = "Max height",
-       y = "log AGB")
-
-summary(lm(fig4_df$agb_plot_ha ~ fig4_df$max_height))
+summary(lm(log1p(fig4_df$agb_plot_ha) ~ fig4_df$loreys_height))
 
 f4f <- fig4_df %>%
-  ggplot(aes(x = ave_wd, y = log1p(agb_plot_ha)))  +
-  #geom_smooth(method = "lm", span= 0.9, color = "black", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
+  ggplot(aes(x = ave_wd, y = agb_plot_ha))  +
   geom_point(aes(color = factor(forest_classification, levels = c('undisturbed', 'regrowth', 'degraded', 'deforested'),ordered = TRUE)),
              size = 2, alpha = 0.75) +
   scale_color_manual(values = c("#1b9e77", "#7570b3", "#e7298a", "#d95f02")) +
-  #scale_y_continuous(limits = c(0,650)) +
-  #scale_x_continuous(limits = c(0, 1)) +
-  geom_smooth(method = "loess", span=1, color = "gray20", se = F, linetype = "dashed", size = 0.75, alpha= 0.3) +
+  geom_smooth(method = "lm", span=1, color = "gray20", se = F, linetype = "solid", size = 0.75, alpha= 0.3) +
   theme_classic() +
   theme(legend.position = "none") +
   labs(x = (bquote('Wood density ('*"g"~cm^-3*')')),
-       y = (bquote('log AGB ('*"Mg "~ha^-1*')')))
+       y = (bquote('log AGB ('*"Mg "~ha^-1*')'))) +
+  scale_y_continuous(trans = "log1p",
+                     limits = c(0,1000),
+                     breaks = c(0,100,500,1000)) +
+  annotate("text", x = 0.35, y = 1000, label = "Adjusted R-squared:  0.17", size = 3.3)
 
-summary(lm(fig4_df$agb_plot_ha ~ fig4_df$ave_wd))
+summary(lm(log1p(fig4_df$agb_plot_ha) ~ fig4_df$ave_wd))
 
 # figure 4
 

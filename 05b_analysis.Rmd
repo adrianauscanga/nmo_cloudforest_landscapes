@@ -97,8 +97,8 @@ env <- env[,c(-1, -2)]
 pca_env <- rda(env, scale = T)
 summary(pca_env)
 plot(pca_env)
-biplot(pca_env, display = 'species')
-
+biplot(pca_env, display = c('species', 'sites'), type = c('text', 'points'), col = c('gray', 'black'))
+biplot(pca_env)
 # PC1 (0.43) and PC2 (0.19) together explain 0.62 of variation
 
 ```
@@ -2401,6 +2401,7 @@ gamm4_4_int <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
            slope +
            t2(hill_shannon*agriculture, bs= "tp", k= 4),
            random = ~(1|site), data = plots_cf_4p)
+
 gamm4_4_int2 <- gamm4(log1p(agb_plot_ha) ~ env_pc1*agriculture +
            slope +
            t2(hill_shannon, bs= "tp", k= 4),
@@ -2490,9 +2491,9 @@ agbprop <- plots_cf_4p %>%
   dplyr::select(plot_id, agb_plot) %>%
   right_join(agb_class_plots, by = "plot_id") %>%
   mutate(agb_prop = agb_class_plot/agb_plot)  %>%
-  mutate(agb_prop_logit = logit(agb_prop))
+  mutate(stem_prop_logit = logit(agb_prop))
 
-lmm_agb_diam <- lmer(agb_prop_logit ~ diam_class + (1|site/plot_id), data = agbprop)
+lmm_agb_diam <- lmer(stem_prop_logit ~ diam_class + (1|site/plot_id), data = agbprop)
 summary(lmm_agb_diam)
 stargazer(lmm_agb_diam, type = "text")
 summary(glht(lmm_agb_diam, linfct = mcp(diam_class = "Tukey")), test = adjusted("holm"))
@@ -2527,7 +2528,7 @@ plots_cf_4p %>%
 #   mutate(agb_prop = agb_class_plot/agb_plot) %>%
 #   arrange(diam_class)
 # 
-# pairwise.wilcox.test(x= agbprop$agb_prop_logit, g= agbprop$diam_class, p.adjust.method = "bonferroni")
+# pairwise.wilcox.test(x= agbprop$stem_prop_logit, g= agbprop$diam_class, p.adjust.method = "bonferroni")
 # 
 # anova <- aov(agb_prop ~ diam_class, data = agb_prop)
 # summary(anova)
@@ -2702,6 +2703,36 @@ diam6 <- agb_prop_fc %>%
   filter(diam_class == "diam6")
 summary(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam6))
 summary(glht(lmer(agb_prop_logit ~ forest_classification + (1|site), data = diam6), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+agbprop_undis <- agb_prop_fc %>%
+  filter(forest_classification == "undisturbed")
+agbprop_und_lmm <- lmer(agb_prop_logit ~ diam_class + (1|site), data = agbprop_undis)
+summary(agbprop_und_lmm)
+stargazer(agbprop_und_lmm, type = "text", report=("vc*p"))
+summary(glht(lmer(agb_prop_logit ~ diam_class + (1|site), data = agbprop_undis), linfct = mcp(diam_class = "Tukey"), test = adjusted("holm")))
+
+
+agbprop_reg <- agb_prop_fc %>%
+  filter(forest_classification == "regrowth")
+agbprop_reg_lmm <- lmer(agb_prop_logit ~ diam_class + (1|site), data = agbprop_reg)
+summary(agbprop_reg_lmm)
+stargazer(agbprop_reg_lmm, type = "text", report=("vc*p"))
+summary(glht(lmer(agb_prop_logit ~ diam_class + (1|site), data = agbprop_reg), linfct = mcp(diam_class = "Tukey"), test = adjusted("holm")))
+
+agbprop_deg <- agb_prop_fc %>%
+  filter(forest_classification == "degraded")
+agbprop_deg_lmm <- lmer(agb_prop_logit ~ diam_class + (1|site), data = agbprop_deg)
+summary(agbprop_deg_lmm)
+stargazer(agbprop_deg_lmm, type = "text", report=("vc*p"))
+summary(glht(lmer(agb_prop_logit ~ diam_class + (1|site), data = agbprop_deg), linfct = mcp(diam_class = "Tukey"), test = adjusted("holm")))
+
+
+agbprop_def <- agb_prop_fc %>%
+  filter(forest_classification == "deforested")
+agbprop_def_lmm <- lmer(agb_prop_logit ~ diam_class + (1|site), data = agbprop_def)
+summary(agbprop_def_lmm)
+stargazer(agbprop_def_lmm, type = "text", report=("vc*p"))
+summary(glht(lmer(agb_prop_logit ~ diam_class + (1|site), data = agbprop_def), linfct = mcp(diam_class = "Tukey"), test = adjusted("holm")))
 ```
 
 Contribution to Stem Number
@@ -2774,6 +2805,34 @@ diam6 <- stem_prop_str %>%
   filter(diam_class == "diam6")
 summary(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam6))
 summary(glht(lmer(stem_prop_logit ~ forest_classification + (1|site), data = diam6), linfct = mcp(forest_classification = "Tukey"), test = adjusted("holm")))
+
+stemprop_undis <- stem_prop_str %>%
+  filter(forest_classification == "undisturbed")
+stemprop_undis_lmm <- lmer(stem_prop_logit ~ diam_class + (1|site), data = stemprop_undis)
+summary(stemprop_undis_lmm)
+stargazer(stemprop_undis_lmm, type = "text", report=("vc*p"))
+summary(glht(lmer(stem_prop_logit ~ diam_class + (1|site), data = stemprop_undis), linfct = mcp(diam_class = "Tukey"), test = adjusted("holm")))
+
+stemprop_reg <- stem_prop_str %>%
+  filter(forest_classification == "regrowth")
+stemprop_reg_lmm <- lmer(stem_prop_logit ~ diam_class + (1|site), data = stemprop_reg)
+summary(stemprop_reg_lmm)
+stargazer(stemprop_reg_lmm, type = "text", report=("vc*p"))
+summary(glht(lmer(stem_prop_logit ~ diam_class + (1|site), data = stemprop_reg), linfct = mcp(diam_class = "Tukey"), test = adjusted("holm")))
+
+stemprop_deg <- stem_prop_str %>%
+  filter(forest_classification == "degraded")
+stemprop_deg_lmm <- lmer(stem_prop_logit ~ diam_class + (1|site), data = stemprop_deg)
+summary(stemprop_deg_lmm)
+stargazer(stemprop_deg_lmm, type = "text", report=("vc*p"))
+summary(glht(lmer(stem_prop_logit ~ diam_class + (1|site), data = stemprop_deg), linfct = mcp(diam_class = "Tukey"), test = adjusted("holm")))
+
+stemprop_def <- stem_prop_str %>%
+  filter(forest_classification == "deforested")
+stemprop_def_lmm <- lmer(stem_prop_logit ~ diam_class + (1|site), data = stemprop_def)
+summary(stemprop_def_lmm)
+stargazer(stemprop_def_lmm, type = "text", report=("vc*p"))
+summary(glht(lmer(stem_prop_logit ~ diam_class + (1|site), data = stemprop_def), linfct = mcp(diam_class = "Tukey"), test = adjusted("holm")))
 ```
 
 ### Structural attributes, AGB and diversity across disturbance levels
